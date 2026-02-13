@@ -1,0 +1,14 @@
+{
+  "port": 3000,
+  "mode": "single",
+  "excelPath": "./data/lab.xlsx",
+  "writerHost": "http://localhost:3000",
+  "writerToken": "change-me",
+  "backupEnabled": true,
+  "backupPolicy": "daily",
+  "backupIntervalMinutes": 60,
+  "backupRetentionDays": 14,
+  "backupZip": false,
+  "uiShowPackagePreview": true,
+  "uiDefaultEilig": "ja"
+}

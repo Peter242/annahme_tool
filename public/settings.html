@@ -1,0 +1,394 @@
+<!doctype html>
+<html lang="de">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Settings</title>
+    <style>
+      :root {
+        font-family: Arial, sans-serif;
+      }
+
+      body {
+        margin: 0;
+        background: #f4f6f8;
+        color: #222;
+      }
+
+      main {
+        max-width: 900px;
+        margin: 2rem auto;
+        padding: 1.5rem;
+        background: #fff;
+        border-radius: 10px;
+        box-shadow: 0 4px 18px rgba(0, 0, 0, 0.08);
+      }
+
+      .meta {
+        font-size: 0.9rem;
+        color: #4f5b67;
+        margin-bottom: 1rem;
+      }
+
+      .back {
+        display: inline-block;
+        margin-bottom: 1rem;
+        color: #145ea8;
+        text-decoration: none;
+      }
+
+      fieldset {
+        border: 1px solid #d4dbe1;
+        border-radius: 8px;
+        padding: 1rem;
+        margin-bottom: 1rem;
+      }
+
+      legend {
+        padding: 0 0.4rem;
+        font-weight: 700;
+      }
+
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 1rem;
+      }
+
+      label {
+        display: block;
+        font-weight: 600;
+        margin-bottom: 0.4rem;
+      }
+
+      input,
+      select,
+      button {
+        width: 100%;
+        padding: 0.55rem;
+        border: 1px solid #ccd2d8;
+        border-radius: 6px;
+        box-sizing: border-box;
+        font-size: 1rem;
+      }
+
+      input[type='checkbox'] {
+        width: auto;
+      }
+
+      .check-row {
+        display: flex;
+        gap: 0.5rem;
+        align-items: center;
+      }
+
+      .actions {
+        margin-top: 1rem;
+        display: flex;
+        gap: 0.6rem;
+        flex-wrap: wrap;
+      }
+
+      .actions button {
+        width: auto;
+        min-width: 180px;
+      }
+
+      pre {
+        margin-top: 1rem;
+        white-space: pre-wrap;
+        background: #0c1117;
+        color: #d0e2ff;
+        padding: 1rem;
+        border-radius: 8px;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <a class="back" href="/">Zurueck zur Annahme</a>
+      <h1>Settings</h1>
+      <div class="meta" id="meta">Mode: - | excelPath: -</div>
+
+      <fieldset>
+        <legend>Basis (Ebene 1)</legend>
+        <div class="grid">
+          <div>
+            <label for="excel-path">excelPath</label>
+            <input id="excel-path" type="text" />
+          </div>
+
+          <div>
+            <label for="backup-policy">backupPolicy</label>
+            <select id="backup-policy">
+              <option value="daily">daily</option>
+              <option value="interval">interval</option>
+            </select>
+          </div>
+
+          <div>
+            <label for="backup-interval">backupIntervalMinutes</label>
+            <input id="backup-interval" type="number" min="1" step="1" />
+          </div>
+
+          <div>
+            <label for="backup-retention">backupRetentionDays</label>
+            <input id="backup-retention" type="number" min="0" step="1" />
+          </div>
+
+          <div>
+            <label for="ui-default-eilig">uiDefaultEilig</label>
+            <select id="ui-default-eilig">
+              <option value="ja">ja</option>
+              <option value="nein">nein</option>
+            </select>
+          </div>
+
+          <div>
+            <label>backupEnabled</label>
+            <div class="check-row">
+              <input id="backup-enabled" type="checkbox" />
+              <span>aktiv</span>
+            </div>
+          </div>
+
+          <div>
+            <label>backupZip</label>
+            <div class="check-row">
+              <input id="backup-zip" type="checkbox" />
+              <span>.zip statt .xlsx</span>
+            </div>
+          </div>
+
+          <div>
+            <label>uiShowPackagePreview</label>
+            <div class="check-row">
+              <input id="ui-show-package-preview" type="checkbox" />
+              <span>Vorschau anzeigen</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="actions">
+          <button id="save-basic" type="button">Basis speichern</button>
+          <button id="validate-path" type="button">Pfad pruefen</button>
+        </div>
+      </fieldset>
+
+      <fieldset>
+        <legend>Advanced (Ebene 2)</legend>
+        <div class="grid">
+          <div>
+            <label for="mode">mode</label>
+            <select id="mode">
+              <option value="single">single</option>
+              <option value="writer">writer</option>
+              <option value="client">client</option>
+            </select>
+          </div>
+
+          <div>
+            <label for="writer-host">writerHost</label>
+            <input id="writer-host" type="text" />
+          </div>
+
+          <div>
+            <label for="writer-token">writerToken</label>
+            <input id="writer-token" type="password" autocomplete="off" />
+          </div>
+
+          <div>
+            <label for="admin-key">Admin Key (nur fuer Ebene 2)</label>
+            <input id="admin-key" type="password" autocomplete="off" />
+          </div>
+        </div>
+
+        <div class="actions">
+          <button id="save-advanced" type="button">Advanced speichern</button>
+        </div>
+      </fieldset>
+
+      <fieldset>
+        <legend>Pakete</legend>
+        <div class="actions">
+          <button id="import-packages-btn" type="button">Pakete aus Excel importieren</button>
+        </div>
+        <pre id="packages-preview"></pre>
+      </fieldset>
+
+      <pre id="status"></pre>
+      <pre id="validate-result"></pre>
+    </main>
+
+    <script>
+      const meta = document.getElementById('meta');
+      const status = document.getElementById('status');
+      const validateResult = document.getElementById('validate-result');
+      const packagesPreview = document.getElementById('packages-preview');
+
+      const excelPathInput = document.getElementById('excel-path');
+      const backupEnabledInput = document.getElementById('backup-enabled');
+      const backupPolicyInput = document.getElementById('backup-policy');
+      const backupIntervalInput = document.getElementById('backup-interval');
+      const backupRetentionInput = document.getElementById('backup-retention');
+      const backupZipInput = document.getElementById('backup-zip');
+      const uiShowPackagePreviewInput = document.getElementById('ui-show-package-preview');
+      const uiDefaultEiligInput = document.getElementById('ui-default-eilig');
+
+      const modeInput = document.getElementById('mode');
+      const writerHostInput = document.getElementById('writer-host');
+      const writerTokenInput = document.getElementById('writer-token');
+      const adminKeyInput = document.getElementById('admin-key');
+
+      const saveBasicButton = document.getElementById('save-basic');
+      const saveAdvancedButton = document.getElementById('save-advanced');
+      const validatePathButton = document.getElementById('validate-path');
+      const importPackagesButton = document.getElementById('import-packages-btn');
+
+      let currentConfig = null;
+
+      function setStatus(payload) {
+        status.textContent = JSON.stringify(payload, null, 2);
+      }
+
+      function setValidateResult(payload) {
+        validateResult.textContent = JSON.stringify(payload, null, 2);
+      }
+
+      function setPackagesPreview(packages) {
+        packagesPreview.textContent = JSON.stringify(
+          {
+            count: packages.length,
+            preview: packages.slice(0, 10),
+          },
+          null,
+          2,
+        );
+      }
+
+      function fillForm(config) {
+        currentConfig = config;
+        meta.textContent = `Mode: ${config.mode} | excelPath: ${config.excelPath}`;
+
+        excelPathInput.value = config.excelPath || '';
+        backupEnabledInput.checked = Boolean(config.backupEnabled);
+        backupPolicyInput.value = config.backupPolicy || 'daily';
+        backupIntervalInput.value = config.backupIntervalMinutes ?? 60;
+        backupRetentionInput.value = config.backupRetentionDays ?? 14;
+        backupZipInput.checked = Boolean(config.backupZip);
+        uiShowPackagePreviewInput.checked = Boolean(config.uiShowPackagePreview);
+        uiDefaultEiligInput.value = config.uiDefaultEilig || 'ja';
+
+        modeInput.value = config.mode || 'single';
+        writerHostInput.value = config.writerHost || '';
+      }
+
+      async function loadConfig() {
+        const response = await fetch('/api/config');
+        const data = await response.json();
+        if (!response.ok || !data.ok) {
+          throw new Error(data.message || 'Config konnte nicht geladen werden');
+        }
+        fillForm(data.config);
+      }
+
+      async function loadPackages() {
+        const response = await fetch('/api/packages');
+        const data = await response.json();
+        if (!response.ok || !Array.isArray(data)) {
+          throw new Error(data.message || 'Pakete konnten nicht geladen werden');
+        }
+        setPackagesPreview(data);
+      }
+
+      async function saveConfig(payload, adminKey = '') {
+        const headers = {
+          'Content-Type': 'application/json',
+        };
+
+        if (adminKey) {
+          headers['x-admin-key'] = adminKey;
+        }
+
+        const response = await fetch('/api/config', {
+          method: 'POST',
+          headers,
+          body: JSON.stringify(payload),
+        });
+
+        const data = await response.json();
+        setStatus(data);
+        if (response.ok && data.ok) {
+          fillForm(data.config);
+        }
+      }
+
+      saveBasicButton.addEventListener('click', async () => {
+        try {
+          await saveConfig({
+            excelPath: excelPathInput.value.trim(),
+            backupEnabled: backupEnabledInput.checked,
+            backupPolicy: backupPolicyInput.value,
+            backupIntervalMinutes: Number(backupIntervalInput.value),
+            backupRetentionDays: Number(backupRetentionInput.value),
+            backupZip: backupZipInput.checked,
+            uiShowPackagePreview: uiShowPackagePreviewInput.checked,
+            uiDefaultEilig: uiDefaultEiligInput.value,
+          });
+        } catch (error) {
+          setStatus({ ok: false, message: error.message });
+        }
+      });
+
+      saveAdvancedButton.addEventListener('click', async () => {
+        try {
+          await saveConfig(
+            {
+              mode: modeInput.value,
+              writerHost: writerHostInput.value.trim(),
+              writerToken: writerTokenInput.value,
+            },
+            adminKeyInput.value,
+          );
+        } catch (error) {
+          setStatus({ ok: false, message: error.message });
+        }
+      });
+
+      validatePathButton.addEventListener('click', async () => {
+        try {
+          const excelPath = excelPathInput.value.trim();
+          const query = new URLSearchParams({ excelPath }).toString();
+          const response = await fetch(`/api/config/validate?${query}`);
+          const data = await response.json();
+          setValidateResult(data);
+        } catch (error) {
+          setValidateResult({ ok: false, message: error.message });
+        }
+      });
+
+      importPackagesButton.addEventListener('click', async () => {
+        try {
+          const response = await fetch('/api/packages/import', {
+            method: 'POST',
+          });
+          const data = await response.json();
+          setStatus(data);
+          if (response.ok) {
+            await loadPackages();
+          }
+        } catch (error) {
+          setStatus({ ok: false, message: error.message });
+        }
+      });
+
+      Promise.all([loadConfig(), loadPackages()])
+        .then(() => {
+          setStatus({ ok: true, message: 'Settings geladen' });
+        })
+        .catch((error) => {
+          setStatus({ ok: false, message: error.message });
+        });
+    </script>
+  </body>
+</html>

@@ -1,0 +1,532 @@
+<!doctype html>
+<html lang="de">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Annahme Maske</title>
+    <style>
+      :root {
+        font-family: Arial, sans-serif;
+      }
+
+      body {
+        margin: 0;
+        background: #f4f6f8;
+        color: #222;
+      }
+
+      main {
+        max-width: 900px;
+        margin: 2rem auto;
+        padding: 1.5rem;
+        background: #fff;
+        border-radius: 10px;
+        box-shadow: 0 4px 18px rgba(0, 0, 0, 0.08);
+      }
+
+      h1,
+      h2 {
+        margin-top: 0;
+      }
+
+      .env {
+        font-size: 0.85rem;
+        color: #4f5b67;
+        margin-bottom: 1rem;
+      }
+
+      .top-links {
+        display: flex;
+        justify-content: flex-end;
+        margin-bottom: 1rem;
+      }
+
+      .top-links a {
+        color: #145ea8;
+        text-decoration: none;
+      }
+
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 1rem;
+      }
+
+      label {
+        display: block;
+        font-weight: 600;
+        margin-bottom: 0.4rem;
+      }
+
+      input,
+      select,
+      textarea,
+      button {
+        width: 100%;
+        padding: 0.55rem;
+        border: 1px solid #ccd2d8;
+        border-radius: 6px;
+        box-sizing: border-box;
+        font-size: 1rem;
+      }
+
+      input[type='checkbox'],
+      input[type='radio'] {
+        width: auto;
+        padding: 0;
+      }
+
+      .radio-group {
+        display: flex;
+        gap: 1rem;
+        align-items: center;
+        height: 100%;
+      }
+
+      .radio-group label {
+        margin: 0;
+        font-weight: 500;
+      }
+
+      .probe-table-wrap {
+        overflow-x: auto;
+        border: 1px solid #e0e4e8;
+        border-radius: 8px;
+        background: #fafbfc;
+      }
+
+      .probe-table {
+        width: 100%;
+        border-collapse: collapse;
+        min-width: 760px;
+      }
+
+      .probe-table th,
+      .probe-table td {
+        border-bottom: 1px solid #e0e4e8;
+        padding: 0.55rem;
+        vertical-align: middle;
+      }
+
+      .probe-table tr:last-child td {
+        border-bottom: none;
+      }
+
+      .probe-table th {
+        background: #f0f4f8;
+        text-align: left;
+      }
+
+      .probe-index {
+        text-align: center;
+        width: 48px;
+      }
+
+      .probe-actions-cell {
+        width: 150px;
+      }
+
+      .probe-actions-inline {
+        display: flex;
+        gap: 0.4rem;
+      }
+
+      .probe-actions-inline button {
+        width: auto;
+        min-width: 64px;
+        padding: 0.35rem 0.5rem;
+      }
+
+      .actions {
+        display: flex;
+        gap: 0.8rem;
+        margin-top: 1rem;
+        flex-wrap: wrap;
+      }
+
+      .bulk-import {
+        margin-top: 1rem;
+      }
+
+      button {
+        cursor: pointer;
+      }
+
+      #result {
+        margin-top: 1.5rem;
+        white-space: pre-wrap;
+        background: #0c1117;
+        color: #d0e2ff;
+        padding: 1rem;
+        border-radius: 8px;
+        min-height: 80px;
+        overflow-x: auto;
+      }
+
+      .hidden {
+        display: none;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <div class="top-links">
+        <a href="/settings.html">Settings</a>
+      </div>
+      <h1>Annahme</h1>
+      <div class="env" id="env-info">Mode: - | excelPath: -</div>
+      <form id="order-form">
+        <div class="grid">
+          <div>
+            <label for="kunde">Kunde</label>
+            <input id="kunde" name="kunde" required />
+          </div>
+
+          <div>
+            <label for="projekt">Projekt</label>
+            <input id="projekt" name="projekt" required />
+          </div>
+
+          <div>
+            <label for="projektnummer">Projektnummer</label>
+            <input id="projektnummer" name="projektnummer" required />
+          </div>
+
+          <div>
+            <label for="probenEingangDatum">ProbenEingangDatum</label>
+            <input id="probenEingangDatum" name="probenEingangDatum" type="date" required />
+          </div>
+
+          <div>
+            <label>Eilig</label>
+            <div class="radio-group">
+              <label><input type="radio" name="eilig" value="ja" checked /> Ja</label>
+              <label><input type="radio" name="eilig" value="nein" /> Nein</label>
+            </div>
+          </div>
+
+          <div>
+            <label for="probeNochNichtDa">
+              <input id="probeNochNichtDa" name="probeNochNichtDa" type="checkbox" />
+              Probe noch nicht da
+            </label>
+          </div>
+        </div>
+
+        <h2>Probenliste</h2>
+        <div class="bulk-import">
+          <label for="bulk-probenbezeichnungen">Probenbezeichnungen (mehrzeilig)</label>
+          <textarea id="bulk-probenbezeichnungen" rows="4"></textarea>
+          <div class="actions">
+            <button type="button" id="bulk-add-probes">In Probenliste uebernehmen</button>
+          </div>
+        </div>
+        <div class="probe-table-wrap">
+          <table class="probe-table">
+            <thead>
+              <tr>
+                <th class="probe-index">#</th>
+                <th>Probenbezeichnung</th>
+                <th>Parameter Paket</th>
+                <th>Gewicht</th>
+                <th class="probe-actions-cell">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="proben-container"></tbody>
+          </table>
+        </div>
+
+        <div class="actions">
+          <button type="button" id="add-probe">Probe hinzufuegen</button>
+          <button type="submit" id="draft-btn">Draft senden</button>
+          <button type="button" id="commit-btn" class="hidden">Commit senden</button>
+        </div>
+      </form>
+
+      <h2>Antwort</h2>
+      <pre id="result"></pre>
+    </main>
+
+    <template id="probe-template">
+      <tr class="probe-row">
+        <td class="probe-index" data-index>1</td>
+        <td>
+          <input name="probenbezeichnung" required />
+        </td>
+        <td>
+          <select name="packageId">
+            <option value="">Bitte waehlen</option>
+          </select>
+          <input name="parameterTextPreview" type="hidden" />
+          <input name="matrixTyp" type="hidden" value="Boden" />
+        </td>
+        <td>
+          <input name="gewicht" type="number" min="0" step="any" />
+        </td>
+        <td class="probe-actions-cell">
+          <div class="probe-actions-inline">
+            <button type="button" data-action="duplicate">Kopie</button>
+            <button type="button" data-action="delete">Loeschen</button>
+          </div>
+        </td>
+      </tr>
+    </template>
+
+    <script>
+      const probenContainer = document.getElementById('proben-container');
+      const probeTemplate = document.getElementById('probe-template');
+      const addProbeButton = document.getElementById('add-probe');
+      const bulkAddProbesButton = document.getElementById('bulk-add-probes');
+      const bulkProbeNamesInput = document.getElementById('bulk-probenbezeichnungen');
+      const commitButton = document.getElementById('commit-btn');
+      const result = document.getElementById('result');
+      const form = document.getElementById('order-form');
+      const envInfo = document.getElementById('env-info');
+      const probeNochNichtDaInput = document.getElementById('probeNochNichtDa');
+      const probenEingangDatumInput = document.getElementById('probenEingangDatum');
+      let packages = [];
+
+      let appConfig = {
+        mode: 'single',
+        excelPath: '-',
+        commitAllowed: true,
+        uiShowPackagePreview: true,
+        uiDefaultEilig: 'ja',
+      };
+
+      async function loadConfig() {
+        const response = await fetch('/api/config');
+        const data = await response.json();
+        const cfg = data.config || {};
+
+        appConfig = {
+          mode: data.mode ?? cfg.mode ?? 'single',
+          excelPath: data.excelPath ?? cfg.excelPath ?? '-',
+          commitAllowed: data.commitAllowed,
+          uiShowPackagePreview: cfg.uiShowPackagePreview !== false,
+          uiDefaultEilig: cfg.uiDefaultEilig || 'ja',
+        };
+
+        envInfo.textContent = `Mode: ${appConfig.mode} | excelPath: ${appConfig.excelPath}`;
+
+        if (appConfig.commitAllowed) {
+          commitButton.classList.remove('hidden');
+        } else {
+          commitButton.classList.add('hidden');
+        }
+
+        const defaultEilig = appConfig.uiDefaultEilig === 'nein' ? 'nein' : 'ja';
+        const eiligRadio = form.querySelector(`input[name=\"eilig\"][value=\"${defaultEilig}\"]`);
+        if (eiligRadio) {
+          eiligRadio.checked = true;
+        }
+      }
+
+      async function loadPackages() {
+        const response = await fetch('/api/packages');
+        const data = await response.json();
+        if (!response.ok || !Array.isArray(data)) {
+          throw new Error(data.message || 'Pakete konnten nicht geladen werden');
+        }
+        packages = data;
+      }
+
+      function parseNumberOrUndefined(value) {
+        if (value === '') {
+          return undefined;
+        }
+
+        const parsed = Number(value);
+        return Number.isFinite(parsed) ? parsed : undefined;
+      }
+
+      function updateEingangDatumState() {
+        const isChecked = probeNochNichtDaInput.checked;
+        probenEingangDatumInput.disabled = isChecked;
+        probenEingangDatumInput.required = !isChecked;
+
+        if (isChecked) {
+          probenEingangDatumInput.value = '';
+        }
+      }
+
+      function setPackageText(probeElement) {
+        const packageSelect = probeElement.querySelector('[name="packageId"]');
+        const parameterTextInput = probeElement.querySelector('[name="parameterTextPreview"]');
+        const selected = packages.find((pkg) => pkg.id === packageSelect.value);
+        parameterTextInput.value = selected ? selected.text : '';
+      }
+
+      function populatePackageSelect(probeElement) {
+        const packageSelect = probeElement.querySelector('[name="packageId"]');
+        packageSelect.innerHTML = '<option value="">Bitte waehlen</option>';
+
+        packages.forEach((pkg) => {
+          const option = document.createElement('option');
+          option.value = pkg.id;
+          option.textContent = pkg.code ? `${pkg.name} (${pkg.code})` : pkg.name;
+          packageSelect.appendChild(option);
+        });
+
+        packageSelect.addEventListener('change', () => setPackageText(probeElement));
+      }
+
+      function updateProbeIndexes() {
+        const rows = Array.from(probenContainer.querySelectorAll('.probe-row'));
+        rows.forEach((row, index) => {
+          const indexCell = row.querySelector('[data-index]');
+          indexCell.textContent = String(index + 1);
+        });
+      }
+
+      function wireProbeActions(probeElement) {
+        const duplicateButton = probeElement.querySelector('[data-action="duplicate"]');
+        const deleteButton = probeElement.querySelector('[data-action="delete"]');
+
+        duplicateButton.addEventListener('click', () => duplicateProbe(probeElement));
+        deleteButton.addEventListener('click', () => deleteProbe(probeElement));
+      }
+
+      function addProbe(initialData = null) {
+        const fragment = probeTemplate.content.cloneNode(true);
+        const probeElement = fragment.querySelector('.probe-row');
+
+        populatePackageSelect(probeElement);
+        wireProbeActions(probeElement);
+
+        if (initialData) {
+          probeElement.querySelector('[name="probenbezeichnung"]').value = initialData.probenbezeichnung || '';
+          probeElement.querySelector('[name="gewicht"]').value = initialData.gewicht ?? '';
+          probeElement.querySelector('[name="packageId"]').value = initialData.packageId || '';
+        }
+
+        setPackageText(probeElement);
+
+        probenContainer.appendChild(fragment);
+        updateProbeIndexes();
+      }
+
+      function duplicateProbe(probeElement) {
+        const initialData = {
+          probenbezeichnung: probeElement.querySelector('[name="probenbezeichnung"]').value.trim(),
+          packageId: probeElement.querySelector('[name="packageId"]').value,
+          gewicht: probeElement.querySelector('[name="gewicht"]').value,
+        };
+        addProbe(initialData);
+      }
+
+      function deleteProbe(probeElement) {
+        probeElement.remove();
+        updateProbeIndexes();
+
+        if (probenContainer.querySelectorAll('.probe-row').length === 0) {
+          addProbe();
+        }
+      }
+
+      function buildPayload() {
+        const probeNochNichtDa = probeNochNichtDaInput.checked;
+
+        return {
+          kunde: form.kunde.value.trim(),
+          projekt: form.projekt.value.trim(),
+          projektnummer: form.projektnummer.value.trim(),
+          eilig: form.eilig.value === 'ja',
+          probeNochNichtDa,
+          probenEingangDatum: probeNochNichtDa ? undefined : probenEingangDatumInput.value || undefined,
+          proben: Array.from(probenContainer.querySelectorAll('.probe-row')).map((probe) => ({
+            probenbezeichnung: probe.querySelector('[name="probenbezeichnung"]').value.trim(),
+            matrixTyp: 'Boden',
+            packageId: probe.querySelector('[name="packageId"]').value || undefined,
+            parameterTextPreview: probe.querySelector('[name="parameterTextPreview"]').value.trim() || undefined,
+            gewicht: parseNumberOrUndefined(probe.querySelector('[name="gewicht"]').value),
+          })),
+        };
+      }
+
+      async function sendOrder(endpoint, extraHeaders = {}) {
+        const payload = buildPayload();
+
+        try {
+          const response = await fetch(endpoint, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              ...extraHeaders,
+            },
+            body: JSON.stringify(payload),
+          });
+
+          const data = await response.json();
+          result.textContent = JSON.stringify(data, null, 2);
+        } catch (error) {
+          result.textContent = JSON.stringify(
+            {
+              ok: false,
+              message: 'Fehler beim Senden',
+              detail: error.message,
+            },
+            null,
+            2,
+          );
+        }
+      }
+
+      addProbeButton.addEventListener('click', addProbe);
+      bulkAddProbesButton.addEventListener('click', () => {
+        const names = bulkProbeNamesInput.value
+          .split('\n')
+          .map((name) => name.trim())
+          .filter(Boolean);
+
+        names.forEach((name) => {
+          addProbe({ probenbezeichnung: name });
+        });
+      });
+      probeNochNichtDaInput.addEventListener('change', updateEingangDatumState);
+
+      form.addEventListener('submit', async (event) => {
+        event.preventDefault();
+        await sendOrder('/api/order/draft');
+      });
+
+      commitButton.addEventListener('click', async () => {
+        if (appConfig.mode === 'writer') {
+          const writerToken = sessionStorage.getItem('writerToken') || '';
+          const writerLoginOk = sessionStorage.getItem('writerLoginOk') === '1';
+
+          if (!writerToken || !writerLoginOk) {
+            result.textContent = JSON.stringify(
+              {
+                ok: false,
+                message: 'Kein Writer Login vorhanden. Bitte zuerst in Settings anmelden.',
+              },
+              null,
+              2,
+            );
+            return;
+          }
+
+          await sendOrder('/api/order/commit', {
+            'x-ui-request': '1',
+            'x-writer-token': writerToken,
+          });
+          return;
+        }
+
+        await sendOrder('/api/order/commit');
+      });
+
+      async function bootstrap() {
+        await loadConfig();
+        await loadPackages();
+        addProbe();
+        updateEingangDatumState();
+      }
+
+      bootstrap().catch((error) => {
+        envInfo.textContent = `Mode: unbekannt | excelPath: unbekannt (${error.message})`;
+      });
+    </script>
+  </body>
+</html>
