@@ -16,7 +16,7 @@
       }
 
       main {
-        max-width: 900px;
+        width: min(1400px, 90vw);
         margin: 2rem auto;
         padding: 1.5rem;
         background: #fff;
@@ -90,6 +90,8 @@
 
       .probe-table-wrap {
         overflow-x: auto;
+        max-height: 55vh;
+        overflow-y: auto;
         border: 1px solid #e0e4e8;
         border-radius: 8px;
         background: #fafbfc;
@@ -126,6 +128,21 @@
         width: 150px;
       }
 
+      .remark-cell {
+        min-width: 230px;
+      }
+
+      .remark-grid {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 0.35rem;
+      }
+
+      .remark-grid input {
+        padding: 0.42rem;
+        font-size: 0.92rem;
+      }
+
       .probe-actions-inline {
         display: flex;
         gap: 0.4rem;
@@ -142,6 +159,15 @@
         gap: 0.8rem;
         margin-top: 1rem;
         flex-wrap: wrap;
+      }
+
+      .bottom-actions {
+        position: sticky;
+        bottom: 0;
+        background: #fff;
+        padding-top: 0.7rem;
+        border-top: 1px solid #e4e8ed;
+        z-index: 2;
       }
 
       .bulk-import {
@@ -193,6 +219,26 @@
           </div>
 
           <div>
+            <label for="projektname">Projektname</label>
+            <input id="projektname" name="projektname" />
+          </div>
+
+          <div>
+            <label for="ansprechpartner">Ansprechpartner</label>
+            <input id="ansprechpartner" name="ansprechpartner" />
+          </div>
+
+          <div>
+            <label for="email">Email</label>
+            <input id="email" name="email" type="email" />
+          </div>
+
+          <div>
+            <label for="erfasstKuerzel">Erfasst (Kuerzel)</label>
+            <input id="erfasstKuerzel" name="erfasstKuerzel" />
+          </div>
+
+          <div>
             <label for="probenEingangDatum">ProbenEingangDatum</label>
             <input id="probenEingangDatum" name="probenEingangDatum" type="date" required />
           </div>
@@ -227,8 +273,11 @@
               <tr>
                 <th class="probe-index">#</th>
                 <th>Probenbezeichnung</th>
+                <th>Matrix</th>
                 <th>Parameter Paket</th>
+                <th>Tiefe/Volumen</th>
                 <th>Gewicht</th>
+                <th>Bemerkung/Geruch</th>
                 <th class="probe-actions-cell">Actions</th>
               </tr>
             </thead>
@@ -236,7 +285,7 @@
           </table>
         </div>
 
-        <div class="actions">
+        <div class="actions bottom-actions">
           <button type="button" id="add-probe">Probe hinzufuegen</button>
           <button type="submit" id="draft-btn">Draft senden</button>
           <button type="button" id="commit-btn" class="hidden">Commit senden</button>
@@ -254,14 +303,30 @@
           <input name="probenbezeichnung" required />
         </td>
         <td>
+          <select name="matrixTyp">
+            <option value="Boden">Boden</option>
+            <option value="Wasser">Wasser</option>
+            <option value="Luft">Luft</option>
+          </select>
+        </td>
+        <td>
           <select name="packageId">
             <option value="">Bitte waehlen</option>
           </select>
           <input name="parameterTextPreview" type="hidden" />
-          <input name="matrixTyp" type="hidden" value="Boden" />
+        </td>
+        <td>
+          <input name="tiefeVolumen" type="text" />
         </td>
         <td>
           <input name="gewicht" type="number" min="0" step="any" />
+          <input name="gewichtEinheit" type="text" placeholder="Einheit" />
+        </td>
+        <td class="remark-cell">
+          <div class="remark-grid">
+            <input name="geruchAuffaelligkeit" type="text" placeholder="Geruch/Auffaelligkeit" />
+            <input name="bemerkung" type="text" placeholder="Bemerkung" />
+          </div>
         </td>
         <td class="probe-actions-cell">
           <div class="probe-actions-inline">
@@ -382,9 +447,21 @@
       function wireProbeActions(probeElement) {
         const duplicateButton = probeElement.querySelector('[data-action="duplicate"]');
         const deleteButton = probeElement.querySelector('[data-action="delete"]');
+        const matrixSelect = probeElement.querySelector('[name="matrixTyp"]');
+        const gewichtInput = probeElement.querySelector('[name="gewicht"]');
+
+        const syncMatrixFields = () => {
+          const isBoden = matrixSelect.value === 'Boden';
+          gewichtInput.disabled = !isBoden;
+          if (!isBoden) {
+            gewichtInput.value = '';
+          }
+        };
 
         duplicateButton.addEventListener('click', () => duplicateProbe(probeElement));
         deleteButton.addEventListener('click', () => deleteProbe(probeElement));
+        matrixSelect.addEventListener('change', syncMatrixFields);
+        syncMatrixFields();
       }
 
       function addProbe(initialData = null) {
@@ -396,7 +473,13 @@
 
         if (initialData) {
           probeElement.querySelector('[name="probenbezeichnung"]').value = initialData.probenbezeichnung || '';
+          probeElement.querySelector('[name="matrixTyp"]').value = initialData.matrixTyp || 'Boden';
+          probeElement.querySelector('[name="tiefeVolumen"]').value = initialData.tiefeVolumen ?? '';
           probeElement.querySelector('[name="gewicht"]').value = initialData.gewicht ?? '';
+          probeElement.querySelector('[name="gewichtEinheit"]').value = initialData.gewichtEinheit ?? '';
+          probeElement.querySelector('[name="geruchAuffaelligkeit"]').value =
+            initialData.geruchAuffaelligkeit ?? '';
+          probeElement.querySelector('[name="bemerkung"]').value = initialData.bemerkung ?? '';
           probeElement.querySelector('[name="packageId"]').value = initialData.packageId || '';
         }
 
@@ -409,8 +492,13 @@
       function duplicateProbe(probeElement) {
         const initialData = {
           probenbezeichnung: probeElement.querySelector('[name="probenbezeichnung"]').value.trim(),
+          matrixTyp: probeElement.querySelector('[name="matrixTyp"]').value,
           packageId: probeElement.querySelector('[name="packageId"]').value,
+          tiefeVolumen: probeElement.querySelector('[name="tiefeVolumen"]').value,
           gewicht: probeElement.querySelector('[name="gewicht"]').value,
+          gewichtEinheit: probeElement.querySelector('[name="gewichtEinheit"]').value,
+          geruchAuffaelligkeit: probeElement.querySelector('[name="geruchAuffaelligkeit"]').value,
+          bemerkung: probeElement.querySelector('[name="bemerkung"]').value,
         };
         addProbe(initialData);
       }
@@ -431,16 +519,35 @@
           kunde: form.kunde.value.trim(),
           projekt: form.projekt.value.trim(),
           projektnummer: form.projektnummer.value.trim(),
+          projektname: form.projektname.value.trim() || undefined,
+          ansprechpartner: form.ansprechpartner.value.trim() || undefined,
+          email: form.email.value.trim() || undefined,
+          erfasstKuerzel: form.erfasstKuerzel.value.trim() || undefined,
           eilig: form.eilig.value === 'ja',
           probeNochNichtDa,
           probenEingangDatum: probeNochNichtDa ? undefined : probenEingangDatumInput.value || undefined,
-          proben: Array.from(probenContainer.querySelectorAll('.probe-row')).map((probe) => ({
-            probenbezeichnung: probe.querySelector('[name="probenbezeichnung"]').value.trim(),
-            matrixTyp: 'Boden',
-            packageId: probe.querySelector('[name="packageId"]').value || undefined,
-            parameterTextPreview: probe.querySelector('[name="parameterTextPreview"]').value.trim() || undefined,
-            gewicht: parseNumberOrUndefined(probe.querySelector('[name="gewicht"]').value),
-          })),
+          proben: Array.from(probenContainer.querySelectorAll('.probe-row')).map((probe) => {
+            const matrixTyp = probe.querySelector('[name="matrixTyp"]').value;
+            const tiefeVolumenRaw = probe.querySelector('[name="tiefeVolumen"]').value.trim();
+            const tiefeVolumenNum = parseNumberOrUndefined(tiefeVolumenRaw);
+
+            return {
+              probenbezeichnung: probe.querySelector('[name="probenbezeichnung"]').value.trim(),
+              matrixTyp,
+              packageId: probe.querySelector('[name="packageId"]').value || undefined,
+              parameterTextPreview: probe.querySelector('[name="parameterTextPreview"]').value.trim() || undefined,
+              tiefeVolumen: tiefeVolumenRaw || undefined,
+              volumen: matrixTyp === 'Boden' ? undefined : tiefeVolumenNum,
+              gewicht:
+                matrixTyp === 'Boden'
+                  ? parseNumberOrUndefined(probe.querySelector('[name="gewicht"]').value)
+                  : undefined,
+              gewichtEinheit: probe.querySelector('[name="gewichtEinheit"]').value.trim() || undefined,
+              geruchAuffaelligkeit:
+                probe.querySelector('[name="geruchAuffaelligkeit"]').value.trim() || undefined,
+              bemerkung: probe.querySelector('[name="bemerkung"]').value.trim() || undefined,
+            };
+          }),
         };
       }
 

@@ -1,7 +1,9 @@
 {
   "port": 3000,
   "mode": "single",
+  "writerBackend": "com",
   "excelPath": "./data/lab.xlsx",
+  "yearSheetName": "",
   "writerHost": "http://localhost:3000",
   "writerToken": "change-me",
   "backupEnabled": true,

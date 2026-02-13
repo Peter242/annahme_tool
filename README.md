@@ -26,7 +26,9 @@ Beispiel:
 {
   "port": 3000,
   "mode": "single",
+  "writerBackend": "com",
   "excelPath": "./data/lab.xlsx",
+  "yearSheetName": "",
   "writerHost": "http://localhost:3000",
   "writerToken": "change-me",
   "backupEnabled": true,
@@ -84,10 +86,10 @@ Server laeuft auf `http://localhost:3000`.
 - `POST /api/config`
   - speichert erlaubte Config-Felder in `config.json` und laedt Runtime-Config ohne Neustart
   - Ebene 1 ohne Admin-Key: `excelPath`, Backup-Felder, UI-Felder
-  - Ebene 2 nur mit Header `x-admin-key` passend zu `ANNAHME_ADMIN_KEY`: `mode`, `writerHost`, `writerToken`
+  - Ebene 2 nur mit Header `x-admin-key` passend zu `ANNAHME_ADMIN_KEY`: `mode`, `writerHost`, `writerToken`, `writerBackend`
   - `ANNAHME_ADMIN_KEY` muss als Umgebungsvariable gesetzt sein, sonst sind Ebene-2-Aenderungen gesperrt
 - `GET /api/config/validate?excelPath=...`
-  - prueft Excel-Pfad, Sheet `Vorlagen` mit mind. 1 Paket, Jahresblatt des aktuellen Jahres
+  - prueft Excel-Pfad, Sheet `Vorlagen` mit mind. 1 Paket, Jahresblatt `yearSheetName` (oder aktuelles Jahr falls leer)
   - Antwort: `warnings`, `errors`
 - `POST /api/writer/login`
   - Body: `{ "token": "..." }`
@@ -96,6 +98,9 @@ Server laeuft auf `http://localhost:3000`.
   - validiert Auftrag und liefert Vorschau
 - `POST /api/order/commit`
   - mode-abhaengig (siehe oben)
+  - nutzt `writerBackend`:
+    - `com`: Windows COM Automation ueber `scripts/writer.ps1`
+    - `exceljs`: direkter XLSX-Schreibpfad in Node
   - erstellt vor Commit rotierende Backups (nicht pro Auftrag)
   - fuehrt Cleanup alter Backups aus
 

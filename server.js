@@ -2,18 +2,21 @@ const fs = require('fs');
 const path = require('path');
 const express = require('express');
 const ExcelJS = require('exceljs');
-const { addBusinessDays, format, parseISO } = require('date-fns');
 const { z } = require('zod');
 const { makeOrderNumber, nextLabNumbers } = require('./src/numbering');
 const { ensureBackupBeforeCommit } = require('./src/backup');
 const { importPackagesFromExcel } = require('./src/packages/importFromExcel');
 const { readPackages, writePackages } = require('./src/packages/store');
+const { writeOrderBlock } = require('./src/orderWriter');
+const { calculateTermin } = require('./src/termin');
 
 const configSchema = z
   .object({
     port: z.number().int().min(1).max(65535),
     mode: z.enum(['single', 'writer', 'client']),
+    writerBackend: z.enum(['exceljs', 'com']),
     excelPath: z.string().trim().min(1),
+    yearSheetName: z.string(),
     writerHost: z.string().trim(),
     writerToken: z.string(),
     backupEnabled: z.boolean(),
@@ -37,7 +40,9 @@ const configSchema = z
 const defaultConfig = {
   port: 3000,
   mode: 'single',
+  writerBackend: 'com',
   excelPath: './data/lab.xlsx',
+  yearSheetName: '',
   writerHost: 'http://localhost:3000',
   writerToken: 'dev-writer-token',
   backupEnabled: true,
@@ -90,8 +95,14 @@ function getConfig() {
   return runtimeConfig;
 }
 
+function getYearSheetName(config) {
+  const configured = (config.yearSheetName || '').trim();
+  return configured || String(new Date().getFullYear());
+}
+
 const level1Fields = [
   'excelPath',
+  'yearSheetName',
   'backupEnabled',
   'backupPolicy',
   'backupIntervalMinutes',
@@ -100,11 +111,12 @@ const level1Fields = [
   'uiShowPackagePreview',
   'uiDefaultEilig',
 ];
-const level2Fields = ['mode', 'writerHost', 'writerToken'];
+const level2Fields = ['mode', 'writerHost', 'writerToken', 'writerBackend'];
 const allEditableFields = [...level1Fields, ...level2Fields];
 
 const configUpdateSchema = z.object({
   excelPath: z.string().trim().min(1).optional(),
+  yearSheetName: z.string().optional(),
   backupEnabled: z.boolean().optional(),
   backupPolicy: z.enum(['daily', 'interval']).optional(),
   backupIntervalMinutes: z.number().int().positive().optional(),
@@ -113,6 +125,7 @@ const configUpdateSchema = z.object({
   uiShowPackagePreview: z.boolean().optional(),
   uiDefaultEilig: z.enum(['ja', 'nein']).optional(),
   mode: z.enum(['single', 'writer', 'client']).optional(),
+  writerBackend: z.enum(['exceljs', 'com']).optional(),
   writerHost: z.string().trim().optional(),
   writerToken: z.string().optional(),
 }).strict();
@@ -122,9 +135,16 @@ const sampleSchema = z
     probenbezeichnung: z.string().trim().min(1, 'Probenbezeichnung ist erforderlich'),
     matrixTyp: z.enum(['Boden', 'Wasser', 'Luft']),
     gewicht: z.number().positive().optional(),
+    gewichtEinheit: z.string().trim().optional(),
     volumen: z.number().positive().optional(),
     packageId: z.string().trim().optional(),
     parameterTextPreview: z.string().optional(),
+    tiefeVolumen: z.union([z.string(), z.number()]).optional(),
+    geruchAuffaelligkeit: z.string().trim().optional(),
+    bemerkung: z.string().trim().optional(),
+    materialGebinde: z.string().optional(),
+    material: z.string().optional(),
+    gebinde: z.string().optional(),
   })
   .superRefine((sample, ctx) => {
     if (sample.matrixTyp === 'Boden') {
@@ -167,8 +187,18 @@ const orderSchema = z
     kunde: z.string().trim().min(1, 'Kunde ist erforderlich'),
     projekt: z.string().trim().min(1, 'Projekt ist erforderlich'),
     projektnummer: z.string().trim().min(1, 'Projektnummer ist erforderlich'),
+    auftragsnotiz: z.string().optional(),
+    pbTyp: z.enum(['PB', 'AI', 'AKN']).optional(),
+    auftraggeberKurz: z.string().optional(),
+    ansprechpartner: z.string().optional(),
+    email: z.string().optional(),
+    projektname: z.string().optional(),
+    probenahmedatum: z.string().optional(),
+    erfasstKuerzel: z.string().optional(),
+    terminDatum: z.string().optional(),
     eilig: z.boolean(),
-    probeNochNichtDa: z.boolean(),
+    probeNochNichtDa: z.boolean().optional().default(false),
+    sampleNotArrived: z.boolean().optional().default(false),
     probenEingangDatum: z
       .string()
       .date('ProbenEingangDatum muss ein gueltiges Datum sein (YYYY-MM-DD)')
@@ -176,7 +206,9 @@ const orderSchema = z
     proben: z.array(sampleSchema).min(1, 'Mindestens eine Probe ist erforderlich'),
   })
   .superRefine((order, ctx) => {
-    if (!order.probeNochNichtDa && !order.probenEingangDatum) {
+    const sampleNotArrived = order.probeNochNichtDa || order.sampleNotArrived === true;
+
+    if (!sampleNotArrived && !order.probenEingangDatum) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         path: ['probenEingangDatum'],
@@ -184,7 +216,7 @@ const orderSchema = z
       });
     }
 
-    if (order.probeNochNichtDa && order.probenEingangDatum) {
+    if (sampleNotArrived && order.probenEingangDatum) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         path: ['probenEingangDatum'],
@@ -213,12 +245,8 @@ function buildOrderPreview(order) {
     }),
   };
 
-  let termin = null;
-  if (!order.probeNochNichtDa && order.probenEingangDatum) {
-    const tage = order.eilig ? 2 : 4;
-    const terminDatum = addBusinessDays(parseISO(order.probenEingangDatum), tage);
-    termin = format(terminDatum, 'yyyy-MM-dd');
-  }
+  const sampleNotArrived = order.probeNochNichtDa || order.sampleNotArrived === true;
+  const termin = sampleNotArrived ? null : calculateTermin(order.probenEingangDatum, order.eilig);
 
   const xy = 1;
   const lastLab = 26203;
@@ -374,9 +402,10 @@ app.get('/api/config/validate', async (req, res) => {
       }
     }
 
-    const currentYearSheet = workbook.getWorksheet(String(new Date().getFullYear()));
-    if (!currentYearSheet) {
-      warnings.push(`Jahresblatt ${new Date().getFullYear()} nicht gefunden`);
+    const yearSheetName = getYearSheetName(config);
+    const yearSheet = workbook.getWorksheet(yearSheetName);
+    if (!yearSheet) {
+      warnings.push(`Jahresblatt ${yearSheetName} nicht gefunden`);
     }
   } catch (error) {
     errors.push(`Excel-Datei kann nicht gelesen werden: ${error.message}`);
@@ -458,7 +487,7 @@ app.post('/api/order/draft', (req, res) => {
   });
 });
 
-app.post('/api/order/commit', (req, res) => {
+app.post('/api/order/commit', async (req, res) => {
   const config = getConfig();
   if (config.mode === 'client') {
     return res.status(403).json({
@@ -497,6 +526,22 @@ app.post('/api/order/commit', (req, res) => {
     rootDir: __dirname,
   });
   const preview = buildOrderPreview(order);
+
+  try {
+    await writeOrderBlock({
+      backend: config.writerBackend,
+      config,
+      rootDir: __dirname,
+      excelPath: config.excelPath,
+      order,
+      termin: preview.termin,
+    });
+  } catch (error) {
+    return res.status(400).json({
+      ok: false,
+      message: `Writer fehlgeschlagen (${config.writerBackend}): ${error.message}`,
+    });
+  }
 
   logCommit({
     timestamp: new Date().toISOString(),

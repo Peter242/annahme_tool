@@ -119,6 +119,11 @@
           </div>
 
           <div>
+            <label for="year-sheet-name">yearSheetName (leer = aktuelles Jahr)</label>
+            <input id="year-sheet-name" type="text" />
+          </div>
+
+          <div>
             <label for="backup-policy">backupPolicy</label>
             <select id="backup-policy">
               <option value="daily">daily</option>
@@ -193,6 +198,14 @@
           </div>
 
           <div>
+            <label for="writer-backend">writerBackend</label>
+            <select id="writer-backend">
+              <option value="com">com</option>
+              <option value="exceljs">exceljs</option>
+            </select>
+          </div>
+
+          <div>
             <label for="writer-token">writerToken</label>
             <input id="writer-token" type="password" autocomplete="off" />
           </div>
@@ -227,6 +240,7 @@
       const packagesPreview = document.getElementById('packages-preview');
 
       const excelPathInput = document.getElementById('excel-path');
+      const yearSheetNameInput = document.getElementById('year-sheet-name');
       const backupEnabledInput = document.getElementById('backup-enabled');
       const backupPolicyInput = document.getElementById('backup-policy');
       const backupIntervalInput = document.getElementById('backup-interval');
@@ -237,6 +251,7 @@
 
       const modeInput = document.getElementById('mode');
       const writerHostInput = document.getElementById('writer-host');
+      const writerBackendInput = document.getElementById('writer-backend');
       const writerTokenInput = document.getElementById('writer-token');
       const adminKeyInput = document.getElementById('admin-key');
 
@@ -271,6 +286,7 @@
         meta.textContent = `Mode: ${config.mode} | excelPath: ${config.excelPath}`;
 
         excelPathInput.value = config.excelPath || '';
+        yearSheetNameInput.value = config.yearSheetName || '';
         backupEnabledInput.checked = Boolean(config.backupEnabled);
         backupPolicyInput.value = config.backupPolicy || 'daily';
         backupIntervalInput.value = config.backupIntervalMinutes ?? 60;
@@ -281,6 +297,7 @@
 
         modeInput.value = config.mode || 'single';
         writerHostInput.value = config.writerHost || '';
+        writerBackendInput.value = config.writerBackend || 'com';
       }
 
       async function loadConfig() {
@@ -327,6 +344,7 @@
         try {
           await saveConfig({
             excelPath: excelPathInput.value.trim(),
+            yearSheetName: yearSheetNameInput.value.trim(),
             backupEnabled: backupEnabledInput.checked,
             backupPolicy: backupPolicyInput.value,
             backupIntervalMinutes: Number(backupIntervalInput.value),
@@ -346,6 +364,7 @@
             {
               mode: modeInput.value,
               writerHost: writerHostInput.value.trim(),
+              writerBackend: writerBackendInput.value,
               writerToken: writerTokenInput.value,
             },
             adminKeyInput.value,
