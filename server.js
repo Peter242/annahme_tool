@@ -8,6 +8,8 @@ const { ensureBackupBeforeCommit } = require('./src/backup');
 const { importPackagesFromExcel } = require('./src/packages/importFromExcel');
 const { readPackages, writePackages } = require('./src/packages/store');
 const { writeOrderBlock } = require('./src/orderWriter');
+const { writeOrderBlockWithCom } = require('./src/writers/comWriter');
+const { writeComTestCell } = require('./src/writers/comTestWriter');
 const { calculateTermin } = require('./src/termin');
 
 const configSchema = z
@@ -475,6 +477,41 @@ app.post('/api/writer/login', (req, res) => {
   return res.json({ ok: true });
 });
 
+app.post('/api/com-test', async (req, res) => {
+  const schema = z.object({
+    cellPath: z.string().trim().min(1),
+  });
+  const parsed = schema.safeParse(req.body);
+  if (!parsed.success) {
+    return res.status(400).json({
+      ok: false,
+      message: 'cellPath fehlt oder ist ungueltig',
+      errors: parsed.error.flatten(),
+    });
+  }
+
+  try {
+    const config = getConfig();
+    const result = await writeComTestCell({
+      rootDir: __dirname,
+      excelPath: config.excelPath,
+      cellPath: parsed.data.cellPath,
+    });
+
+    console.log(`[api/com-test] ok=true cellPath=${parsed.data.cellPath}`);
+    return res.json({
+      ok: true,
+      writtenValue: result.writtenValue,
+    });
+  } catch (error) {
+    console.error(`[api/com-test] ok=false cellPath=${parsed.data.cellPath} error=${error.message}`);
+    return res.status(400).json({
+      ok: false,
+      message: error.message,
+    });
+  }
+});
+
 app.post('/api/order/draft', (req, res) => {
   const order = parseOrderOrRespond(req, res);
   if (!order) {
@@ -527,25 +564,44 @@ app.post('/api/order/commit', async (req, res) => {
   });
   const preview = buildOrderPreview(order);
 
+  let writeResult = null;
+  let usedBackend = config.writerBackend;
   try {
-    await writeOrderBlock({
-      backend: config.writerBackend,
-      config,
-      rootDir: __dirname,
-      excelPath: config.excelPath,
-      order,
-      termin: preview.termin,
-    });
+    if (config.mode === 'single' && config.writerBackend === 'com') {
+      // Single mode writes locally and ignores any writerHost/writerToken forwarding logic.
+      console.log('[api/order/commit] single mode: direct local COM writer');
+      writeResult = await writeOrderBlockWithCom({
+        backend: 'com',
+        config,
+        rootDir: __dirname,
+        excelPath: config.excelPath,
+        order,
+        termin: preview.termin,
+      });
+      usedBackend = 'com';
+    } else {
+      writeResult = await writeOrderBlock({
+        backend: config.writerBackend,
+        config,
+        rootDir: __dirname,
+        excelPath: config.excelPath,
+        order,
+        termin: preview.termin,
+      });
+    }
   } catch (error) {
     return res.status(400).json({
       ok: false,
-      message: `Writer fehlgeschlagen (${config.writerBackend}): ${error.message}`,
+      message: `Writer fehlgeschlagen (${usedBackend}): ${error.message}`,
     });
   }
+
+  console.log(`[api/order/commit] writerBackend=${usedBackend} ok=true`);
 
   logCommit({
     timestamp: new Date().toISOString(),
     mode: config.mode,
+    writerBackend: usedBackend,
     kunde: order.kunde,
     projekt: order.projekt,
     projektnummer: order.projektnummer,
@@ -553,12 +609,15 @@ app.post('/api/order/commit', async (req, res) => {
     backup,
     orderNumberPreview: preview.orderNumberPreview,
     termin: preview.termin,
+    writerResult: writeResult,
   });
 
   return res.json({
     ...preview,
     operation: 'commit',
     backup,
+    writerBackend: usedBackend,
+    writerResult: writeResult,
   });
 });
 

@@ -94,6 +94,10 @@ Server laeuft auf `http://localhost:3000`.
 - `POST /api/writer/login`
   - Body: `{ "token": "..." }`
   - validiert gegen `writerToken` aus Config
+- `POST /api/com-test`
+  - Body: `{ "cellPath": "2026!Z1" }`
+  - schreibt via COM in die laufende Excel-Instanz den Wert `COM_OK_<timestamp>`
+  - Antwort: `{ "ok": true, "writtenValue": "COM_OK_<timestamp>" }`
 - `POST /api/order/draft`
   - validiert Auftrag und liefert Vorschau
 - `POST /api/order/commit`
