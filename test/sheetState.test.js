@@ -84,3 +84,17 @@ test('getSheetState counts suffix variants for lab and order numbers', () => {
     maxOrderSeqToday: 2,
   });
 });
+
+test('getSheetState ignores previous-day order numbers but parses suffixes for today', () => {
+  const workbook = new ExcelJS.Workbook();
+  const sheet = workbook.addWorksheet('2026');
+  const now = new Date('2026-02-14T10:00:00Z');
+  const todayPrefix = buildTodayPrefix(now);
+
+  sheet.getCell('A1').value = '130226805';
+  sheet.getCell('A2').value = `${todayPrefix}01-1`;
+  sheet.getCell('A3').value = `${todayPrefix}01-B`;
+
+  const state = getSheetState(sheet, now);
+  assert.equal(state.maxOrderSeqToday, 1);
+});

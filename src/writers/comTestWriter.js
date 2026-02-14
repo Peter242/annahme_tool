@@ -19,6 +19,7 @@ async function writeComTestCell(params) {
 
   const payload = {
     excelPath: absoluteExcelPath,
+    workbookFullName: absoluteExcelPath,
     cellPath,
   };
 
@@ -43,6 +44,13 @@ async function writeComTestCell(params) {
 
     const output = String(result.stdout || '').trim();
     const stderr = String(result.stderr || '').trim();
+    console.log(`[com-test:ps:exit] status=${String(result.status)} signal=${String(result.signal || '')}`);
+    if (output) {
+      console.log(`[com-test:ps:stdout]\n${output}`);
+    }
+    if (stderr) {
+      console.error(`[com-test:ps:stderr]\n${stderr}`);
+    }
     const lastLine = output.split(/\r?\n/).filter(Boolean).pop() || '{}';
 
     let parsed;
@@ -53,7 +61,12 @@ async function writeComTestCell(params) {
     }
 
     if (!parsed.ok || result.status !== 0) {
-      throw new Error(parsed.error || 'Unbekannter COM-Testfehler');
+      const message = parsed.error || stderr || `Unbekannter COM-Testfehler (exit=${String(result.status)})`;
+      throw new Error(message);
+    }
+
+    if (typeof parsed.saved !== 'boolean') {
+      parsed.saved = false;
     }
 
     return parsed;

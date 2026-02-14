@@ -2,13 +2,13 @@ const { writeOrderBlockWithExcelJs } = require('./writers/exceljsWriter');
 const { writeOrderBlockWithCom } = require('./writers/comWriter');
 
 async function writeOrderBlock(params) {
-  const backend = params.backend || 'exceljs';
+  const backend = String(params.backend || 'exceljs').toLowerCase();
 
   if (backend === 'com') {
     return writeOrderBlockWithCom(params);
   }
 
-  if (backend === 'exceljs') {
+  if (backend === 'exceljs' || backend === 'comexceljs') {
     return writeOrderBlockWithExcelJs(params);
   }
 

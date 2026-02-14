@@ -49,7 +49,6 @@ function rowHasContentInAToJ(sheet, rowNumber) {
 
 function getSheetState(sheet, now = new Date()) {
   const todayPrefix = buildTodayPrefix(now);
-  const orderRegex = new RegExp(`^${todayPrefix}(\\d{2})(?!\\d)`);
 
   let lastUsedRow = 0;
   let maxLabNumber = 0;
@@ -65,21 +64,19 @@ function getSheetState(sheet, now = new Date()) {
       continue;
     }
 
-    const isOrderHeader = /^\d{9}(?!\d)/.test(colA);
-
-    const orderMatch = colA.match(orderRegex);
-    if (orderMatch) {
-      const seq = Number.parseInt(orderMatch[1], 10);
-      if (Number.isFinite(seq) && seq > maxOrderSeqToday) {
-        maxOrderSeqToday = seq;
+    const orderCoreMatch = colA.match(/^(\d{6}8\d{2})/);
+    if (orderCoreMatch) {
+      const core = orderCoreMatch[1];
+      if (core.startsWith(todayPrefix)) {
+        const seq = Number.parseInt(core.slice(-2), 10);
+        if (Number.isFinite(seq) && seq > maxOrderSeqToday) {
+          maxOrderSeqToday = seq;
+        }
       }
-    }
-
-    if (isOrderHeader) {
       continue;
     }
 
-    const labMatch = colA.match(/^(\d{5,6})(?!\d)/);
+    const labMatch = colA.match(/^(\d+)/);
     if (!labMatch) {
       continue;
     }

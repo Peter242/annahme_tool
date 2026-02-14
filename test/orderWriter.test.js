@@ -12,3 +12,10 @@ test('writeOrderBlock rejects com backend on non-windows', async () => {
     /nur auf Windows/,
   );
 });
+
+test('writeOrderBlock accepts comExceljs alias for exceljs backend', async () => {
+  await assert.rejects(
+    writeOrderBlock({ backend: 'comExceljs', config: {}, rootDir: '.', excelPath: 'missing.xlsx', order: {} }),
+    /no such file|ENOENT|File not found/i,
+  );
+});

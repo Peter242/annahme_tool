@@ -97,16 +97,20 @@ Server laeuft auf `http://localhost:3000`.
 - `POST /api/com-test`
   - Body: `{ "cellPath": "2026!Z1" }`
   - schreibt via COM in die laufende Excel-Instanz den Wert `COM_OK_<timestamp>`
-  - Antwort: `{ "ok": true, "writtenValue": "COM_OK_<timestamp>" }`
+  - Antwort: `{ "ok": true, "writtenValue": "COM_OK_<timestamp>", "saved": true }`
 - `POST /api/order/draft`
   - validiert Auftrag und liefert Vorschau
 - `POST /api/order/commit`
   - mode-abhaengig (siehe oben)
-  - nutzt `writerBackend`:
+  - Writer-Auswahl:
+    - `mode=single` + Windows-Pfad (`C:\...`) => COM Writer als Standard
+    - `writerBackend: "comExceljs"` oder `writerBackend: "exceljs"` => ExcelJS erzwingen
+    - Linux/WSL ohne COM => ExcelJS Fallback
     - `com`: Windows COM Automation ueber `scripts/writer.ps1`
     - `exceljs`: direkter XLSX-Schreibpfad in Node
   - erstellt vor Commit rotierende Backups (nicht pro Auftrag)
   - fuehrt Cleanup alter Backups aus
+  - Antwort enthaelt u. a.: `{ ok, writer, saved, orderNo, sampleNos, ersteProbennr, letzteProbennr, endRowRange }`
 
 Antwort-Vorschau enthaelt u. a.:
 

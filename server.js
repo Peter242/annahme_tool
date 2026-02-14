@@ -8,7 +8,6 @@ const { ensureBackupBeforeCommit } = require('./src/backup');
 const { importPackagesFromExcel } = require('./src/packages/importFromExcel');
 const { readPackages, writePackages } = require('./src/packages/store');
 const { writeOrderBlock } = require('./src/orderWriter');
-const { writeOrderBlockWithCom } = require('./src/writers/comWriter');
 const { writeComTestCell } = require('./src/writers/comTestWriter');
 const { calculateTermin } = require('./src/termin');
 
@@ -16,7 +15,7 @@ const configSchema = z
   .object({
     port: z.number().int().min(1).max(65535),
     mode: z.enum(['single', 'writer', 'client']),
-    writerBackend: z.enum(['exceljs', 'com']),
+    writerBackend: z.enum(['exceljs', 'com', 'comExceljs']),
     excelPath: z.string().trim().min(1),
     yearSheetName: z.string(),
     writerHost: z.string().trim(),
@@ -93,6 +92,30 @@ function resolveExcelPath(excelPath) {
   return path.isAbsolute(excelPath) ? excelPath : path.join(__dirname, excelPath);
 }
 
+function isWindowsDrivePath(value) {
+  return typeof value === 'string' && /^[a-zA-Z]:[\\/]/.test(value.trim());
+}
+
+function resolveCommitWriterBackend(config) {
+  const configuredBackend = String(config.writerBackend || '').trim().toLowerCase();
+  if (configuredBackend === 'comexceljs' || configuredBackend === 'exceljs') {
+    return 'exceljs';
+  }
+
+  if (config.mode === 'single') {
+    if (process.platform === 'win32' && isWindowsDrivePath(config.excelPath)) {
+      return 'com';
+    }
+    return 'exceljs';
+  }
+
+  if (configuredBackend === 'com') {
+    return 'com';
+  }
+
+  return 'exceljs';
+}
+
 function getConfig() {
   return runtimeConfig;
 }
@@ -100,6 +123,118 @@ function getConfig() {
 function getYearSheetName(config) {
   const configured = (config.yearSheetName || '').trim();
   return configured || String(new Date().getFullYear());
+}
+
+function normalizePackageLookupToken(value) {
+  return String(value || '')
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, ' ');
+}
+
+async function applyPaketKeyTextsToOrder(order, absoluteExcelPath) {
+  const probes = Array.isArray(order.proben) ? order.proben : [];
+  const probesWithPaketKey = probes.filter((probe) => String(probe?.paketKey || '').trim() !== '');
+  if (probesWithPaketKey.length === 0) {
+    return { order, warnings: [] };
+  }
+
+  const warnings = [];
+  let packages = [];
+  try {
+    packages = await importPackagesFromExcel(absoluteExcelPath, 'Vorlagen');
+  } catch (error) {
+    for (const probe of probesWithPaketKey) {
+      const paketKey = String(probe.paketKey || '').trim();
+      probe.parameterTextPreview = `UNBEKANNTES PAKET: ${paketKey}`;
+      warnings.push(`Paket ${paketKey} konnte nicht aus Vorlagen geladen werden (${error.message})`);
+    }
+    return { order, warnings };
+  }
+
+  const lookup = new Map();
+  for (const pkg of packages) {
+    const candidates = [pkg.code, pkg.name, pkg.id, `${pkg.name}/${pkg.code}`, `${pkg.code}/${pkg.name}`];
+    for (const candidate of candidates) {
+      const key = normalizePackageLookupToken(candidate);
+      if (key && !lookup.has(key)) {
+        lookup.set(key, pkg);
+      }
+    }
+  }
+
+  for (const probe of probesWithPaketKey) {
+    const paketKey = String(probe.paketKey || '').trim();
+    const found = lookup.get(normalizePackageLookupToken(paketKey));
+    if (found && String(found.text || '').trim() !== '') {
+      probe.parameterTextPreview = String(found.text);
+    } else {
+      probe.parameterTextPreview = `UNBEKANNTES PAKET: ${paketKey}`;
+      warnings.push(`Paket nicht gefunden: ${paketKey}`);
+    }
+  }
+
+  return { order, warnings };
+}
+
+function buildOrderCommitExample() {
+  return {
+    kunde: 'Musterkunde GmbH',
+    projekt: 'Projekt Muster',
+    projektname: 'Projekt Muster Name',
+    projektnummer: 'P-2026-001',
+    ansprechpartner: 'Max Mustermann',
+    email: 'max@example.com',
+    kuerzel: 'MM',
+    eilig: false,
+    probenEingangDatum: '2026-02-14',
+    proben: [
+      {
+        probenbezeichnung: 'Probe 1',
+        matrixTyp: 'Boden',
+        gewicht: 1.2,
+        paketKey: 'DepV/DepV DK0',
+      },
+    ],
+  };
+}
+
+function buildOrderSchemaInfo() {
+  return {
+    matrixTypEnum: ['Boden', 'Wasser', 'Luft'],
+    fields: {
+      kunde: 'string (required)',
+      projekt: 'string (required)',
+      projektnummer: 'string (required)',
+      projektname: 'string (optional)',
+      ansprechpartner: 'string (optional)',
+      email: 'string (optional)',
+      kuerzel: 'string (optional)',
+      eilig: 'boolean (required)',
+      probenEingangDatum: 'string YYYY-MM-DD (required unless probeNochNichtDa/sampleNotArrived=true)',
+      probeNochNichtDa: 'boolean (optional)',
+      sampleNotArrived: 'boolean (optional)',
+      proben: 'array(min 1) of sample objects',
+    },
+    sampleFields: {
+      probenbezeichnung: 'string (required)',
+      matrixTyp: 'enum: Boden | Wasser | Luft (required)',
+      gewicht: 'number > 0 (optional)',
+      gewichtEinheit: 'string (optional)',
+      volumen: 'number > 0 (optional, legacy)',
+      tiefeVolumen: 'string|number (optional, legacy)',
+      tiefeOderVolumen: 'string (optional)',
+      geruch: 'string (optional)',
+      packageId: 'string (optional)',
+      paketKey: 'string (optional, lookup in sheet Vorlagen)',
+      parameterTextPreview: 'string (optional)',
+      geruchAuffaelligkeit: 'string (optional)',
+      bemerkung: 'string (optional)',
+      materialGebinde: 'string (optional)',
+      material: 'string (optional)',
+      gebinde: 'string (optional)',
+    },
+  };
 }
 
 const level1Fields = [
@@ -127,7 +262,7 @@ const configUpdateSchema = z.object({
   uiShowPackagePreview: z.boolean().optional(),
   uiDefaultEilig: z.enum(['ja', 'nein']).optional(),
   mode: z.enum(['single', 'writer', 'client']).optional(),
-  writerBackend: z.enum(['exceljs', 'com']).optional(),
+  writerBackend: z.enum(['exceljs', 'com', 'comExceljs']).optional(),
   writerHost: z.string().trim().optional(),
   writerToken: z.string().optional(),
 }).strict();
@@ -140,48 +275,16 @@ const sampleSchema = z
     gewichtEinheit: z.string().trim().optional(),
     volumen: z.number().positive().optional(),
     packageId: z.string().trim().optional(),
+    paketKey: z.string().trim().optional(),
     parameterTextPreview: z.string().optional(),
     tiefeVolumen: z.union([z.string(), z.number()]).optional(),
+    tiefeOderVolumen: z.string().trim().optional(),
+    geruch: z.string().trim().optional(),
     geruchAuffaelligkeit: z.string().trim().optional(),
     bemerkung: z.string().trim().optional(),
     materialGebinde: z.string().optional(),
     material: z.string().optional(),
     gebinde: z.string().optional(),
-  })
-  .superRefine((sample, ctx) => {
-    if (sample.matrixTyp === 'Boden') {
-      if (typeof sample.gewicht !== 'number') {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          path: ['gewicht'],
-          message: 'Gewicht ist fuer Matrix Typ Boden erforderlich',
-        });
-      }
-      if (sample.volumen !== undefined) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          path: ['volumen'],
-          message: 'Volumen darf bei Boden nicht gesetzt sein',
-        });
-      }
-    }
-
-    if (sample.matrixTyp === 'Wasser' || sample.matrixTyp === 'Luft') {
-      if (typeof sample.volumen !== 'number') {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          path: ['volumen'],
-          message: `Volumen ist fuer Matrix Typ ${sample.matrixTyp} erforderlich`,
-        });
-      }
-      if (sample.gewicht !== undefined) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          path: ['gewicht'],
-          message: `Gewicht darf bei ${sample.matrixTyp} nicht gesetzt sein`,
-        });
-      }
-    }
   });
 
 const orderSchema = z
@@ -197,6 +300,7 @@ const orderSchema = z
     projektname: z.string().optional(),
     probenahmedatum: z.string().optional(),
     erfasstKuerzel: z.string().optional(),
+    kuerzel: z.string().optional(),
     terminDatum: z.string().optional(),
     eilig: z.boolean(),
     probeNochNichtDa: z.boolean().optional().default(false),
@@ -238,7 +342,7 @@ function buildOrderPreview(order) {
     ...order,
     proben: order.proben.map((probe) => {
       const packageTemplate = probe.packageId ? packageById.get(probe.packageId) : null;
-      const renderedTextD = packageTemplate ? packageTemplate.text : '';
+      const renderedTextD = packageTemplate ? packageTemplate.text : (probe.parameterTextPreview || '');
       return {
         ...probe,
         parameterTextPreview: renderedTextD,
@@ -271,6 +375,7 @@ function parseOrderOrRespond(req, res) {
       ok: false,
       message: 'Validierung fehlgeschlagen',
       errors: parsed.error.flatten(),
+      expectedExample: buildOrderCommitExample(),
     });
     return null;
   }
@@ -502,14 +607,40 @@ app.post('/api/com-test', async (req, res) => {
     return res.json({
       ok: true,
       writtenValue: result.writtenValue,
+      saved: result.saved === true,
     });
   } catch (error) {
     console.error(`[api/com-test] ok=false cellPath=${parsed.data.cellPath} error=${error.message}`);
     return res.status(400).json({
       ok: false,
       message: error.message,
+      saved: false,
     });
   }
+});
+
+app.get('/api/order/schema', (req, res) => {
+  return res.json({
+    ok: true,
+    commitExample: buildOrderCommitExample(),
+    schema: buildOrderSchemaInfo(),
+    uiModel: {
+      defaults: {
+        eilig: false,
+        matrixTyp: 'Boden',
+        projektname: '',
+        ansprechpartner: '',
+        email: '',
+        kuerzel: '',
+      },
+      sampleDefaults: {
+        gewicht: '',
+        geruch: '',
+        bemerkung: '',
+        tiefeOderVolumen: '',
+      },
+    },
+  });
 });
 
 app.post('/api/order/draft', (req, res) => {
@@ -557,38 +688,30 @@ app.post('/api/order/commit', async (req, res) => {
     return;
   }
 
+  const commitWarnings = [];
+  const absoluteExcelPath = resolveExcelPath(config.excelPath);
+  const enrichedOrderResult = await applyPaketKeyTextsToOrder(order, absoluteExcelPath);
+  const orderForWrite = enrichedOrderResult.order;
+  commitWarnings.push(...enrichedOrderResult.warnings);
+
   const backup = ensureBackupBeforeCommit({
     config,
     excelPath: config.excelPath,
     rootDir: __dirname,
   });
-  const preview = buildOrderPreview(order);
+  const preview = buildOrderPreview(orderForWrite);
 
   let writeResult = null;
-  let usedBackend = config.writerBackend;
+  const usedBackend = resolveCommitWriterBackend(config);
   try {
-    if (config.mode === 'single' && config.writerBackend === 'com') {
-      // Single mode writes locally and ignores any writerHost/writerToken forwarding logic.
-      console.log('[api/order/commit] single mode: direct local COM writer');
-      writeResult = await writeOrderBlockWithCom({
-        backend: 'com',
-        config,
-        rootDir: __dirname,
-        excelPath: config.excelPath,
-        order,
-        termin: preview.termin,
-      });
-      usedBackend = 'com';
-    } else {
-      writeResult = await writeOrderBlock({
-        backend: config.writerBackend,
-        config,
-        rootDir: __dirname,
-        excelPath: config.excelPath,
-        order,
-        termin: preview.termin,
-      });
-    }
+    writeResult = await writeOrderBlock({
+      backend: usedBackend,
+      config,
+      rootDir: __dirname,
+      excelPath: config.excelPath,
+      order: orderForWrite,
+      termin: preview.termin,
+    });
   } catch (error) {
     return res.status(400).json({
       ok: false,
@@ -596,23 +719,46 @@ app.post('/api/order/commit', async (req, res) => {
     });
   }
 
-  console.log(`[api/order/commit] writerBackend=${usedBackend} ok=true`);
+  const sampleNos = Array.isArray(writeResult.sampleNos)
+    ? writeResult.sampleNos
+    : (Number.isInteger(writeResult.startLabNo)
+      ? Array.from({ length: orderForWrite.proben.length }, (_unused, idx) => writeResult.startLabNo + idx)
+      : []);
+  const orderNo = writeResult.orderNo || preview.orderNumberPreview || null;
+  const ersteProbennr = sampleNos.length > 0 ? sampleNos[0] : null;
+  const letzteProbennr = sampleNos.length > 0 ? sampleNos[sampleNos.length - 1] : null;
+  const fallbackEndRow = Number.isInteger(writeResult.appendRow) ? writeResult.appendRow + orderForWrite.proben.length : null;
+  const endRowRange = writeResult.endRowRange || (fallbackEndRow ? `A${writeResult.appendRow}:J${fallbackEndRow}` : null);
+  const saved = writeResult.saved !== false;
+
+  console.log(`[commit] writer=${usedBackend} order=${orderNo || 'n/a'} rows=${endRowRange || 'n/a'}`);
 
   logCommit({
     timestamp: new Date().toISOString(),
     mode: config.mode,
     writerBackend: usedBackend,
-    kunde: order.kunde,
-    projekt: order.projekt,
-    projektnummer: order.projektnummer,
-    probeCount: order.proben.length,
+    kunde: orderForWrite.kunde,
+    projekt: orderForWrite.projekt,
+    projektnummer: orderForWrite.projektnummer,
+    probeCount: orderForWrite.proben.length,
     backup,
+    warnings: commitWarnings,
     orderNumberPreview: preview.orderNumberPreview,
     termin: preview.termin,
     writerResult: writeResult,
   });
 
   return res.json({
+    ok: true,
+    writer: usedBackend,
+    saved,
+    orderNo,
+    auftragsnummer: orderNo,
+    sampleNos,
+    ersteProbennr,
+    letzteProbennr,
+    endRowRange,
+    warnings: commitWarnings,
     ...preview,
     operation: 'commit',
     backup,

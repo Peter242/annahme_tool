@@ -24,6 +24,7 @@ async function writeOrderBlockWithCom(params) {
 
   const payload = {
     excelPath: absoluteExcelPath,
+    workbookFullName: absoluteExcelPath,
     yearSheetName: resolveYearSheetName(config, now),
     now: now.toISOString(),
     termin: termin || null,
@@ -51,6 +52,13 @@ async function writeOrderBlockWithCom(params) {
 
     const output = String(result.stdout || '').trim();
     const stderr = String(result.stderr || '').trim();
+    console.log(`[commit:ps:exit] status=${String(result.status)} signal=${String(result.signal || '')}`);
+    if (output) {
+      console.log(`[commit:ps:stdout]\n${output}`);
+    }
+    if (stderr) {
+      console.error(`[commit:ps:stderr]\n${stderr}`);
+    }
     const lastLine = output.split(/\r?\n/).filter(Boolean).pop() || '{}';
     let parsed = null;
 
@@ -61,7 +69,12 @@ async function writeOrderBlockWithCom(params) {
     }
 
     if (!parsed.ok || result.status !== 0) {
-      throw new Error(parsed.error || 'Unbekannter COM-Fehler');
+      const message = parsed.error || stderr || `Unbekannter COM-Fehler (exit=${String(result.status)})`;
+      throw new Error(message);
+    }
+
+    if (typeof parsed.saved !== 'boolean') {
+      parsed.saved = false;
     }
 
     return parsed;
