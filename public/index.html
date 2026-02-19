@@ -3,360 +3,575 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Annahme Maske</title>
-    <style>
-      :root {
-        font-family: Arial, sans-serif;
-      }
-
-      body {
-        margin: 0;
-        background: #f4f6f8;
-        color: #222;
-      }
-
-      main {
-        width: min(1400px, 90vw);
-        margin: 2rem auto;
-        padding: 1.5rem;
-        background: #fff;
-        border-radius: 10px;
-        box-shadow: 0 4px 18px rgba(0, 0, 0, 0.08);
-      }
-
-      h1,
-      h2 {
-        margin-top: 0;
-      }
-
-      .env {
-        font-size: 0.85rem;
-        color: #4f5b67;
-        margin-bottom: 1rem;
-      }
-
-      .top-links {
-        display: flex;
-        justify-content: flex-end;
-        margin-bottom: 1rem;
-      }
-
-      .top-links a {
-        color: #145ea8;
-        text-decoration: none;
-      }
-
-      .grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-        gap: 1rem;
-      }
-
-      label {
-        display: block;
-        font-weight: 600;
-        margin-bottom: 0.4rem;
-      }
-
-      input,
-      select,
-      textarea,
-      button {
-        width: 100%;
-        padding: 0.55rem;
-        border: 1px solid #ccd2d8;
-        border-radius: 6px;
-        box-sizing: border-box;
-        font-size: 1rem;
-      }
-
-      input[type='checkbox'],
-      input[type='radio'] {
-        width: auto;
-        padding: 0;
-      }
-
-      .radio-group {
-        display: flex;
-        gap: 1rem;
-        align-items: center;
-        height: 100%;
-      }
-
-      .radio-group label {
-        margin: 0;
-        font-weight: 500;
-      }
-
-      .probe-table-wrap {
-        overflow-x: auto;
-        max-height: 55vh;
-        overflow-y: auto;
-        border: 1px solid #e0e4e8;
-        border-radius: 8px;
-        background: #fafbfc;
-      }
-
-      .probe-table {
-        width: 100%;
-        border-collapse: collapse;
-        min-width: 760px;
-      }
-
-      .probe-table th,
-      .probe-table td {
-        border-bottom: 1px solid #e0e4e8;
-        padding: 0.55rem;
-        vertical-align: middle;
-      }
-
-      .probe-table tr:last-child td {
-        border-bottom: none;
-      }
-
-      .probe-table th {
-        background: #f0f4f8;
-        text-align: left;
-      }
-
-      .probe-index {
-        text-align: center;
-        width: 48px;
-      }
-
-      .probe-actions-cell {
-        width: 150px;
-      }
-
-      .remark-cell {
-        min-width: 230px;
-      }
-
-      .remark-grid {
-        display: grid;
-        grid-template-columns: 1fr;
-        gap: 0.35rem;
-      }
-
-      .remark-grid input {
-        padding: 0.42rem;
-        font-size: 0.92rem;
-      }
-
-      .probe-actions-inline {
-        display: flex;
-        gap: 0.4rem;
-      }
-
-      .probe-actions-inline button {
-        width: auto;
-        min-width: 64px;
-        padding: 0.35rem 0.5rem;
-      }
-
-      .actions {
-        display: flex;
-        gap: 0.8rem;
-        margin-top: 1rem;
-        flex-wrap: wrap;
-      }
-
-      .bottom-actions {
-        position: sticky;
-        bottom: 0;
-        background: #fff;
-        padding-top: 0.7rem;
-        border-top: 1px solid #e4e8ed;
-        z-index: 2;
-      }
-
-      .bulk-import {
-        margin-top: 1rem;
-      }
-
-      button {
-        cursor: pointer;
-      }
-
-      #result {
-        margin-top: 1.5rem;
-        white-space: pre-wrap;
-        background: #0c1117;
-        color: #d0e2ff;
-        padding: 1rem;
-        border-radius: 8px;
-        min-height: 80px;
-        overflow-x: auto;
-      }
-
-      .hidden {
-        display: none;
-      }
-    </style>
+    <title>CUA Annahme</title>
+    <link rel="stylesheet" href="/styles.css" />
   </head>
   <body>
-    <main>
-      <div class="top-links">
-        <a href="/settings.html">Settings</a>
+    <header class="topbar app-topbar">
+      <div class="brand app-brand">
+        <img src="/assets/cua-logo.png" alt="CUA Logo" />
       </div>
-      <h1>Annahme</h1>
-      <div class="env" id="env-info">Mode: - | excelPath: -</div>
-      <form id="order-form">
-        <div class="grid">
-          <div>
-            <label for="kunde">Kunde</label>
-            <input id="kunde" name="kunde" required />
-          </div>
+      <h1 class="app-brand-title">CUA Annahme</h1>
+      <div class="topbar-actions">
+        <button type="button" id="theme-toggle" class="secondary theme-toggle topbar-icon-btn" title="Theme wechseln" aria-label="Theme wechseln">◐</button>
+        <a class="topbar-icon-btn secondary" href="/settings.html" title="Settings" aria-label="Settings">⚙</a>
+      </div>
+    </header>
 
-          <div>
-            <label for="projekt">Projekt</label>
-            <input id="projekt" name="projekt" required />
-          </div>
-
-          <div>
-            <label for="projektnummer">Projektnummer</label>
-            <input id="projektnummer" name="projektnummer" required />
-          </div>
-
-          <div>
-            <label for="projektname">Projektname</label>
-            <input id="projektname" name="projektname" />
-          </div>
-
-          <div>
-            <label for="ansprechpartner">Ansprechpartner</label>
-            <input id="ansprechpartner" name="ansprechpartner" />
-          </div>
-
-          <div>
-            <label for="email">Email</label>
-            <input id="email" name="email" type="email" />
-          </div>
-
-          <div>
-            <label for="erfasstKuerzel">Erfasst (Kuerzel)</label>
-            <input id="erfasstKuerzel" name="erfasstKuerzel" />
-          </div>
-
-          <div>
-            <label for="probenEingangDatum">ProbenEingangDatum</label>
-            <input id="probenEingangDatum" name="probenEingangDatum" type="date" required />
-          </div>
-
-          <div>
-            <label>Eilig</label>
-            <div class="radio-group">
-              <label><input type="radio" name="eilig" value="ja" checked /> Ja</label>
-              <label><input type="radio" name="eilig" value="nein" /> Nein</label>
+    <main class="app-main">
+      <form id="order-form" class="order-layout">
+        <section class="head-section">
+          <div class="head-header-row">
+            <h2 class="section-title">Kopf</h2>
+            <div class="head-action-row">
+              <button type="button" id="new-order-btn" class="secondary head-action-btn" title="Neuer Auftrag" aria-label="Neuer Auftrag">Neu</button>
+              <button type="button" id="new-order-same-project-btn" class="secondary head-action-btn" title="Neuer Auftrag gleiches Projekt" aria-label="Neuer Auftrag gleiches Projekt">Neu gleiches Projekt</button>
+              <button type="button" id="open-customers-modal" class="secondary head-action-btn" title="Kunden" aria-label="Kunden">Kunden</button>
+              <button type="button" id="add-probe" class="secondary head-action-btn" title="Probe hinzufügen" aria-label="Probe hinzufügen">Probe +</button>
+              <button type="button" id="open-bulk-probe-modal" class="secondary head-action-btn" title="Mehrere Proben einfügen" aria-label="Mehrere Proben einfügen">Mehrere Proben</button>
+              <button type="submit" form="order-form" id="draft-btn" class="secondary head-action-btn" title="Draft senden" aria-label="Draft senden">Draft senden</button>
+              <button type="button" id="commit-btn" class="primary head-action-btn hidden" title="Commit senden" aria-label="Commit senden">Commit senden</button>
+              <button type="button" id="retry-commit-btn" class="secondary head-action-btn hidden" title="Erneut versuchen" aria-label="Erneut versuchen">Erneut versuchen</button>
             </div>
           </div>
-
-          <div>
-            <label for="probeNochNichtDa">
+          <div id="commit-feedback" class="feedback" role="status" aria-live="polite"></div>
+          <details id="error-panel" class="error-panel hidden">
+            <summary>Details</summary>
+            <pre id="error-details"></pre>
+          </details>
+          <div class="head-grid">
+            <div class="field-kunde">
+              <input id="kunde" name="kunde" list="kunden-options" placeholder="Kunde" />
+              <datalist id="kunden-options"></datalist>
+            </div>
+            <div class="field-ansprechpartner">
+              <input id="ansprechpartner" name="ansprechpartner" placeholder="Ansprechpartner" />
+            </div>
+            <div class="field-projektnummer">
+              <input id="projektnummer" name="projektnummer" placeholder="Projektnummer" />
+            </div>
+            <div class="field-projekt">
+              <input id="projektName" name="projektName" placeholder="Projekt" />
+            </div>
+            <div class="field-email">
+              <input id="email" name="email" type="email" placeholder="Email" />
+            </div>
+            <div class="field-kuerzel">
+              <input id="erfasstKuerzel" name="erfasstKuerzel" maxlength="8" class="head-input-kuerzel hidden" readonly />
+              <button type="button" id="open-kuerzel-modal" class="secondary head-field-btn">Kürzel</button>
+            </div>
+            <div class="field-probenahmedatum">
+              <input id="probenahmedatum" name="probenahmedatum" type="date" class="head-input-date" placeholder="Probenahmedatum" aria-label="Probenahmedatum" />
+            </div>
+            <div class="head-toggle-wrap field-eilig">
+              <button type="button" id="eilig-toggle" class="switch-toggle" role="switch" aria-checked="false" data-value="nein">
+                <span class="switch-toggle-label">Eilig</span>
+                <span class="switch-toggle-value">Aus</span>
+              </button>
+              <input type="hidden" id="eilig-value" name="eilig" value="nein" />
+            </div>
+            <div class="head-toggle-wrap field-transport">
+              <button type="button" id="probentransport-toggle" class="switch-toggle switch-toggle-transport" role="switch" aria-checked="false" data-value="CUA">
+                <span class="switch-toggle-label">Transport</span>
+                <span class="switch-toggle-value">CUA</span>
+              </button>
+              <input type="hidden" id="probentransport-value" name="probentransport" value="CUA" />
+            </div>
+          </div>
+          <div class="head-meta-row">
+            <div class="head-inline-actions head-inline-actions-helper">
+              <button type="button" id="open-address-modal" class="secondary">Anschrift</button>
+              <span id="adresse-preview" class="mini-hint">Keine Anschrift</span>
+            </div>
+            <button type="button" id="open-kopfbemerkung-modal" class="secondary head-note-btn" title="Keine Kopfbemerkung">
+              <span id="kopf-bemerkung-button-label">Kopfbemerkung</span>
+              <span id="kopf-bemerkung-indicator" class="note-indicator hidden" aria-hidden="true"></span>
+            </button>
+            <label for="probeNochNichtDa" class="inline-checkbox compact-inline-checkbox">
               <input id="probeNochNichtDa" name="probeNochNichtDa" type="checkbox" />
               Probe noch nicht da
             </label>
+            <input id="adresseBlock" name="adresseBlock" type="hidden" />
+            <input id="probenEingangDatum" name="probenEingangDatum" type="date" class="head-input-date hidden" />
+            <textarea id="kopfBemerkung" name="kopfBemerkung" class="hidden"></textarea>
           </div>
-        </div>
+        </section>
 
-        <h2>Probenliste</h2>
-        <div class="bulk-import">
-          <label for="bulk-probenbezeichnungen">Probenbezeichnungen (mehrzeilig)</label>
-          <textarea id="bulk-probenbezeichnungen" rows="4"></textarea>
-          <div class="actions">
-            <button type="button" id="bulk-add-probes">In Probenliste uebernehmen</button>
+        <section class="sample-section">
+          <h2 class="section-title">Probenliste</h2>
+          <div class="same-set-row">
+            <label for="same-containers-for-all" class="inline-checkbox">
+              <input id="same-containers-for-all" name="sameContainersForAll" type="checkbox" />
+              Gebinde gelten für gesamten Auftrag
+            </label>
+            <button type="button" id="open-header-gebinde-modal" class="secondary hidden">Gebinde Auftrag...</button>
+            <span id="header-gebinde-summary" class="gebinde-summary">-</span>
           </div>
-        </div>
-        <div class="probe-table-wrap">
-          <table class="probe-table">
-            <thead>
-              <tr>
-                <th class="probe-index">#</th>
-                <th>Probenbezeichnung</th>
-                <th>Matrix</th>
-                <th>Parameter Paket</th>
-                <th>Tiefe/Volumen</th>
-                <th>Gewicht</th>
-                <th>Bemerkung/Geruch</th>
-                <th class="probe-actions-cell">Actions</th>
-              </tr>
-            </thead>
-            <tbody id="proben-container"></tbody>
-          </table>
-        </div>
 
-        <div class="actions bottom-actions">
-          <button type="button" id="add-probe">Probe hinzufuegen</button>
-          <button type="submit" id="draft-btn">Draft senden</button>
-          <button type="button" id="commit-btn" class="hidden">Commit senden</button>
-        </div>
+          <div class="probes-table-wrap">
+            <table class="probes-table">
+              <thead>
+                <tr>
+                  <th>Probenbezeichnung</th>
+                  <th>Material</th>
+                  <th>Tiefe/Volumen</th>
+                  <th>Paket</th>
+                  <th>Gebinde</th>
+                  <th>Gewicht (kg)</th>
+                  <th>Geruch</th>
+                  <th>Bemerkung</th>
+                  <th>Aktionen</th>
+                </tr>
+              </thead>
+              <tbody id="proben-container"></tbody>
+            </table>
+          </div>
+        </section>
       </form>
-
-      <h2>Antwort</h2>
-      <pre id="result"></pre>
     </main>
 
     <template id="probe-template">
       <tr class="probe-row">
-        <td class="probe-index" data-index>1</td>
         <td>
-          <input name="probenbezeichnung" required />
+          <input name="probenbezeichnung" />
+          <input name="probenbezeichnungFull" type="hidden" />
         </td>
         <td>
-          <select name="matrixTyp">
-            <option value="Boden">Boden</option>
-            <option value="Wasser">Wasser</option>
-            <option value="Luft">Luft</option>
-          </select>
-        </td>
-        <td>
-          <select name="packageId">
-            <option value="">Bitte waehlen</option>
-          </select>
-          <input name="parameterTextPreview" type="hidden" />
+          <input name="material" placeholder="Boden, Wasser, Feststoff, Sand ..." />
         </td>
         <td>
           <input name="tiefeVolumen" type="text" />
         </td>
         <td>
+          <select name="packageId">
+            <option value="">Bitte wählen</option>
+          </select>
+          <input name="parameterTextPreview" type="hidden" />
+        </td>
+        <td>
+          <button type="button" data-action="gebinde" class="secondary icon-btn" title="Gebinde auswählen" aria-label="Gebinde auswählen">◐</button>
+          <span class="gebinde-summary" data-gebinde-summary>-</span>
+          <input name="containersJson" type="hidden" />
+        </td>
+        <td>
           <input name="gewicht" type="number" min="0" step="any" />
-          <input name="gewichtEinheit" type="text" placeholder="Einheit" />
         </td>
-        <td class="remark-cell">
-          <div class="remark-grid">
-            <input name="geruchAuffaelligkeit" type="text" placeholder="Geruch/Auffaelligkeit" />
-            <input name="bemerkung" type="text" placeholder="Bemerkung" />
-          </div>
+        <td>
+          <button type="button" data-action="geruch" class="secondary icon-btn" title="Geruch wählen" aria-label="Geruch wählen">◐</button>
+          <span class="gebinde-summary" data-geruch-summary>-</span>
+          <input name="geruchOption" type="hidden" />
+          <input name="geruchSonstiges" type="hidden" />
         </td>
-        <td class="probe-actions-cell">
+        <td>
+          <input name="bemerkung" type="text" />
+        </td>
+        <td>
           <div class="probe-actions-inline">
-            <button type="button" data-action="duplicate">Kopie</button>
-            <button type="button" data-action="delete">Loeschen</button>
+            <button type="button" data-action="duplicate" class="secondary icon-btn" title="Duplizieren" aria-label="Duplizieren">◐</button>
+            <button type="button" data-action="delete" class="secondary icon-btn" title="Löschen" aria-label="Löschen">◐</button>
           </div>
         </td>
       </tr>
     </template>
 
+    <div id="bulk-probe-modal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="bulk-probe-modal-title">
+      <div class="modal-card">
+        <h3 id="bulk-probe-modal-title">Probenliste einfügen</h3>
+        <p class="meta" style="margin: 0 0 0.5rem;">Eine Probenbezeichnung pro Zeile. Leere Zeilen ignorieren.</p>
+        <textarea id="bulk-probe-modal-text" rows="12"></textarea>
+        <div class="check-row" style="margin-top:0.5rem;">
+          <input id="bulk-copy-from-first" type="checkbox" checked />
+          <span>Parameter und Gebinde von erster Probe kopieren</span>
+        </div>
+        <fieldset id="bulk-probe-mode-wrap" style="margin-top: 0.7rem;">
+          <legend>Vorhandene Proben</legend>
+          <div class="radio-group">
+            <label><input type="radio" name="bulk-probe-mode" value="append" checked /> Anhängen</label>
+            <label><input type="radio" name="bulk-probe-mode" value="replace" /> Ersetzen</label>
+          </div>
+        </fieldset>
+        <div class="modal-actions">
+          <button type="button" id="bulk-probe-modal-cancel" class="secondary">Abbrechen</button>
+          <button type="button" id="bulk-probe-modal-apply" class="primary">Übernehmen</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="gebinde-modal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="gebinde-modal-title">
+      <div class="modal-card">
+        <h3 id="gebinde-modal-title">Gebinde auswählen</h3>
+        <div class="modal-tabs" role="tablist" aria-label="Gebinde Typ">
+          <button type="button" class="secondary" data-tab="plastic">Kunststoff</button>
+          <button type="button" class="secondary" data-tab="glass">Glas</button>
+        </div>
+        <div class="grid" style="grid-template-columns: 1fr; gap: 0.45rem;">
+          <div>
+            <label for="gebinde-preview">Vorschau</label>
+            <textarea id="gebinde-preview" rows="2" readonly></textarea>
+          </div>
+        </div>
+        <div id="gebinde-buttons-wrap" class="quick-buttons-grid"></div>
+        <div class="actions" style="margin-top: 0.6rem;">
+          <button type="button" id="gebinde-undo" class="secondary">Undo</button>
+          <button type="button" id="gebinde-reset" class="secondary">Reset</button>
+        </div>
+        <div class="modal-actions">
+          <button type="button" id="gebinde-modal-cancel" class="secondary">Abbrechen</button>
+          <button type="button" id="gebinde-modal-apply" class="primary">Übernehmen</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="geruch-modal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="geruch-modal-title">
+      <div class="modal-card modal-card-small">
+        <h3 id="geruch-modal-title">Geruch wählen</h3>
+        <div class="grid" style="grid-template-columns: 1fr; gap: 0.45rem;">
+          <div>
+            <label for="geruch-option">Option</label>
+            <select id="geruch-option">
+              <option value="unauffaellig">unauffällig</option>
+              <option value="muffig">muffig</option>
+              <option value="mineralisch">mineralisch</option>
+              <option value="loesungsmittelartig">lösungsmittelartig</option>
+              <option value="faulig">faulig</option>
+              <option value="sonstiges">sonstiges</option>
+            </select>
+          </div>
+          <div id="geruch-sonstiges-wrap" class="hidden">
+            <label for="geruch-sonstiges">Sonstiges</label>
+            <input id="geruch-sonstiges" type="text" />
+          </div>
+        </div>
+        <div class="modal-actions">
+          <button type="button" id="geruch-modal-cancel" class="secondary">Abbrechen</button>
+          <button type="button" id="geruch-modal-apply" class="primary">Übernehmen</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="kuerzel-modal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="kuerzel-modal-title">
+      <div class="modal-card modal-card-small">
+        <h3 id="kuerzel-modal-title">Kürzel wählen</h3>
+        <div id="kuerzel-buttons-wrap" class="quick-buttons-grid kuerzel-buttons-grid"></div>
+        <div class="grid" style="grid-template-columns: 1fr auto; gap: 0.45rem; margin-top: 0.55rem;">
+          <input id="kuerzel-custom-input" type="text" placeholder="Eigener Eintrag" />
+          <button type="button" id="kuerzel-custom-apply" class="primary">Übernehmen</button>
+        </div>
+        <div class="modal-actions">
+          <button type="button" id="kuerzel-modal-reset" class="secondary">Reset Leeren</button>
+          <button type="button" id="kuerzel-modal-close" class="secondary">Schließen</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="kopf-bemerkung-modal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="kopf-bemerkung-modal-title">
+      <div class="modal-card modal-card-small">
+        <h3 id="kopf-bemerkung-modal-title">Kopfbemerkung</h3>
+        <textarea id="kopf-bemerkung-modal-text" rows="7" placeholder="Kopfbemerkung eingeben..."></textarea>
+        <div class="modal-actions">
+          <button type="button" id="kopf-bemerkung-modal-cancel" class="secondary">Abbrechen</button>
+          <button type="button" id="kopf-bemerkung-modal-apply" class="primary">Übernehmen</button>
+        </div>
+      </div>
+    </div>
+
+
+    <div id="customers-modal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="customers-modal-title">
+      <div class="modal-card modal-card-medium">
+        <h3 id="customers-modal-title">Kunden</h3>
+        <div class="grid" style="grid-template-columns: 1fr auto auto; gap: 0.45rem;">
+          <input id="customers-search" type="text" placeholder="Kunde suchen..." />
+          <button type="button" id="customers-refresh-from-excel" class="secondary">Aus Excel aktualisieren</button>
+          <button type="button" id="customers-modal-close" class="secondary">Schließen</button>
+        </div>
+        <div id="customers-list" class="customers-list" role="listbox" aria-label="Kundenliste"></div>
+      </div>
+    </div>
+
+    <div id="important-fields-modal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="important-fields-modal-title">
+      <div class="modal-card modal-card-small">
+        <h3 id="important-fields-modal-title">Wichtige Felder fehlen</h3>
+        <ul id="important-fields-list" class="missing-fields-list"></ul>
+        <div class="modal-actions">
+          <button type="button" id="important-fields-cancel" class="secondary">Abbrechen</button>
+          <button type="button" id="important-fields-proceed" class="primary">Trotzdem fortfahren</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="customer-delete-modal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="customer-delete-modal-title">
+      <div class="modal-card modal-card-small">
+        <h3 id="customer-delete-modal-title">Kunde wirklich l�schen</h3>
+        <p id="customer-delete-modal-text" class="meta"></p>
+        <div class="modal-actions">
+          <button type="button" id="customer-delete-cancel" class="secondary">Abbrechen</button>
+          <button type="button" id="customer-delete-confirm" class="secondary danger">Löschen</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="address-modal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="address-modal-title">
+      <div class="modal-card modal-card-small">
+        <h3 id="address-modal-title">Anschrift</h3>
+        <div class="grid" style="grid-template-columns: 1fr 120px; gap: 0.45rem;">
+          <div style="grid-column: 1 / span 2;">
+            <label for="address-firma">Firma Name</label>
+            <input id="address-firma" type="text" required />
+          </div>
+          <div style="grid-column: 1 / span 2;">
+            <label for="address-zh">zH (optional)</label>
+            <input id="address-zh" type="text" />
+          </div>
+          <div>
+            <label for="address-strasse">Straße</label>
+            <input id="address-strasse" type="text" />
+          </div>
+          <div>
+            <label for="address-hausnummer">Hausnummer</label>
+            <input id="address-hausnummer" type="text" />
+          </div>
+          <div>
+            <label for="address-plz">PLZ</label>
+            <input id="address-plz" type="text" />
+          </div>
+          <div>
+            <label for="address-ort">Ort</label>
+            <input id="address-ort" type="text" />
+          </div>
+          <div style="grid-column: 1 / span 2;">
+            <label for="address-preview-block">Vorschau</label>
+            <textarea id="address-preview-block" rows="4" readonly></textarea>
+          </div>
+        </div>
+        <div class="modal-actions">
+          <button type="button" id="address-modal-cancel" class="secondary">Abbrechen</button>
+          <button type="button" id="address-modal-apply" class="primary">Speichern</button>
+        </div>
+      </div>
+    </div>
+    <div id="toast-container" class="toast-wrap"></div>
+
     <script>
+      const THEME_KEY = 'cua-theme';
+      const themeToggle = document.getElementById('theme-toggle');
+      function applyTheme(theme) {
+        const resolved = theme === 'light' ? 'light' : 'dark';
+        document.documentElement.setAttribute('data-theme', resolved);
+        localStorage.setItem(THEME_KEY, resolved);
+        if (themeToggle) {
+          themeToggle.textContent = '◐';
+          themeToggle.title = resolved === 'dark' ? 'Zu Light wechseln' : 'Zu Dark wechseln';
+        }
+      }
+      applyTheme(localStorage.getItem(THEME_KEY) || 'dark');
+      if (themeToggle) {
+        themeToggle.addEventListener('click', () => {
+          const current = document.documentElement.getAttribute('data-theme') || 'dark';
+          applyTheme(current === 'dark' ? 'light' : 'dark');
+        });
+      }
+
+      function decodeMojibakeText(input) {
+        let value = String(input || '');
+        if (!value) return value;
+        value = value
+          .replace(/Ã¤/g, 'ä')
+          .replace(/Ã„/g, 'Ä')
+          .replace(/Ã¶/g, 'ö')
+          .replace(/Ã–/g, 'Ö')
+          .replace(/Ã¼/g, 'ü')
+          .replace(/Ãœ/g, 'Ü')
+          .replace(/ÃŸ/g, 'ß')
+          .replace(/âœ“/g, '✓')
+          .replace(/â—/g, '◐')
+          .replace(/âš™/g, '⚙')
+          .replace(/â—/g, '◍')
+          .replace(/â—Œ/g, '◌')
+          .replace(/â§‰/g, '⧉')
+          .replace(/âœ•/g, '✕')
+          .replace(/ï¿½/g, 'ö');
+        return value;
+      }
+
+      function normalizeUiEncoding(root = document.body) {
+        if (!root) return;
+        const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+        let node = walker.nextNode();
+        while (node) {
+          node.nodeValue = decodeMojibakeText(node.nodeValue);
+          node = walker.nextNode();
+        }
+        root.querySelectorAll('*').forEach((el) => {
+          ['title', 'aria-label', 'placeholder', 'value'].forEach((attr) => {
+            if (!el.hasAttribute(attr)) return;
+            el.setAttribute(attr, decodeMojibakeText(el.getAttribute(attr)));
+          });
+        });
+        const settingsLink = root.querySelector('.topbar-actions a[aria-label="Settings"]');
+        if (settingsLink) settingsLink.textContent = '⚙';
+        if (themeToggle) themeToggle.textContent = '◐';
+      }
+
+      normalizeUiEncoding(document.body);
+
+      const toastContainer = document.getElementById('toast-container');
+      function showToast(type, message) {
+        const el = document.createElement('div');
+        el.className = `toast ${type || 'info'}`;
+        el.textContent = decodeMojibakeText(message);
+        toastContainer.appendChild(el);
+        setTimeout(() => {
+          el.remove();
+        }, 4200);
+      }
+
+      function setButtonLoading(button, isLoading, loadingLabel, idleLabel) {
+        button.disabled = isLoading;
+        button.classList.toggle('loading', isLoading);
+        if (loadingLabel || idleLabel) {
+          if (!button.dataset.idleLabel) {
+            button.dataset.idleLabel = idleLabel || button.textContent.trim();
+          }
+          const resolvedIdle = idleLabel || button.dataset.idleLabel;
+          if (isLoading && loadingLabel) {
+            button.textContent = loadingLabel;
+          } else {
+            button.textContent = resolvedIdle;
+          }
+        }
+      }
+
       const probenContainer = document.getElementById('proben-container');
       const probeTemplate = document.getElementById('probe-template');
+      const newOrderButton = document.getElementById('new-order-btn');
+      const openCustomersModalButton = document.getElementById('open-customers-modal');
+      const newOrderSameProjectButton = document.getElementById('new-order-same-project-btn');
       const addProbeButton = document.getElementById('add-probe');
-      const bulkAddProbesButton = document.getElementById('bulk-add-probes');
-      const bulkProbeNamesInput = document.getElementById('bulk-probenbezeichnungen');
+      const openBulkProbeModalButton = document.getElementById('open-bulk-probe-modal');
+      const draftButton = document.getElementById('draft-btn');
       const commitButton = document.getElementById('commit-btn');
-      const result = document.getElementById('result');
       const form = document.getElementById('order-form');
-      const envInfo = document.getElementById('env-info');
+      const errorPanel = document.getElementById('error-panel');
+      const errorDetails = document.getElementById('error-details');
+      const kundenOptions = document.getElementById('kunden-options');
       const probeNochNichtDaInput = document.getElementById('probeNochNichtDa');
+      const probenahmedatumInput = document.getElementById('probenahmedatum');
       const probenEingangDatumInput = document.getElementById('probenEingangDatum');
+      const openKopfBemerkungModalButton = document.getElementById('open-kopfbemerkung-modal');
+      const kopfBemerkungButtonLabel = document.getElementById('kopf-bemerkung-button-label');
+      const kopfBemerkungIndicator = document.getElementById('kopf-bemerkung-indicator');
+      const kopfBemerkungModal = document.getElementById('kopf-bemerkung-modal');
+      const kopfBemerkungModalText = document.getElementById('kopf-bemerkung-modal-text');
+      const kopfBemerkungModalCancel = document.getElementById('kopf-bemerkung-modal-cancel');
+      const kopfBemerkungModalApply = document.getElementById('kopf-bemerkung-modal-apply');
+      const bulkProbeModal = document.getElementById('bulk-probe-modal');
+      const bulkProbeModalText = document.getElementById('bulk-probe-modal-text');
+      const bulkCopyFromFirstInput = document.getElementById('bulk-copy-from-first');
+      const bulkProbeModalCancel = document.getElementById('bulk-probe-modal-cancel');
+      const bulkProbeModalApply = document.getElementById('bulk-probe-modal-apply');
+      const bulkProbeModeWrap = document.getElementById('bulk-probe-mode-wrap');
+      const gebindeModal = document.getElementById('gebinde-modal');
+      const gebindeModalTitle = document.getElementById('gebinde-modal-title');
+      const gebindePreviewInput = document.getElementById('gebinde-preview');
+      const gebindeButtonsWrap = document.getElementById('gebinde-buttons-wrap');
+      const gebindeUndoButton = document.getElementById('gebinde-undo');
+      const gebindeResetButton = document.getElementById('gebinde-reset');
+      const gebindeModalCancel = document.getElementById('gebinde-modal-cancel');
+      const gebindeModalApply = document.getElementById('gebinde-modal-apply');
+      const sameContainersForAllInput = document.getElementById('same-containers-for-all');
+      const openHeaderGebindeModalButton = document.getElementById('open-header-gebinde-modal');
+      const headerGebindeSummary = document.getElementById('header-gebinde-summary');
+      const retryCommitButton = document.getElementById('retry-commit-btn');
+      const commitFeedback = document.getElementById('commit-feedback');
+      const eiligToggle = document.getElementById('eilig-toggle');
+      const eiligValueInput = document.getElementById('eilig-value');
+      const probentransportToggle = document.getElementById('probentransport-toggle');
+      const probentransportValueInput = document.getElementById('probentransport-value');
+      const geruchModal = document.getElementById('geruch-modal');
+      const geruchOptionInput = document.getElementById('geruch-option');
+      const geruchSonstigesWrap = document.getElementById('geruch-sonstiges-wrap');
+      const geruchSonstigesInput = document.getElementById('geruch-sonstiges');
+      const geruchModalCancel = document.getElementById('geruch-modal-cancel');
+      const geruchModalApply = document.getElementById('geruch-modal-apply');
+      const openKuerzelModalButton = document.getElementById('open-kuerzel-modal');
+      const kuerzelModal = document.getElementById('kuerzel-modal');
+      const kuerzelButtonsWrap = document.getElementById('kuerzel-buttons-wrap');
+      const kuerzelCustomInput = document.getElementById('kuerzel-custom-input');
+      const kuerzelCustomApply = document.getElementById('kuerzel-custom-apply');
+      const kuerzelModalReset = document.getElementById('kuerzel-modal-reset');
+      const kuerzelModalClose = document.getElementById('kuerzel-modal-close');
+      const customersModal = document.getElementById('customers-modal');
+      const customersSearchInput = document.getElementById('customers-search');
+      const customersList = document.getElementById('customers-list');
+      const customersModalClose = document.getElementById('customers-modal-close');
+      const customersRefreshFromExcelButton = document.getElementById('customers-refresh-from-excel');
+      const importantFieldsModal = document.getElementById('important-fields-modal');
+      const importantFieldsList = document.getElementById('important-fields-list');
+      const importantFieldsCancel = document.getElementById('important-fields-cancel');
+      const importantFieldsProceed = document.getElementById('important-fields-proceed');
+      const customerDeleteModal = document.getElementById('customer-delete-modal');
+      const customerDeleteModalText = document.getElementById('customer-delete-modal-text');
+      const customerDeleteCancel = document.getElementById('customer-delete-cancel');
+      const customerDeleteConfirm = document.getElementById('customer-delete-confirm');
+      const openAddressModalButton = document.getElementById('open-address-modal');
+      const adressePreview = document.getElementById('adresse-preview');
+      const adresseBlockInput = document.getElementById('adresseBlock');
+      const addressModal = document.getElementById('address-modal');
+      const addressFirmaInput = document.getElementById('address-firma');
+      const addressZhInput = document.getElementById('address-zh');
+      const addressStrasseInput = document.getElementById('address-strasse');
+      const addressHausnummerInput = document.getElementById('address-hausnummer');
+      const addressPlzInput = document.getElementById('address-plz');
+      const addressOrtInput = document.getElementById('address-ort');
+      const addressPreviewBlock = document.getElementById('address-preview-block');
+      const addressModalCancel = document.getElementById('address-modal-cancel');
+      const addressModalApply = document.getElementById('address-modal-apply');
+      const sidebarActionButtons = [
+        addProbeButton,
+        openBulkProbeModalButton,
+        newOrderButton,
+        openCustomersModalButton,
+        newOrderSameProjectButton,
+        draftButton,
+        commitButton,
+        retryCommitButton,
+      ];
       let packages = [];
+      let customers = [];
+      let activeCustomerSearch = '';
+      let activeProbeForGeruchModal = null;
+      let commitInFlight = false;
+      let draftInFlight = false;
+      let commitSlowTimer = null;
+      let lastFailedCommitContext = null;
+      let activeGebindeTarget = null;
+      let activeGebindeTab = 'plastic';
+      let pendingImportantFieldsResolver = null;
+      let pendingCustomerDeleteResolver = null;
+      let pendingCustomerDeleteEntry = null;
+      let pendingKuerzelSelection = '';
+      let hasLoggedPackageFieldFallback = false;
+      const DEFAULT_QUICK_BUTTONS = {
+        plastic: ['5L', '3L', '1L', '500mL', '250mL', '250mL + CaCO3', '250mL + NaOH', '100mL', '100mL + NaOH', '30mL', '30mL + HCl', '30mL + HNO3'],
+        glass: ['1L', '1L + H2SO4', '500mL', '500mL + H2SO4', '250mL', '250mL Schliff', '250mL Duran', 'HS', 'HS + CuSO4', 'HS + MeOH'],
+      };
+      const DEFAULT_KUERZEL_PRESETS = ['AD', 'DV', 'LB', 'DH', 'SE', 'JO', 'RS', 'KH'];
 
       let appConfig = {
         mode: 'single',
         excelPath: '-',
+        writerBackend: '-',
+        yearSheetName: '',
         commitAllowed: true,
         uiShowPackagePreview: true,
+        uiKuerzelPreset: [...DEFAULT_KUERZEL_PRESETS],
+        uiRequiredFields: ['kunde', 'projektName', 'projektnummer'],
+        uiRequireAtLeastOneSample: true,
+        uiWarnOnly: true,
+        uiBlockOnMissing: false,
         uiDefaultEilig: 'ja',
+        quickContainerPlastic: [...DEFAULT_QUICK_BUTTONS.plastic],
+        quickContainerGlass: [...DEFAULT_QUICK_BUTTONS.glass],
       };
 
       async function loadConfig() {
@@ -367,28 +582,39 @@
         appConfig = {
           mode: data.mode ?? cfg.mode ?? 'single',
           excelPath: data.excelPath ?? cfg.excelPath ?? '-',
+          writerBackend: cfg.writerBackend || '-',
+          yearSheetName: cfg.yearSheetName || '',
           commitAllowed: data.commitAllowed,
           uiShowPackagePreview: cfg.uiShowPackagePreview !== false,
+          uiKuerzelPreset: Array.isArray(cfg.uiKuerzelPreset) && cfg.uiKuerzelPreset.length > 0
+            ? cfg.uiKuerzelPreset.map((item) => String(item || '').trim()).filter(Boolean)
+            : [...DEFAULT_KUERZEL_PRESETS],
+          uiRequiredFields: Array.isArray(cfg.uiRequiredFields)
+            ? cfg.uiRequiredFields.map((item) => String(item || '').trim()).filter(Boolean)
+            : ['kunde', 'projektName', 'projektnummer'],
+          uiRequireAtLeastOneSample: cfg.uiRequireAtLeastOneSample !== false,
+          uiWarnOnly: cfg.uiWarnOnly !== false,
+          uiBlockOnMissing: cfg.uiBlockOnMissing === true,
           uiDefaultEilig: cfg.uiDefaultEilig || 'ja',
+          quickContainerPlastic: Array.isArray(cfg.quickContainerPlastic) && cfg.quickContainerPlastic.length > 0
+            ? cfg.quickContainerPlastic
+            : [...DEFAULT_QUICK_BUTTONS.plastic],
+          quickContainerGlass: Array.isArray(cfg.quickContainerGlass) && cfg.quickContainerGlass.length > 0
+            ? cfg.quickContainerGlass
+            : [...DEFAULT_QUICK_BUTTONS.glass],
         };
-
-        envInfo.textContent = `Mode: ${appConfig.mode} | excelPath: ${appConfig.excelPath}`;
 
         if (appConfig.commitAllowed) {
           commitButton.classList.remove('hidden');
         } else {
           commitButton.classList.add('hidden');
         }
+        renderKuerzelPresetButtons();
 
-        const defaultEilig = appConfig.uiDefaultEilig === 'nein' ? 'nein' : 'ja';
-        const eiligRadio = form.querySelector(`input[name=\"eilig\"][value=\"${defaultEilig}\"]`);
-        if (eiligRadio) {
-          eiligRadio.checked = true;
-        }
       }
 
       async function loadPackages() {
-        const response = await fetch('/api/packages');
+        const response = await fetch('/api/packages', { cache: 'no-store' });
         const data = await response.json();
         if (!response.ok || !Array.isArray(data)) {
           throw new Error(data.message || 'Pakete konnten nicht geladen werden');
@@ -396,23 +622,1140 @@
         packages = data;
       }
 
-      function parseNumberOrUndefined(value) {
-        if (value === '') {
-          return undefined;
+      function normalizeCustomerName(value) {
+        return String(value || '')
+          .trim()
+          .replace(/\s+/g, ' ')
+          .replace(/,+$/g, '')
+          .trim()
+          .toLocaleLowerCase('de-DE');
+      }
+
+      function normalizeAddressLines(value) {
+        return String(value || '')
+          .replace(/\r\n?/g, '\n')
+          .split('\n')
+          .map((line) => line.trim())
+          .filter((line) => line !== '');
+      }
+
+      function formatAdresseBlock(parts = {}) {
+        const firma = String(parts.firma || '').trim();
+        const zh = String(parts.zh || '').trim();
+        const strasse = String(parts.strasse || '').trim();
+        const hausnummer = String(parts.hausnummer || '').trim();
+        const plz = String(parts.plz || '').trim();
+        const ort = String(parts.ort || '').trim().toUpperCase();
+        if (!firma) return '';
+
+        const lines = [firma];
+        if (zh) lines.push(`zH ${zh}`);
+        const streetLine = [strasse, hausnummer].filter(Boolean).join(' ').trim();
+        if (streetLine) lines.push(streetLine);
+        const plzOrtLine = [plz, ort].filter(Boolean).join(' ').trim();
+        if (plzOrtLine) lines.push(plzOrtLine);
+        return lines.join('\n');
+      }
+
+      function parseAdresseBlockToFields(value) {
+        const lines = normalizeAddressLines(value);
+        const out = { firma: '', zh: '', strasse: '', hausnummer: '', plz: '', ort: '' };
+        if (lines.length === 0) return out;
+        out.firma = lines[0];
+        let index = 1;
+        if (lines[index] && /^zh\s+/i.test(lines[index])) {
+          out.zh = lines[index].replace(/^zh\s+/i, '').trim();
+          index += 1;
+        }
+        if (lines[index]) {
+          const streetLine = lines[index];
+          const m = streetLine.match(/^(.*?)(\s+\S+)?$/);
+          out.strasse = String(m?.[1] || '').trim();
+          out.hausnummer = String(m?.[2] || '').trim();
+          index += 1;
+        }
+        if (lines[index]) {
+          const plzOrt = lines[index];
+          const m = plzOrt.match(/^(\S+)\s+(.+)$/);
+          out.plz = String(m?.[1] || '').trim();
+          out.ort = String(m?.[2] || plzOrt).trim();
+        }
+        return out;
+      }
+
+      function updateAdressePreviewUi() {
+        const lines = normalizeAddressLines(adresseBlockInput.value);
+        adressePreview.textContent = lines.length > 0 ? lines[0] : 'Keine Anschrift';
+        adressePreview.title = lines.join('\n');
+      }
+
+      function renderCustomerOptions() {
+        kundenOptions.innerHTML = '';
+        customers.forEach((customer) => {
+          const option = document.createElement('option');
+          option.value = customer.kunde;
+          kundenOptions.appendChild(option);
+        });
+      }
+
+      function renderCustomerList() {
+        const filter = normalizeCustomerName(activeCustomerSearch);
+        const entries = customers.filter((entry) => !filter || normalizeCustomerName(entry.kunde).includes(filter));
+        customersList.innerHTML = '';
+        entries.forEach((entry) => {
+          const row = document.createElement('div');
+          row.className = 'customer-item-row';
+          const btn = document.createElement('button');
+          btn.type = 'button';
+          btn.className = 'secondary customer-item';
+          const usageCount = Number(entry.usageCount || 0);
+          const meta = usageCount === 1 ? '1 Auftrag' : `${usageCount} Auftraege`;
+          const titleEl = document.createElement('strong');
+          titleEl.textContent = String(entry.kunde || '');
+          const metaEl = document.createElement('span');
+          metaEl.textContent = meta || '-';
+          btn.appendChild(titleEl);
+          btn.appendChild(metaEl);
+          btn.addEventListener('click', () => {
+            applyCustomerProfile(entry);
+            closeCustomersModal();
+          });
+          row.appendChild(btn);
+
+          const deleteButton = document.createElement('button');
+          deleteButton.type = 'button';
+          deleteButton.className = 'secondary icon-btn danger';
+          deleteButton.title = `Kunde l�schen: ${String(entry.kunde || '')}`;
+          deleteButton.setAttribute('aria-label', `Kunde l�schen: ${String(entry.kunde || '')}`);
+          deleteButton.textContent = '🗑';
+          deleteButton.addEventListener('click', (event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            deleteCustomerEntry(entry);
+          });
+          row.appendChild(deleteButton);
+          customersList.appendChild(row);
+        });
+        if (entries.length === 0) {
+          const empty = document.createElement('div');
+          empty.className = 'meta';
+          empty.textContent = 'Keine Treffer';
+          customersList.appendChild(empty);
+        }
+      }
+
+      function applyCustomerProfile(selected) {
+        if (!selected) return;
+        form.kunde.value = String(selected.kunde || '');
+        form.ansprechpartner.value = String(selected.ansprechpartner || '');
+        form.email.value = String(selected.email || '');
+        form.kopfBemerkung.value = String(selected.kopfBemerkung || form.kopfBemerkung.value || '');
+        adresseBlockInput.value = String(selected.adresseBlock || '');
+        updateAdressePreviewUi();
+        updateKopfBemerkungUi();
+      }
+
+      async function refreshCustomersFromExcel() {
+        customersRefreshFromExcelButton.disabled = true;
+        try {
+          const response = await fetch('/api/customers/refresh-from-excel', { method: 'POST' });
+          const data = await response.json();
+          if (!response.ok || !data.ok) {
+            throw new Error(data?.message || 'Excel-Refresh fehlgeschlagen');
+          }
+          await loadCustomers();
+          renderCustomerList();
+          showToast('success', `Kunden aktualisiert (${data.upserts})`);
+        } catch (error) {
+          showToast('error', error.message);
+        } finally {
+          customersRefreshFromExcelButton.disabled = false;
+        }
+      }
+
+      function openCustomersModal() {
+        activeCustomerSearch = '';
+        customersSearchInput.value = '';
+        renderCustomerList();
+        customersModal.classList.remove('hidden');
+        setTimeout(() => customersSearchInput.focus(), 0);
+      }
+
+      function closeCustomersModal() {
+        customersModal.classList.add('hidden');
+      }
+
+      function customerDeleteId(entry) {
+        const key = String(entry?.key || '').trim();
+        if (key) return key;
+        return normalizeCustomerName(entry?.kunde || '');
+      }
+
+      function openCustomerDeleteModal(entry) {
+        pendingCustomerDeleteEntry = entry;
+        customerDeleteModalText.textContent = `Kunde wirklich l�schen: ${String(entry?.kunde || '')}`;
+        customerDeleteModal.classList.remove('hidden');
+        setTimeout(() => customerDeleteConfirm.focus(), 0);
+        return new Promise((resolve) => {
+          pendingCustomerDeleteResolver = resolve;
+        });
+      }
+
+      function resolveCustomerDeleteModal(confirmed) {
+        customerDeleteModal.classList.add('hidden');
+        const resolver = pendingCustomerDeleteResolver;
+        pendingCustomerDeleteResolver = null;
+        pendingCustomerDeleteEntry = null;
+        if (resolver) resolver(Boolean(confirmed));
+      }
+
+      async function deleteCustomerEntry(entry) {
+        const confirmed = await openCustomerDeleteModal(entry);
+        if (!confirmed) return;
+        const id = customerDeleteId(entry);
+        if (!id) {
+          showToast('error', 'Kunden-ID fehlt');
+          return;
+        }
+        try {
+          const response = await fetch(`/api/customers/${encodeURIComponent(id)}`, { method: 'DELETE' });
+          const data = await response.json();
+          if (!response.ok || !data.ok) {
+            throw new Error(data?.message || 'Löschen fehlgeschlagen');
+          }
+          await loadCustomers();
+          showToast('success', `Kunde gelöscht: ${String(entry.kunde || '')}`);
+        } catch (error) {
+          showToast('error', error.message);
+        }
+      }
+
+      function importantFieldLabel(path) {
+        const normalized = String(path || '').trim();
+        const labels = {
+          kunde: 'Kunde',
+          projektName: 'Projekt',
+          projektnummer: 'Projektnummer',
+          ansprechpartner: 'Ansprechpartner',
+          email: 'Email',
+          kuerzel: 'Kürzel',
+          kopfBemerkung: 'Kopfbemerkung',
+          adresseBlock: 'Anschrift',
+          probenEingangDatum: 'Probeneingangsdatum',
+          'proben[0].probenbezeichnung': 'Probe 1: Probenbezeichnung',
+          'proben[0].packageId': 'Probe 1: Paket',
+          'proben[0].paketKey': 'Probe 1: Paket',
+        };
+        return labels[normalized] || normalized;
+      }
+
+      function parseFieldPath(path) {
+        return String(path || '')
+          .replace(/\[(\d+)\]/g, '.$1')
+          .split('.')
+          .map((part) => part.trim())
+          .filter(Boolean);
+      }
+
+      function resolvePathValue(data, path) {
+        const tokens = parseFieldPath(path);
+        let cursor = data;
+        for (const token of tokens) {
+          if (cursor === null || cursor === undefined) return undefined;
+          if (/^\d+$/.test(token)) {
+            const index = Number(token);
+            if (!Array.isArray(cursor) || index >= cursor.length) return undefined;
+            cursor = cursor[index];
+          } else {
+            cursor = cursor[token];
+          }
+        }
+        return cursor;
+      }
+
+      function resolveImportantFieldValue(payload, path) {
+        const normalizedPath = String(path || '').trim();
+        const direct = resolvePathValue(payload, normalizedPath);
+        if (!isMissingValue(direct)) {
+          return direct;
         }
 
+        // Guard against config drift: older configs use paketKey, UI currently posts packageId.
+        if (normalizedPath.includes('.paketKey') || normalizedPath.endsWith('paketKey')) {
+          const aliasPath = normalizedPath.replace(/paketKey/g, 'packageId');
+          const aliasValue = resolvePathValue(payload, aliasPath);
+          if (!isMissingValue(aliasValue)) {
+            if (!hasLoggedPackageFieldFallback) {
+              console.debug('[ui-required] using packageId fallback for paketKey required field');
+              hasLoggedPackageFieldFallback = true;
+            }
+            return aliasValue;
+          }
+        }
+        if (normalizedPath.includes('.packageId') || normalizedPath.endsWith('packageId')) {
+          const aliasPath = normalizedPath.replace(/packageId/g, 'paketKey');
+          const aliasValue = resolvePathValue(payload, aliasPath);
+          if (!isMissingValue(aliasValue)) {
+            return aliasValue;
+          }
+        }
+
+        return direct;
+      }
+
+      function isMissingValue(value) {
+        if (value === null || value === undefined) return true;
+        if (typeof value === 'string') return value.trim() === '';
+        if (Array.isArray(value)) return value.length === 0;
+        return false;
+      }
+
+      function collectMissingImportantFields(payload) {
+        const configured = Array.isArray(appConfig.uiRequiredFields) ? appConfig.uiRequiredFields : [];
+        const missing = [];
+        configured.forEach((path) => {
+          if (!String(path || '').trim()) return;
+          const value = resolveImportantFieldValue(payload, path);
+          if (isMissingValue(value)) {
+            missing.push(importantFieldLabel(path));
+          }
+        });
+        if (appConfig.uiRequireAtLeastOneSample !== false) {
+          const sampleCount = Array.isArray(payload.proben) ? payload.proben.length : 0;
+          if (sampleCount === 0) {
+            missing.push('Mindestens eine Probe');
+          }
+        }
+        return missing;
+      }
+
+      function openImportantFieldsModal(missingFields, blockOnMissing) {
+        importantFieldsList.innerHTML = '';
+        missingFields.forEach((field) => {
+          const item = document.createElement('li');
+          item.textContent = field;
+          importantFieldsList.appendChild(item);
+        });
+        importantFieldsProceed.classList.toggle('hidden', blockOnMissing);
+        importantFieldsModal.classList.remove('hidden');
+        setTimeout(() => (blockOnMissing ? importantFieldsCancel : importantFieldsProceed).focus(), 0);
+        return new Promise((resolve) => {
+          pendingImportantFieldsResolver = resolve;
+        });
+      }
+
+      function resolveImportantFieldsModal(shouldProceed) {
+        importantFieldsModal.classList.add('hidden');
+        const resolver = pendingImportantFieldsResolver;
+        pendingImportantFieldsResolver = null;
+        if (resolver) resolver(Boolean(shouldProceed));
+      }
+
+      async function confirmBeforeSend(payload) {
+        const missingFields = collectMissingImportantFields(payload);
+        if (missingFields.length === 0) {
+          return true;
+        }
+        if (appConfig.uiWarnOnly === false && appConfig.uiBlockOnMissing !== true) {
+          return true;
+        }
+        const allowContinue = await openImportantFieldsModal(missingFields, appConfig.uiBlockOnMissing === true);
+        return allowContinue;
+      }
+
+      function updateAddressPreviewBlock() {
+        const block = formatAdresseBlock({
+          firma: addressFirmaInput.value,
+          zh: addressZhInput.value,
+          strasse: addressStrasseInput.value,
+          hausnummer: addressHausnummerInput.value,
+          plz: addressPlzInput.value,
+          ort: addressOrtInput.value,
+        });
+        addressPreviewBlock.value = block;
+      }
+
+      function openAddressModal() {
+        const parsed = parseAdresseBlockToFields(adresseBlockInput.value);
+        addressFirmaInput.value = parsed.firma;
+        addressZhInput.value = parsed.zh;
+        addressStrasseInput.value = parsed.strasse;
+        addressHausnummerInput.value = parsed.hausnummer;
+        addressPlzInput.value = parsed.plz;
+        addressOrtInput.value = parsed.ort;
+        updateAddressPreviewBlock();
+        addressModal.classList.remove('hidden');
+        setTimeout(() => addressFirmaInput.focus(), 0);
+      }
+
+      function closeAddressModal() {
+        addressModal.classList.add('hidden');
+      }
+
+      function applyAddressModal() {
+        updateAddressPreviewBlock();
+        const block = addressPreviewBlock.value.trim();
+        if (!block) {
+          showToast('error', 'Firma Name ist erforderlich');
+          addressFirmaInput.focus();
+          return;
+        }
+        adresseBlockInput.value = block;
+        updateAdressePreviewUi();
+        closeAddressModal();
+      }
+
+      async function loadCustomers() {
+        const response = await fetch('/api/customers');
+        const data = await response.json();
+        if (!response.ok || !data || !Array.isArray(data.customers)) {
+          throw new Error(data?.message || 'Kunden konnten nicht geladen werden');
+        }
+        customers = [...data.customers].sort((a, b) => {
+          const usageDiff = Number(b.usageCount || 0) - Number(a.usageCount || 0);
+          if (usageDiff !== 0) return usageDiff;
+          return String(a.kunde || '').localeCompare(String(b.kunde || ''), 'de');
+        });
+        renderCustomerOptions();
+        renderCustomerList();
+      }
+
+      function autofillCustomerProfile() {
+        const selectedName = normalizeCustomerName(form.kunde.value);
+        if (!selectedName) return;
+        const selected = customers.find((entry) => normalizeCustomerName(entry.kunde) === selectedName);
+        if (!selected) return;
+        applyCustomerProfile(selected);
+      }
+
+      function parseNumberOrUndefined(value) {
+        if (value === '') return undefined;
         const parsed = Number(value);
         return Number.isFinite(parsed) ? parsed : undefined;
+      }
+
+      function normalizeProbeNameText(value, singleLine = true) {
+        const base = String(value || '').replace(/\r\n?/g, '\n').trim();
+        if (!singleLine) {
+          return base;
+        }
+        return base.replace(/\n+/g, ' / ').replace(/\s+/g, ' ').trim();
+      }
+
+      function getProbeFullName(probeElement) {
+        const hiddenInput = probeElement.querySelector('[name="probenbezeichnungFull"]');
+        if (hiddenInput && String(hiddenInput.value || '').trim()) {
+          return normalizeProbeNameText(hiddenInput.value, false);
+        }
+        const visibleInput = probeElement.querySelector('[name="probenbezeichnung"]');
+        return normalizeProbeNameText(visibleInput?.value || '', false);
+      }
+
+      function autoSizeProbeNameInput(input) {
+        const base = normalizeProbeNameText(input.value);
+        const chars = Math.max(10, Math.min(56, base.length + 2));
+        input.style.width = `${chars}ch`;
+      }
+
+      function setProbeNameValue(probeElement, value) {
+        const fullValue = normalizeProbeNameText(value, false);
+        const normalized = normalizeProbeNameText(fullValue, true);
+        const visibleInput = probeElement.querySelector('[name="probenbezeichnung"]');
+        const hiddenInput = probeElement.querySelector('[name="probenbezeichnungFull"]');
+        if (hiddenInput) hiddenInput.value = fullValue;
+        visibleInput.value = normalized;
+        visibleInput.title = fullValue;
+        autoSizeProbeNameInput(visibleInput);
+      }
+
+      function setEiligState(isOn) {
+        const value = isOn ? 'ja' : 'nein';
+        eiligValueInput.value = value;
+        eiligToggle.dataset.value = value;
+        eiligToggle.setAttribute('aria-checked', String(isOn));
+        eiligToggle.classList.toggle('is-on', isOn);
+        const text = eiligToggle.querySelector('.switch-toggle-value');
+        if (text) text.textContent = isOn ? 'An' : 'Aus';
+      }
+
+      function setProbentransportState(value) {
+        const nextValue = value === 'AG' ? 'AG' : 'CUA';
+        const isAg = nextValue === 'AG';
+        probentransportValueInput.value = nextValue;
+        probentransportToggle.dataset.value = nextValue;
+        probentransportToggle.setAttribute('aria-checked', String(isAg));
+        probentransportToggle.classList.toggle('is-on', isAg);
+        const text = probentransportToggle.querySelector('.switch-toggle-value');
+        if (text) text.textContent = nextValue;
+      }
+
+      function normalizeKuerzelValue(value) {
+        return String(value || '').trim().replace(/\s+/g, ' ').toUpperCase();
+      }
+
+      function updateKuerzelButtonLabel() {
+        const value = normalizeKuerzelValue(form.erfasstKuerzel.value);
+        openKuerzelModalButton.textContent = value || 'Kürzel';
+      }
+
+      function getKuerzelPresets() {
+        const seen = new Set();
+        const presets = [];
+        const source = Array.isArray(appConfig.uiKuerzelPreset) && appConfig.uiKuerzelPreset.length > 0
+          ? appConfig.uiKuerzelPreset
+          : DEFAULT_KUERZEL_PRESETS;
+        source.forEach((item) => {
+          const normalized = normalizeKuerzelValue(item);
+          if (!normalized || seen.has(normalized)) return;
+          seen.add(normalized);
+          presets.push(normalized);
+        });
+        return presets;
+      }
+
+      function setKuerzelValue(nextValue) {
+        form.erfasstKuerzel.value = normalizeKuerzelValue(nextValue);
+        updateKuerzelButtonLabel();
+      }
+
+      function renderKuerzelPresetButtons() {
+        const presets = getKuerzelPresets();
+        kuerzelButtonsWrap.innerHTML = '';
+        presets.forEach((preset) => {
+          const button = document.createElement('button');
+          button.type = 'button';
+          button.className = 'secondary kuerzel-preset-btn';
+          if (pendingKuerzelSelection === preset) {
+            button.classList.add('is-active');
+          }
+          button.textContent = preset;
+          button.addEventListener('click', () => {
+            pendingKuerzelSelection = preset;
+            kuerzelCustomInput.value = preset;
+            renderKuerzelPresetButtons();
+          });
+          kuerzelButtonsWrap.appendChild(button);
+        });
+      }
+
+      function openKuerzelModal() {
+        pendingKuerzelSelection = normalizeKuerzelValue(form.erfasstKuerzel.value);
+        kuerzelCustomInput.value = pendingKuerzelSelection;
+        renderKuerzelPresetButtons();
+        kuerzelModal.classList.remove('hidden');
+        setTimeout(() => kuerzelCustomInput.focus(), 0);
+      }
+
+      function closeKuerzelModal() {
+        kuerzelModal.classList.add('hidden');
+      }
+
+      function applyKuerzelFromCustomInput() {
+        const normalized = normalizeKuerzelValue(kuerzelCustomInput.value);
+        if (!normalized) {
+          showToast('error', 'Bitte Kürzel eingeben');
+          kuerzelCustomInput.focus();
+          return;
+        }
+        pendingKuerzelSelection = normalized;
+        setKuerzelValue(normalized);
+        closeKuerzelModal();
+      }
+
+      function resetKuerzelValue() {
+        pendingKuerzelSelection = '';
+        setKuerzelValue('');
+        kuerzelCustomInput.value = '';
+        renderKuerzelPresetButtons();
+      }
+
+      function updateKopfBemerkungUi() {
+        const content = String(form.kopfBemerkung.value || '').trim();
+        const hasValue = content.length > 0;
+        kopfBemerkungIndicator.classList.toggle('hidden', !hasValue);
+        if (kopfBemerkungButtonLabel) {
+          kopfBemerkungButtonLabel.textContent = hasValue ? 'Kopfbemerkung ✓' : 'Kopfbemerkung';
+        }
+        openKopfBemerkungModalButton.title = hasValue ? content : 'Keine Kopfbemerkung';
+      }
+
+      function openKopfBemerkungModal() {
+        kopfBemerkungModalText.value = String(form.kopfBemerkung.value || '');
+        kopfBemerkungModal.classList.remove('hidden');
+        setTimeout(() => kopfBemerkungModalText.focus(), 0);
+      }
+
+      function closeKopfBemerkungModal() {
+        kopfBemerkungModal.classList.add('hidden');
+      }
+
+      function applyKopfBemerkungModal() {
+        form.kopfBemerkung.value = String(kopfBemerkungModalText.value || '');
+        updateKopfBemerkungUi();
+        closeKopfBemerkungModal();
+      }
+
+      function normalizeGeruchOption(value) {
+        const allowed = new Set(['unauffaellig', 'muffig', 'mineralisch', 'loesungsmittelartig', 'faulig', 'sonstiges']);
+        return allowed.has(value) ? value : '';
+      }
+
+      function geruchLabelFromOption(option) {
+        const labels = {
+          unauffaellig: 'unauffällig',
+          muffig: 'muffig',
+          mineralisch: 'mineralisch',
+          loesungsmittelartig: 'lösungsmittelartig',
+          faulig: 'faulig',
+          sonstiges: 'sonstiges',
+        };
+        return labels[option] || '';
+      }
+
+      function buildGeruchSummary(option, sonstiges) {
+        const label = geruchLabelFromOption(option);
+        if (!label) return '-';
+        if (option === 'sonstiges') {
+          const details = String(sonstiges || '').trim();
+          return details ? `sonstiges: ${details}` : 'sonstiges';
+        }
+        return label;
+      }
+
+      function setProbeGeruchData(probeElement, data = null) {
+        const optionInput = probeElement.querySelector('[name="geruchOption"]');
+        const sonstigesInput = probeElement.querySelector('[name="geruchSonstiges"]');
+        const summaryEl = probeElement.querySelector('[data-geruch-summary]');
+        const option = normalizeGeruchOption(String(data?.option || '').trim());
+        const sonstiges = option === 'sonstiges' ? String(data?.sonstiges || '').trim() : '';
+        optionInput.value = option;
+        sonstigesInput.value = sonstiges;
+        summaryEl.textContent = buildGeruchSummary(option, sonstiges);
+      }
+
+      function getProbeGeruchData(probeElement) {
+        const option = normalizeGeruchOption(String(probeElement.querySelector('[name="geruchOption"]').value || '').trim());
+        const sonstiges = option === 'sonstiges'
+          ? String(probeElement.querySelector('[name="geruchSonstiges"]').value || '').trim()
+          : '';
+        return { option, sonstiges };
+      }
+
+      function buildGeruchPayloadValue(option, sonstiges) {
+        if (!option) return '';
+        if (option === 'sonstiges') {
+          const text = String(sonstiges || '').trim();
+          return text ? `sonstiges: ${text}` : 'sonstiges';
+        }
+        return geruchLabelFromOption(option);
+      }
+
+      function updateGeruchSonstigesVisibility() {
+        const isSonstiges = geruchOptionInput.value === 'sonstiges';
+        geruchSonstigesWrap.classList.toggle('hidden', !isSonstiges);
+        if (!isSonstiges) {
+          geruchSonstigesInput.value = '';
+        }
+      }
+
+      function openGeruchModalForProbe(probeElement) {
+        activeProbeForGeruchModal = probeElement;
+        const data = getProbeGeruchData(probeElement);
+        geruchOptionInput.value = data.option || 'unauffaellig';
+        geruchSonstigesInput.value = data.sonstiges || '';
+        updateGeruchSonstigesVisibility();
+        geruchModal.classList.remove('hidden');
+      }
+
+      function closeGeruchModal() {
+        activeProbeForGeruchModal = null;
+        geruchModal.classList.add('hidden');
+      }
+
+      function applyGeruchModal() {
+        if (!activeProbeForGeruchModal) {
+          closeGeruchModal();
+          return;
+        }
+        setProbeGeruchData(activeProbeForGeruchModal, {
+          option: geruchOptionInput.value,
+          sonstiges: geruchSonstigesInput.value,
+        });
+        closeGeruchModal();
+      }
+
+      function normalizeQuickLabel(raw) {
+        return String(raw || '').trim().replace(/\s+/g, ' ').replace(/\s*\+\s*/g, ' + ');
+      }
+
+      function tokenIdFromLabel(label) {
+        return normalizeQuickLabel(label).replace(/\s*\+\s*/g, '+').replace(/\s+/g, '-');
+      }
+
+      function tokenDisplayFromId(id) {
+        return String(id || '').trim().replace(/-/g, ' ').replace(/\+/g, ' + ');
+      }
+
+      function normalizeToken(raw) {
+        const text = String(raw || '').trim();
+        const m = text.match(/^([KG]):(.+)$/i);
+        if (!m) return '';
+        const prefix = m[1].toUpperCase();
+        const id = String(m[2] || '').trim();
+        return id ? `${prefix}:${id}` : '';
+      }
+
+      function normalizeContainers(data, modeDefault = 'perSample') {
+        const source = data && typeof data === 'object' ? data : {};
+        const mode = source.mode === 'perOrder' ? 'perOrder' : (source.mode === 'perSample' ? 'perSample' : modeDefault);
+        const items = (Array.isArray(source.items) ? source.items : [])
+          .map((token) => normalizeToken(token))
+          .filter(Boolean);
+        return { mode, items, history: [] };
+      }
+
+      function parseContainersJsonOrDefault(value, modeDefault = 'perSample') {
+        try {
+          const parsed = JSON.parse(String(value || '{}'));
+          return normalizeContainers(parsed, modeDefault);
+        } catch {
+          return normalizeContainers(null, modeDefault);
+        }
+      }
+
+      function getQuickOptions(tabName) {
+        const prefix = tabName === 'glass' ? 'G' : 'K';
+        const raw = tabName === 'glass'
+          ? appConfig.quickContainerGlass
+          : appConfig.quickContainerPlastic;
+        const seen = new Set();
+        const options = [];
+        (Array.isArray(raw) ? raw : []).forEach((line) => {
+          const id = tokenIdFromLabel(line);
+          if (!id || seen.has(id)) return;
+          seen.add(id);
+          options.push({
+            token: `${prefix}:${id}`,
+            label: tokenDisplayFromId(id),
+          });
+        });
+        return options;
+      }
+
+      function renderContainersSummary(containers) {
+        const normalized = normalizeContainers(containers, containers?.mode || 'perSample');
+        const counts = new Map();
+        normalized.items.forEach((token) => counts.set(token, (counts.get(token) || 0) + 1));
+        const renderGroup = (tabName, title) => {
+          const options = getQuickOptions(tabName);
+          const known = [];
+          options.forEach((opt, idx) => {
+            if (counts.has(opt.token)) known.push({ token: opt.token, label: opt.label, qty: counts.get(opt.token), order: idx });
+          });
+          const unknown = [];
+          Array.from(counts.entries()).forEach(([token, qty]) => {
+            const isGroup = tabName === 'glass' ? token.startsWith('G:') : token.startsWith('K:');
+            if (!isGroup || options.some((opt) => opt.token === token)) return;
+            unknown.push({ token, label: tokenDisplayFromId(token.slice(2)), qty, order: 10000 + unknown.length });
+          });
+          const items = [...known, ...unknown].sort((a, b) => a.order - b.order);
+          if (!items.length) return '';
+          return `${title} (${items.map((it) => (it.qty > 1 ? `${it.qty}x ${it.label}` : it.label)).join('; ')})`;
+        };
+        const parts = [renderGroup('plastic', 'Kunststoff'), renderGroup('glass', 'Glas')].filter(Boolean);
+        return parts.join(' ');
+      }
+
+      function setProbeContainersData(probeElement, containers) {
+        const normalized = normalizeContainers(containers, 'perSample');
+        const summary = renderContainersSummary(normalized);
+        probeElement.querySelector('[name="containersJson"]').value = JSON.stringify(normalized);
+        probeElement.querySelector('[data-gebinde-summary]').textContent = summary || '-';
+      }
+
+      function getProbeContainersData(probeElement) {
+        return parseContainersJsonOrDefault(probeElement.querySelector('[name="containersJson"]').value, 'perSample');
+      }
+
+      function setHeaderContainersData(containers) {
+        const normalized = normalizeContainers(containers, 'perOrder');
+        form.dataset.headerContainers = JSON.stringify(normalized);
+        headerGebindeSummary.textContent = renderContainersSummary(normalized) || '-';
+      }
+
+      function getHeaderContainersData() {
+        return parseContainersJsonOrDefault(form.dataset.headerContainers || '{}', 'perOrder');
+      }
+
+      function renderGebindeQuickButtons(tabName) {
+        const options = getQuickOptions(tabName);
+        const counts = new Map();
+        const items = activeGebindeTarget?.containers?.items || [];
+        items.forEach((token) => counts.set(token, (counts.get(token) || 0) + 1));
+        gebindeButtonsWrap.innerHTML = '';
+        options.forEach((option) => {
+          const btn = document.createElement('button');
+          btn.type = 'button';
+          btn.className = 'secondary quick-btn';
+          const count = counts.get(option.token) || 0;
+          btn.innerHTML = `<span>${option.label}</span>${count > 0 ? `<span class="quick-btn-badge">${count}</span>` : ''}`;
+          btn.addEventListener('click', () => {
+            activeGebindeTarget.containers.items.push(option.token);
+            activeGebindeTarget.containers.history.push(option.token);
+            updateGebindeModalPreview();
+            renderGebindeQuickButtons(activeGebindeTab);
+          });
+          gebindeButtonsWrap.appendChild(btn);
+        });
+      }
+
+      function updateGebindeModalPreview() {
+        const containers = activeGebindeTarget?.containers || normalizeContainers(null);
+        gebindePreviewInput.value = renderContainersSummary(containers);
+      }
+
+      function setGebindeModalTab(tabName) {
+        activeGebindeTab = tabName === 'glass' ? 'glass' : 'plastic';
+        const tabButtons = Array.from(gebindeModal.querySelectorAll('[data-tab]'));
+        tabButtons.forEach((btn) => btn.classList.toggle('is-active', btn.dataset.tab === activeGebindeTab));
+        renderGebindeQuickButtons(activeGebindeTab);
+        updateGebindeModalPreview();
+      }
+
+      function openGebindeModalForProbe(probeElement) {
+        gebindeModalTitle.textContent = 'Gebinde auswählen';
+        activeGebindeTarget = {
+          type: 'probe',
+          probeElement,
+          containers: normalizeContainers(getProbeContainersData(probeElement), 'perSample'),
+        };
+        setGebindeModalTab('plastic');
+        gebindeModal.classList.remove('hidden');
+      }
+
+      function openGebindeModalForHeader() {
+        gebindeModalTitle.textContent = 'Gebinde Auftrag auswählen';
+        activeGebindeTarget = {
+          type: 'header',
+          containers: normalizeContainers(getHeaderContainersData(), 'perOrder'),
+        };
+        setGebindeModalTab('plastic');
+        gebindeModal.classList.remove('hidden');
+      }
+
+      function closeGebindeModal() {
+        activeGebindeTarget = null;
+        gebindeModal.classList.add('hidden');
+      }
+
+      function applyGebindeModal() {
+        if (!activeGebindeTarget) {
+          closeGebindeModal();
+          return;
+        }
+        const containers = normalizeContainers(activeGebindeTarget.containers, activeGebindeTarget.type === 'header' ? 'perOrder' : 'perSample');
+        if (activeGebindeTarget.type === 'probe' && activeGebindeTarget.probeElement) {
+          setProbeContainersData(activeGebindeTarget.probeElement, containers);
+        } else if (activeGebindeTarget.type === 'header') {
+          setHeaderContainersData(containers);
+          updateProbeGebindeUiState();
+        }
+        closeGebindeModal();
+      }
+
+      function updateProbeGebindeUiState() {
+        const sameForAll = sameContainersForAllInput.checked;
+        openHeaderGebindeModalButton.classList.toggle('hidden', !sameForAll);
+        if (sameForAll) {
+          headerGebindeSummary.textContent = renderContainersSummary(getHeaderContainersData()) || '-';
+        } else {
+          headerGebindeSummary.textContent = '-';
+        }
+        Array.from(probenContainer.querySelectorAll('.probe-row')).forEach((row) => {
+          const button = row.querySelector('[data-action="gebinde"]');
+          const summary = row.querySelector('[data-gebinde-summary]');
+          button.disabled = sameForAll;
+          if (sameForAll) {
+            summary.textContent = 'wie Auftrag';
+          } else {
+            const containers = getProbeContainersData(row);
+            summary.textContent = renderContainersSummary(containers) || '-';
+          }
+        });
+      }
+
+      function isProbeEffectivelyEmpty(probeElement) {
+        const name = getProbeFullName(probeElement).trim();
+        const material = probeElement.querySelector('[name="material"]').value.trim();
+        const packageId = probeElement.querySelector('[name="packageId"]').value.trim();
+        const tiefeVolumen = probeElement.querySelector('[name="tiefeVolumen"]').value.trim();
+        const gewicht = probeElement.querySelector('[name="gewicht"]').value.trim();
+        const geruchData = getProbeGeruchData(probeElement);
+        const geruch = buildGeruchPayloadValue(geruchData.option, geruchData.sonstiges);
+        const bemerkung = probeElement.querySelector('[name="bemerkung"]').value.trim();
+        const gebinde = renderContainersSummary(getProbeContainersData(probeElement));
+        return !name && !material && !packageId && !tiefeVolumen && !gewicht && !geruch && !bemerkung && !gebinde;
+      }
+
+      function getExistingProbeRows() {
+        return Array.from(probenContainer.querySelectorAll('.probe-row'));
+      }
+
+      function getNonEmptyProbeCount() {
+        return getExistingProbeRows().filter((row) => !isProbeEffectivelyEmpty(row)).length;
+      }
+
+      function openBulkProbeModal() {
+        const hasExisting = getNonEmptyProbeCount() > 0;
+        bulkProbeModeWrap.classList.toggle('hidden', !hasExisting);
+        const appendRadio = bulkProbeModeWrap.querySelector('input[value="append"]');
+        if (appendRadio) appendRadio.checked = true;
+        bulkCopyFromFirstInput.checked = true;
+        bulkProbeModal.classList.remove('hidden');
+        setTimeout(() => bulkProbeModalText.focus(), 0);
+      }
+
+      function closeBulkProbeModal() {
+        bulkProbeModal.classList.add('hidden');
+      }
+
+      function getBulkInsertMode() {
+        const hasExisting = getNonEmptyProbeCount() > 0;
+        if (!hasExisting) return 'replace';
+        const selected = bulkProbeModeWrap.querySelector('input[name="bulk-probe-mode"]:checked');
+        return selected ? selected.value : 'append';
+      }
+
+      function getDefaultMaterialForBulkInsert() {
+        const firstMaterial = probenContainer.querySelector('.probe-row [name="material"]');
+        const value = firstMaterial ? String(firstMaterial.value || '').trim() : '';
+        return value || 'Boden';
+      }
+
+      function getDefaultPackageForBulkInsert() {
+        const firstPackage = probenContainer.querySelector('.probe-row [name="packageId"]');
+        return firstPackage && firstPackage.value ? firstPackage.value : '';
+      }
+
+      function applyBulkProbeInsert() {
+        const names = bulkProbeModalText.value
+          .split('\n')
+          .map((name) => name.trim())
+          .filter(Boolean);
+
+        if (names.length === 0) {
+          showToast('error', 'Keine gültigen Probenbezeichnungen gefunden');
+          return;
+        }
+
+        const mode = getBulkInsertMode();
+        const defaultMaterial = getDefaultMaterialForBulkInsert();
+        const defaultPackageId = getDefaultPackageForBulkInsert();
+        const copyFromFirst = bulkCopyFromFirstInput.checked;
+        const firstRow = probenContainer.querySelector('.probe-row');
+        const firstRowSeed = firstRow ? {
+          material: firstRow.querySelector('[name="material"]').value,
+          packageId: firstRow.querySelector('[name="packageId"]').value,
+          tiefeVolumen: firstRow.querySelector('[name="tiefeVolumen"]').value,
+          gewicht: firstRow.querySelector('[name="gewicht"]').value,
+          geruch: getProbeGeruchData(firstRow),
+          bemerkung: firstRow.querySelector('[name="bemerkung"]').value,
+          containers: getProbeContainersData(firstRow),
+        } : null;
+        const allRows = getExistingProbeRows();
+        const allRowsAreEmpty = allRows.length > 0 && allRows.every((row) => isProbeEffectivelyEmpty(row));
+
+        if (mode === 'replace' || allRowsAreEmpty) {
+          probenContainer.innerHTML = '';
+        }
+
+        names.forEach((name) => {
+          const base = copyFromFirst && firstRowSeed ? firstRowSeed : {};
+          addProbe({
+            probenbezeichnung: name,
+            material: base.material ?? defaultMaterial ?? 'Boden',
+            packageId: base.packageId ?? defaultPackageId ?? '',
+            tiefeVolumen: base.tiefeVolumen ?? '',
+            gewicht: base.gewicht ?? '',
+            geruch: base.geruch ?? null,
+            bemerkung: base.bemerkung ?? '',
+            containers: base.containers ?? null,
+          });
+        });
+
+        bulkProbeModalText.value = '';
+        closeBulkProbeModal();
+        showToast('success', `${names.length} Proben übernommen`);
+      }
+
+      function createClientRequestId() {
+        if (window.crypto && typeof window.crypto.randomUUID === 'function') {
+          return window.crypto.randomUUID();
+        }
+        return `req-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+      }
+
+      function setCommitFeedback(type, message) {
+        commitFeedback.className = 'feedback';
+        if (!type || !message) {
+          commitFeedback.textContent = '';
+          return;
+        }
+        commitFeedback.classList.add(type);
+        commitFeedback.textContent = decodeMojibakeText(message);
+      }
+
+      function setAllFormControlsDisabled(isDisabled, allowIds = []) {
+        const allowSet = new Set(allowIds);
+        for (const element of Array.from(form.elements)) {
+          if (allowSet.has(element.id)) continue;
+          element.disabled = isDisabled;
+        }
+      }
+
+      function setSidebarActionsDisabled(isDisabled, allowIds = []) {
+        const allowSet = new Set(allowIds);
+        sidebarActionButtons.forEach((button) => {
+          if (!button) return;
+          if (allowSet.has(button.id)) return;
+          button.disabled = isDisabled;
+        });
+      }
+
+      function setCommitUiState(isSaving) {
+        commitInFlight = isSaving;
+        setButtonLoading(commitButton, isSaving, 'Sende...', 'Commit senden');
+        retryCommitButton.disabled = isSaving;
+        if (isSaving) {
+          draftButton.disabled = true;
+          setAllFormControlsDisabled(true, ['commit-btn', 'retry-commit-btn', 'draft-btn']);
+          setSidebarActionsDisabled(true, ['commit-btn', 'retry-commit-btn', 'draft-btn']);
+        } else if (!draftInFlight) {
+          setAllFormControlsDisabled(false);
+          setSidebarActionsDisabled(false);
+        }
+      }
+
+      function setDraftUiState(isSaving) {
+        draftInFlight = isSaving;
+        setButtonLoading(draftButton, isSaving, 'Lade...', 'Draft senden');
+        if (isSaving) {
+          commitButton.disabled = true;
+          retryCommitButton.disabled = true;
+          setAllFormControlsDisabled(true, ['draft-btn', 'commit-btn', 'retry-commit-btn']);
+          setSidebarActionsDisabled(true, ['draft-btn', 'commit-btn', 'retry-commit-btn']);
+        } else if (!commitInFlight) {
+          setAllFormControlsDisabled(false);
+          setSidebarActionsDisabled(false);
+        }
+      }
+
+      function formatSuccessMessage(data) {
+        const orderNo = data.orderNo || data.auftragsnummer || '-';
+        const first = data.ersteProbennr ?? '-';
+        const last = data.letzteProbennr ?? '-';
+        const duplicate = data.duplicateIgnored === true ? ' (duplicate ignored)' : '';
+        return `Gespeichert${duplicate}: Auftragsnummer ${orderNo}, Probennr ${first} bis ${last}`;
+      }
+
+      function clearErrorPanel() {
+        errorPanel.classList.add('hidden');
+        errorPanel.removeAttribute('open');
+        errorDetails.textContent = '';
+      }
+
+      function normalizeApiError(data, fallbackMessage = '') {
+        const payload = data && typeof data === 'object' ? data : {};
+        const userMessage = decodeMojibakeText(String(payload.userMessage || payload.message || fallbackMessage || 'Fehler')).trim();
+        let debug = null;
+        if (payload.debug && typeof payload.debug === 'object') {
+          debug = payload.debug;
+        } else {
+          const legacyDebug = {};
+          ['where', 'detail', 'line', 'code'].forEach((key) => {
+            if (payload[key] === undefined || payload[key] === null) return;
+            const value = typeof payload[key] === 'string' ? payload[key].trim() : payload[key];
+            if (value === '') return;
+            legacyDebug[key] = value;
+          });
+          if (Object.keys(legacyDebug).length > 0) {
+            debug = legacyDebug;
+          }
+        }
+        return { userMessage, debug, payload };
+      }
+
+      function showErrorPanel(message, payload = null, debug = null) {
+        if (debug && typeof debug === 'object') {
+          errorPanel.classList.remove('hidden');
+          errorPanel.removeAttribute('open');
+          errorDetails.textContent = JSON.stringify({ message, debug }, null, 2);
+          return;
+        }
+        errorPanel.classList.add('hidden');
+        errorPanel.removeAttribute('open');
+        errorDetails.textContent = '';
       }
 
       function updateEingangDatumState() {
         const isChecked = probeNochNichtDaInput.checked;
         probenEingangDatumInput.disabled = isChecked;
-        probenEingangDatumInput.required = !isChecked;
-
         if (isChecked) {
           probenEingangDatumInput.value = '';
+        } else if (!probenEingangDatumInput.value) {
+          probenEingangDatumInput.value = getLocalTodayYmd();
         }
+      }
+
+      function getLocalTodayYmd() {
+        const now = new Date();
+        const year = now.getFullYear();
+        const month = String(now.getMonth() + 1).padStart(2, '0');
+        const day = String(now.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+      }
+
+      function applyHeaderDefaults() {
+        setEiligState(false);
+        setProbentransportState('CUA');
+        setKuerzelValue('');
+        adresseBlockInput.value = '';
+        updateAdressePreviewUi();
+        form.kopfBemerkung.value = '';
+        updateKopfBemerkungUi();
+        probeNochNichtDaInput.checked = false;
+        sameContainersForAllInput.checked = false;
+        setHeaderContainersData(null);
+        probenahmedatumInput.value = getLocalTodayYmd();
+        probenEingangDatumInput.value = getLocalTodayYmd();
+        updateEingangDatumState();
+        updateProbeGebindeUiState();
+      }
+
+      function resetProbeSection() {
+        probenContainer.innerHTML = '';
+        addProbe();
+        bulkProbeModalText.value = '';
+        closeBulkProbeModal();
+        updateProbeGebindeUiState();
+      }
+
+      function resetForNewOrder() {
+        form.reset();
+        applyHeaderDefaults();
+        resetProbeSection();
+        lastFailedCommitContext = null;
+        retryCommitButton.classList.add('hidden');
+        setCommitFeedback('', '');
+        clearErrorPanel();
+      }
+
+      function resetForNewOrderSameProject() {
+        resetProbeSection();
+        lastFailedCommitContext = null;
+        retryCommitButton.classList.add('hidden');
+        setCommitFeedback('', '');
+        clearErrorPanel();
       }
 
       function setPackageText(probeElement) {
@@ -424,81 +1767,85 @@
 
       function populatePackageSelect(probeElement) {
         const packageSelect = probeElement.querySelector('[name="packageId"]');
-        packageSelect.innerHTML = '<option value="">Bitte waehlen</option>';
-
+        packageSelect.innerHTML = '<option value="">Bitte wählen</option>';
         packages.forEach((pkg) => {
           const option = document.createElement('option');
           option.value = pkg.id;
-          option.textContent = pkg.code ? `${pkg.name} (${pkg.code})` : pkg.name;
+          const displayName = String(pkg.displayName || pkg.name || pkg.id || '').trim();
+          const shortText = String(pkg.shortText || '').trim();
+          option.textContent = shortText ? `${displayName} - ${shortText}` : displayName;
           packageSelect.appendChild(option);
         });
-
         packageSelect.addEventListener('change', () => setPackageText(probeElement));
       }
 
       function updateProbeIndexes() {
-        const rows = Array.from(probenContainer.querySelectorAll('.probe-row'));
-        rows.forEach((row, index) => {
-          const indexCell = row.querySelector('[data-index]');
-          indexCell.textContent = String(index + 1);
-        });
+        // No-op, row numbering column removed.
       }
 
       function wireProbeActions(probeElement) {
         const duplicateButton = probeElement.querySelector('[data-action="duplicate"]');
         const deleteButton = probeElement.querySelector('[data-action="delete"]');
-        const matrixSelect = probeElement.querySelector('[name="matrixTyp"]');
-        const gewichtInput = probeElement.querySelector('[name="gewicht"]');
+        const gebindeButton = probeElement.querySelector('[data-action="gebinde"]');
+        const geruchButton = probeElement.querySelector('[data-action="geruch"]');
+        const nameInput = probeElement.querySelector('[name="probenbezeichnung"]');
 
-        const syncMatrixFields = () => {
-          const isBoden = matrixSelect.value === 'Boden';
-          gewichtInput.disabled = !isBoden;
-          if (!isBoden) {
-            gewichtInput.value = '';
-          }
-        };
+        if (gebindeButton) gebindeButton.textContent = '◍';
+        if (geruchButton) geruchButton.textContent = '◌';
+        if (duplicateButton) duplicateButton.textContent = '⧉';
+        if (deleteButton) deleteButton.textContent = '✕';
 
         duplicateButton.addEventListener('click', () => duplicateProbe(probeElement));
         deleteButton.addEventListener('click', () => deleteProbe(probeElement));
-        matrixSelect.addEventListener('change', syncMatrixFields);
-        syncMatrixFields();
+        gebindeButton.addEventListener('click', () => openGebindeModalForProbe(probeElement));
+        geruchButton.addEventListener('click', () => openGeruchModalForProbe(probeElement));
+        nameInput.addEventListener('input', () => {
+          nameInput.title = nameInput.value;
+          const hiddenInput = probeElement.querySelector('[name="probenbezeichnungFull"]');
+          if (hiddenInput) hiddenInput.value = normalizeProbeNameText(nameInput.value, false);
+          autoSizeProbeNameInput(nameInput);
+        });
+        autoSizeProbeNameInput(nameInput);
       }
 
       function addProbe(initialData = null) {
         const fragment = probeTemplate.content.cloneNode(true);
         const probeElement = fragment.querySelector('.probe-row');
-
         populatePackageSelect(probeElement);
         wireProbeActions(probeElement);
 
         if (initialData) {
-          probeElement.querySelector('[name="probenbezeichnung"]').value = initialData.probenbezeichnung || '';
-          probeElement.querySelector('[name="matrixTyp"]').value = initialData.matrixTyp || 'Boden';
+          setProbeNameValue(probeElement, initialData.probenbezeichnung || '');
+          probeElement.querySelector('[name="material"]').value = initialData.material ?? '';
           probeElement.querySelector('[name="tiefeVolumen"]').value = initialData.tiefeVolumen ?? '';
           probeElement.querySelector('[name="gewicht"]').value = initialData.gewicht ?? '';
-          probeElement.querySelector('[name="gewichtEinheit"]').value = initialData.gewichtEinheit ?? '';
-          probeElement.querySelector('[name="geruchAuffaelligkeit"]').value =
-            initialData.geruchAuffaelligkeit ?? '';
+          setProbeGeruchData(probeElement, initialData.geruch || null);
           probeElement.querySelector('[name="bemerkung"]').value = initialData.bemerkung ?? '';
           probeElement.querySelector('[name="packageId"]').value = initialData.packageId || '';
+          setProbeContainersData(probeElement, initialData.containers || null);
+        } else {
+          setProbeNameValue(probeElement, '');
+          setProbeGeruchData(probeElement, null);
+          setProbeContainersData(probeElement, null);
         }
 
         setPackageText(probeElement);
-
         probenContainer.appendChild(fragment);
         updateProbeIndexes();
+        updateProbeGebindeUiState();
       }
 
       function duplicateProbe(probeElement) {
+        const containers = getProbeContainersData(probeElement);
         const initialData = {
-          probenbezeichnung: probeElement.querySelector('[name="probenbezeichnung"]').value.trim(),
-          matrixTyp: probeElement.querySelector('[name="matrixTyp"]').value,
+          probenbezeichnung: getProbeFullName(probeElement),
+          material: probeElement.querySelector('[name="material"]').value,
           packageId: probeElement.querySelector('[name="packageId"]').value,
           tiefeVolumen: probeElement.querySelector('[name="tiefeVolumen"]').value,
           gewicht: probeElement.querySelector('[name="gewicht"]').value,
-          gewichtEinheit: probeElement.querySelector('[name="gewichtEinheit"]').value,
-          geruchAuffaelligkeit: probeElement.querySelector('[name="geruchAuffaelligkeit"]').value,
+          geruch: getProbeGeruchData(probeElement),
           bemerkung: probeElement.querySelector('[name="bemerkung"]').value,
+          containers,
         };
         addProbe(initialData);
       }
@@ -506,55 +1853,73 @@
       function deleteProbe(probeElement) {
         probeElement.remove();
         updateProbeIndexes();
-
-        if (probenContainer.querySelectorAll('.probe-row').length === 0) {
-          addProbe();
-        }
+        updateProbeGebindeUiState();
       }
 
       function buildPayload() {
         const probeNochNichtDa = probeNochNichtDaInput.checked;
-
+        const sameContainersForAll = sameContainersForAllInput.checked;
         return {
           kunde: form.kunde.value.trim(),
-          projekt: form.projekt.value.trim(),
           projektnummer: form.projektnummer.value.trim(),
-          projektname: form.projektname.value.trim() || undefined,
+          projektName: form.projektName.value.trim(),
           ansprechpartner: form.ansprechpartner.value.trim() || undefined,
           email: form.email.value.trim() || undefined,
-          erfasstKuerzel: form.erfasstKuerzel.value.trim() || undefined,
-          eilig: form.eilig.value === 'ja',
+          kopfBemerkung: form.kopfBemerkung.value.trim() || undefined,
+          auftragsnotiz: form.kopfBemerkung.value.trim() || undefined,
+          adresseBlock: adresseBlockInput.value.trim() || undefined,
+          erfasstKuerzel: form.erfasstKuerzel.value.trim().toUpperCase() || undefined,
+          kuerzel: form.erfasstKuerzel.value.trim().toUpperCase() || undefined,
+          eilig: eiligValueInput.value === 'ja',
+          probentransport: probentransportValueInput.value === 'AG' ? 'AG' : 'CUA',
+          sameContainersForAll,
+          headerContainers: sameContainersForAll ? getHeaderContainersData() : undefined,
           probeNochNichtDa,
+          probenahmedatum: probenahmedatumInput.value || undefined,
           probenEingangDatum: probeNochNichtDa ? undefined : probenEingangDatumInput.value || undefined,
           proben: Array.from(probenContainer.querySelectorAll('.probe-row')).map((probe) => {
-            const matrixTyp = probe.querySelector('[name="matrixTyp"]').value;
             const tiefeVolumenRaw = probe.querySelector('[name="tiefeVolumen"]').value.trim();
             const tiefeVolumenNum = parseNumberOrUndefined(tiefeVolumenRaw);
-
+            const material = probe.querySelector('[name="material"]').value.trim();
+            const geruchData = getProbeGeruchData(probe);
+            const geruchValue = buildGeruchPayloadValue(geruchData.option, geruchData.sonstiges);
             return {
-              probenbezeichnung: probe.querySelector('[name="probenbezeichnung"]').value.trim(),
-              matrixTyp,
+              probenbezeichnung: getProbeFullName(probe),
+              material: material || undefined,
               packageId: probe.querySelector('[name="packageId"]').value || undefined,
               parameterTextPreview: probe.querySelector('[name="parameterTextPreview"]').value.trim() || undefined,
               tiefeVolumen: tiefeVolumenRaw || undefined,
-              volumen: matrixTyp === 'Boden' ? undefined : tiefeVolumenNum,
-              gewicht:
-                matrixTyp === 'Boden'
-                  ? parseNumberOrUndefined(probe.querySelector('[name="gewicht"]').value)
-                  : undefined,
-              gewichtEinheit: probe.querySelector('[name="gewichtEinheit"]').value.trim() || undefined,
-              geruchAuffaelligkeit:
-                probe.querySelector('[name="geruchAuffaelligkeit"]').value.trim() || undefined,
+              tiefeOderVolumen: tiefeVolumenRaw || undefined,
+              volumen: tiefeVolumenNum,
+              gewicht: parseNumberOrUndefined(probe.querySelector('[name="gewicht"]').value),
+              gewichtEinheit: 'kg',
+              geruch: geruchValue || undefined,
+              geruchAuffaelligkeit: geruchValue || undefined,
+              geruchOption: geruchData.option || undefined,
+              geruchSonstiges: geruchData.option === 'sonstiges' ? (geruchData.sonstiges || undefined) : undefined,
               bemerkung: probe.querySelector('[name="bemerkung"]').value.trim() || undefined,
+              containers: sameContainersForAll ? undefined : getProbeContainersData(probe),
             };
           }),
         };
       }
 
-      async function sendOrder(endpoint, extraHeaders = {}) {
-        const payload = buildPayload();
+      async function sendOrder(endpoint, options = {}) {
+        const { extraHeaders = {}, payload = buildPayload(), isCommit = false } = options;
+        clearErrorPanel();
 
         try {
+          if (isCommit) {
+            setCommitUiState(true);
+            setCommitFeedback('info', 'Sende...');
+            retryCommitButton.classList.add('hidden');
+            commitSlowTimer = window.setTimeout(() => {
+              setCommitFeedback('info', 'Bitte warten... Excel wird aktualisiert');
+            }, 2000);
+          } else {
+            setDraftUiState(true);
+          }
+
           const response = await fetch(endpoint, {
             method: 'POST',
             headers: {
@@ -565,74 +1930,297 @@
           });
 
           const data = await response.json();
-          result.textContent = JSON.stringify(data, null, 2);
+
+          if (isCommit) {
+            if (response.ok && data.ok) {
+              setCommitFeedback('success', formatSuccessMessage(data));
+              showToast('success', formatSuccessMessage(data));
+              lastFailedCommitContext = null;
+              retryCommitButton.classList.add('hidden');
+              loadCustomers().catch(() => {});
+            } else {
+              const info = normalizeApiError(data, 'Commit fehlgeschlagen');
+              setCommitFeedback('error', info.userMessage);
+              showToast('error', info.userMessage);
+              showErrorPanel(info.userMessage, data, info.debug);
+              retryCommitButton.classList.remove('hidden');
+              lastFailedCommitContext = {
+                payload,
+                extraHeaders,
+                clientRequestId: payload.clientRequestId,
+              };
+            }
+          } else {
+            if (response.ok && data.ok) {
+              showToast('success', 'Draft erfolgreich erstellt');
+              loadCustomers().catch(() => {});
+            } else {
+              const info = normalizeApiError(data, 'Draft fehlgeschlagen');
+              showToast('error', info.userMessage);
+              showErrorPanel(info.userMessage, data, info.debug);
+            }
+          }
         } catch (error) {
-          result.textContent = JSON.stringify(
-            {
-              ok: false,
-              message: 'Fehler beim Senden',
-              detail: error.message,
-            },
-            null,
-            2,
-          );
+          const message = `Request fehlgeschlagen: ${error.message}`;
+          showToast('error', message);
+          showErrorPanel(message);
+          if (isCommit) {
+            setCommitFeedback('error', `Commit fehlgeschlagen: ${error.message}`);
+            retryCommitButton.classList.remove('hidden');
+            lastFailedCommitContext = { payload, extraHeaders, clientRequestId: payload.clientRequestId };
+          }
+        } finally {
+          if (isCommit) {
+            if (commitSlowTimer) {
+              window.clearTimeout(commitSlowTimer);
+              commitSlowTimer = null;
+            }
+            setCommitUiState(false);
+          } else {
+            setDraftUiState(false);
+          }
         }
       }
 
       addProbeButton.addEventListener('click', addProbe);
-      bulkAddProbesButton.addEventListener('click', () => {
-        const names = bulkProbeNamesInput.value
-          .split('\n')
-          .map((name) => name.trim())
-          .filter(Boolean);
+      newOrderButton.addEventListener('click', resetForNewOrder);
+      openCustomersModalButton.addEventListener('click', openCustomersModal);
+      newOrderSameProjectButton.addEventListener('click', resetForNewOrderSameProject);
+      openBulkProbeModalButton.addEventListener('click', openBulkProbeModal);
+      probeNochNichtDaInput.addEventListener('change', updateEingangDatumState);
+      openKuerzelModalButton.addEventListener('click', openKuerzelModal);
+      kuerzelModalClose.addEventListener('click', closeKuerzelModal);
+      kuerzelModalReset.addEventListener('click', resetKuerzelValue);
+      kuerzelCustomApply.addEventListener('click', applyKuerzelFromCustomInput);
+      kuerzelCustomInput.addEventListener('input', () => {
+        pendingKuerzelSelection = normalizeKuerzelValue(kuerzelCustomInput.value);
+        renderKuerzelPresetButtons();
+      });
+      kuerzelCustomInput.addEventListener('keydown', (event) => {
+        if (event.key === 'Enter') {
+          event.preventDefault();
+          applyKuerzelFromCustomInput();
+        }
+      });
+      kuerzelModal.addEventListener('click', (event) => {
+        if (event.target === kuerzelModal) closeKuerzelModal();
+      });
+      openKopfBemerkungModalButton.addEventListener('click', openKopfBemerkungModal);
+      kopfBemerkungModalCancel.addEventListener('click', closeKopfBemerkungModal);
+      kopfBemerkungModalApply.addEventListener('click', applyKopfBemerkungModal);
+      kopfBemerkungModal.addEventListener('click', (event) => {
+        if (event.target === kopfBemerkungModal) closeKopfBemerkungModal();
+      });
+      eiligToggle.addEventListener('click', () => {
+        setEiligState(eiligValueInput.value !== 'ja');
+      });
+      probentransportToggle.addEventListener('click', () => {
+        setProbentransportState(probentransportValueInput.value === 'CUA' ? 'AG' : 'CUA');
+      });
+      sameContainersForAllInput.addEventListener('change', updateProbeGebindeUiState);
+      openHeaderGebindeModalButton.addEventListener('click', openGebindeModalForHeader);
+      openAddressModalButton.addEventListener('click', openAddressModal);
+      form.kunde.addEventListener('change', autofillCustomerProfile);
+      form.kunde.addEventListener('blur', autofillCustomerProfile);
+      customersSearchInput.addEventListener('input', () => {
+        activeCustomerSearch = customersSearchInput.value;
+        renderCustomerList();
+      });
+      customersModalClose.addEventListener('click', closeCustomersModal);
+      customersModal.addEventListener('click', (event) => {
+        if (event.target === customersModal) closeCustomersModal();
+      });
+      customersRefreshFromExcelButton.addEventListener('click', refreshCustomersFromExcel);
+      importantFieldsCancel.addEventListener('click', () => resolveImportantFieldsModal(false));
+      importantFieldsProceed.addEventListener('click', () => resolveImportantFieldsModal(true));
+      importantFieldsModal.addEventListener('click', (event) => {
+        if (event.target === importantFieldsModal) {
+          resolveImportantFieldsModal(false);
+        }
+      });
+      customerDeleteCancel.addEventListener('click', () => resolveCustomerDeleteModal(false));
+      customerDeleteConfirm.addEventListener('click', () => resolveCustomerDeleteModal(true));
+      customerDeleteModal.addEventListener('click', (event) => {
+        if (event.target === customerDeleteModal) {
+          resolveCustomerDeleteModal(false);
+        }
+      });
+      [addressFirmaInput, addressZhInput, addressStrasseInput, addressHausnummerInput, addressPlzInput, addressOrtInput].forEach((input) => {
+        input.addEventListener('input', updateAddressPreviewBlock);
+      });
+      addressOrtInput.addEventListener('blur', () => {
+        addressOrtInput.value = String(addressOrtInput.value || '').toUpperCase();
+        updateAddressPreviewBlock();
+      });
+      addressModalCancel.addEventListener('click', closeAddressModal);
+      addressModalApply.addEventListener('click', applyAddressModal);
+      addressModal.addEventListener('click', (event) => {
+        if (event.target === addressModal) closeAddressModal();
+      });
 
-        names.forEach((name) => {
-          addProbe({ probenbezeichnung: name });
+      bulkProbeModalCancel.addEventListener('click', closeBulkProbeModal);
+      bulkProbeModalApply.addEventListener('click', applyBulkProbeInsert);
+      bulkProbeModal.addEventListener('click', (event) => {
+        if (event.target === bulkProbeModal) closeBulkProbeModal();
+      });
+      geruchOptionInput.addEventListener('change', updateGeruchSonstigesVisibility);
+      geruchModalCancel.addEventListener('click', closeGeruchModal);
+      geruchModalApply.addEventListener('click', applyGeruchModal);
+      geruchModal.addEventListener('click', (event) => {
+        if (event.target === geruchModal) closeGeruchModal();
+      });
+      gebindeModalCancel.addEventListener('click', closeGebindeModal);
+      gebindeModalApply.addEventListener('click', applyGebindeModal);
+      gebindeUndoButton.addEventListener('click', () => {
+        if (!activeGebindeTarget || activeGebindeTarget.containers.items.length === 0) return;
+        activeGebindeTarget.containers.items.pop();
+        updateGebindeModalPreview();
+        renderGebindeQuickButtons(activeGebindeTab);
+      });
+      gebindeResetButton.addEventListener('click', () => {
+        if (!activeGebindeTarget) return;
+        activeGebindeTarget.containers.items = [];
+        activeGebindeTarget.containers.history = [];
+        updateGebindeModalPreview();
+        renderGebindeQuickButtons(activeGebindeTab);
+      });
+      Array.from(gebindeModal.querySelectorAll('[data-tab]')).forEach((tabBtn) => {
+        tabBtn.addEventListener('click', () => {
+          setGebindeModalTab(tabBtn.dataset.tab);
         });
       });
-      probeNochNichtDaInput.addEventListener('change', updateEingangDatumState);
+      gebindeModal.addEventListener('click', (event) => {
+        if (event.target === gebindeModal) closeGebindeModal();
+      });
+      document.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape' && !importantFieldsModal.classList.contains('hidden')) {
+          resolveImportantFieldsModal(false);
+          return;
+        }
+        if (event.key === 'Escape' && !customerDeleteModal.classList.contains('hidden')) {
+          resolveCustomerDeleteModal(false);
+          return;
+        }
+        if (event.key === 'Escape' && !bulkProbeModal.classList.contains('hidden')) {
+          closeBulkProbeModal();
+          return;
+        }
+        if (event.key === 'Escape' && !gebindeModal.classList.contains('hidden')) {
+          closeGebindeModal();
+          return;
+        }
+        if (event.key === 'Escape' && !geruchModal.classList.contains('hidden')) {
+          closeGeruchModal();
+          return;
+        }
+        if (event.key === 'Escape' && !customersModal.classList.contains('hidden')) {
+          closeCustomersModal();
+          return;
+        }
+        if (event.key === 'Escape' && !kuerzelModal.classList.contains('hidden')) {
+          closeKuerzelModal();
+          return;
+        }
+        if (event.key === 'Escape' && !kopfBemerkungModal.classList.contains('hidden')) {
+          closeKopfBemerkungModal();
+          return;
+        }
+        if (event.key === 'Escape' && !addressModal.classList.contains('hidden')) {
+          closeAddressModal();
+        }
+      });
+      probenContainer.addEventListener('keydown', (event) => {
+        if (event.key !== 'Enter') return;
+        const target = event.target;
+        if (!target || !(target instanceof HTMLElement)) return;
+        if (!target.closest('.probe-row')) return;
+        if (target.tagName === 'TEXTAREA') return;
+        event.preventDefault();
+
+        const row = target.closest('.probe-row');
+        const focusablesInRow = Array.from(
+          row.querySelectorAll('input:not([type="hidden"]), select, button[data-action="gebinde"], button[data-action="geruch"]'),
+        ).filter((el) => !el.disabled);
+        const currentIndex = focusablesInRow.indexOf(target);
+        if (currentIndex >= 0 && currentIndex < focusablesInRow.length - 1) {
+          focusablesInRow[currentIndex + 1].focus();
+          return;
+        }
+
+        const allRows = Array.from(probenContainer.querySelectorAll('.probe-row'));
+        const rowIndex = allRows.indexOf(row);
+        if (rowIndex >= 0 && rowIndex < allRows.length - 1) {
+          const nextRow = allRows[rowIndex + 1];
+          const nextFirst = nextRow.querySelector('input[name="probenbezeichnung"]');
+          if (nextFirst) nextFirst.focus();
+          return;
+        }
+
+        if (rowIndex === allRows.length - 1) {
+          addProbe();
+          const last = probenContainer.querySelector('.probe-row:last-child input[name="probenbezeichnung"]');
+          if (last) last.focus();
+        }
+      });
 
       form.addEventListener('submit', async (event) => {
         event.preventDefault();
-        await sendOrder('/api/order/draft');
+        if (draftInFlight || commitInFlight) return;
+        const payload = buildPayload();
+        const canSend = await confirmBeforeSend(payload);
+        if (!canSend) return;
+        await sendOrder('/api/order/draft', { payload });
       });
 
       commitButton.addEventListener('click', async () => {
+        if (commitInFlight || draftInFlight) return;
+        const payload = buildPayload();
+        const canSend = await confirmBeforeSend(payload);
+        if (!canSend) return;
+        payload.clientRequestId = createClientRequestId();
+
         if (appConfig.mode === 'writer') {
           const writerToken = sessionStorage.getItem('writerToken') || '';
           const writerLoginOk = sessionStorage.getItem('writerLoginOk') === '1';
-
           if (!writerToken || !writerLoginOk) {
-            result.textContent = JSON.stringify(
-              {
-                ok: false,
-                message: 'Kein Writer Login vorhanden. Bitte zuerst in Settings anmelden.',
-              },
-              null,
-              2,
-            );
+            const data = { ok: false, message: 'Kein Writer Login vorhanden. Bitte zuerst in Settings anmelden.' };
+            showToast('error', data.message);
+            showErrorPanel(data.message, data);
             return;
           }
-
           await sendOrder('/api/order/commit', {
-            'x-ui-request': '1',
-            'x-writer-token': writerToken,
+            extraHeaders: { 'x-ui-request': '1', 'x-writer-token': writerToken },
+            payload,
+            isCommit: true,
           });
           return;
         }
 
-        await sendOrder('/api/order/commit');
+        await sendOrder('/api/order/commit', { payload, isCommit: true });
+      });
+
+      retryCommitButton.addEventListener('click', async () => {
+        if (commitInFlight || draftInFlight || !lastFailedCommitContext) return;
+        await sendOrder('/api/order/commit', {
+          extraHeaders: lastFailedCommitContext.extraHeaders || {},
+          payload: { ...lastFailedCommitContext.payload },
+          isCommit: true,
+        });
       });
 
       async function bootstrap() {
         await loadConfig();
         await loadPackages();
+        await loadCustomers().catch(() => {});
         addProbe();
-        updateEingangDatumState();
+        applyHeaderDefaults();
+        updateAdressePreviewUi();
+        clearErrorPanel();
       }
 
       bootstrap().catch((error) => {
-        envInfo.textContent = `Mode: unbekannt | excelPath: unbekannt (${error.message})`;
+        showToast('error', error.message);
+        showErrorPanel(error.message);
       });
     </script>
   </body>

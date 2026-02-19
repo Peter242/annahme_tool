@@ -110,7 +110,26 @@ Server laeuft auf `http://localhost:3000`.
     - `exceljs`: direkter XLSX-Schreibpfad in Node
   - erstellt vor Commit rotierende Backups (nicht pro Auftrag)
   - fuehrt Cleanup alter Backups aus
+  - optional idempotent via `clientRequestId` im Body (UUID empfohlen)
+  - gleiche `clientRequestId` innerhalb von 10 Minuten wird als Duplicate ignoriert (`ok: true`, `duplicateIgnored: true`) und nicht erneut in Excel geschrieben
   - Antwort enthaelt u. a.: `{ ok, writer, saved, orderNo, sampleNos, ersteProbennr, letzteProbennr, endRowRange }`
+
+Duplicate-Schutz testen (zwei identische Requests, gleicher `clientRequestId`):
+
+```powershell
+$body = @{
+  clientRequestId = "11111111-1111-4111-8111-111111111111"
+  kunde = "Musterkunde"
+  projektName = "Projekt A"
+  projektnummer = "P-1"
+  eilig = $false
+  probenEingangDatum = "2026-02-14"
+  proben = @(@{ probenbezeichnung = "Probe 1"; matrixTyp = "Boden" })
+} | ConvertTo-Json -Depth 6
+
+Invoke-RestMethod -Method Post -Uri "http://127.0.0.1:3000/api/order/commit" -ContentType "application/json" -Body $body
+Invoke-RestMethod -Method Post -Uri "http://127.0.0.1:3000/api/order/commit" -ContentType "application/json" -Body $body
+```
 
 Antwort-Vorschau enthaelt u. a.:
 

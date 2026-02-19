@@ -1,4 +1,4 @@
-param(
+﻿param(
   [Parameter(Mandatory = $true)]
   [string]$PayloadPath
 )
@@ -281,6 +281,15 @@ try {
 
   Set-ErrorContext -where 'excel.connect' -detail 'get/open excel application'
   $excel = $null
+  $allowAutoOpenExcel = $false
+  if ($payload.PSObject.Properties.Name -contains 'allowAutoOpenExcel') {
+    try {
+      $allowAutoOpenExcel = [bool]$payload.allowAutoOpenExcel
+    } catch {
+      $allowAutoOpenExcel = $false
+    }
+  }
+  $excelOpenRequiredMessage = 'Fehler: Annahme muss geöffnet sein. Bitte öffnen und erneut versuchen'
   $createdExcelByScript = $false
   $openedByScript = $false
 
@@ -291,6 +300,9 @@ try {
   }
 
   if ($null -eq $excel) {
+    if ($allowAutoOpenExcel -ne $true) {
+      throw $excelOpenRequiredMessage
+    }
     $excel = New-Object -ComObject Excel.Application
     $createdExcelByScript = $true
   }
@@ -339,6 +351,9 @@ try {
   }
 
   if ($null -eq $wb) {
+    if ($allowAutoOpenExcel -ne $true) {
+      throw $excelOpenRequiredMessage
+    }
     Set-ErrorContext -where 'workbook.open' -detail "targetPath=$targetPath"
     try {
       $wb = $excel.Workbooks.Open($targetPath, $null, $false)

@@ -31,9 +31,11 @@ test('appendOrderBlockToYearSheet appends header and probes to year sheet end', 
       projekt: 'Projekt X',
       projektnummer: 'P-123',
       eilig: true,
+      probenahmedatum: '2026-02-13',
       probenEingangDatum: '2026-02-13',
       pbTyp: 'PB',
       auftragsnotiz: 'Notiz',
+      kopfBemerkung: 'Hinweis Kopf',
       ansprechpartner: 'Max',
       email: 'max@example.com',
       kuerzel: 'AB',
@@ -41,6 +43,11 @@ test('appendOrderBlockToYearSheet appends header and probes to year sheet end', 
       proben: [
         {
           probenbezeichnung: 'Probe 1',
+          material: 'Sand',
+          containers: {
+            mode: 'perSample',
+            items: ['K:1L', 'K:1L', 'K:250mL', 'G:1L'],
+          },
           matrixTyp: 'Boden',
           gewicht: 1.2,
           tiefeOderVolumen: '12 cm',
@@ -71,30 +78,148 @@ test('appendOrderBlockToYearSheet appends header and probes to year sheet end', 
   assert.equal(checkSheet.getCell('A4').value, `${prefix}02`);
   assert.equal(checkSheet.getCell('B4').value, 'y');
   assert.equal(checkSheet.getCell('C4').value, 'y');
-  assert.equal(checkSheet.getCell('D4').value, 'Notiz');
+  assert.equal(checkSheet.getCell('D4').value, '');
   assert.equal(checkSheet.getCell('E4').value, 'PB');
   assert.equal(checkSheet.getCell('I4').value, 'Kunde A\nMax\nProjekt Nr: P-123\nProjekt: Projekt X\nProbenahme: 13.02.2026');
   assert.equal(
     checkSheet.getCell('J4').value,
-    'AB EILIG Termin: Di 17.02.2026\nMail: max@example.com',
+    'AB EILIG Termin: Di 17.02.2026\nHinweis Kopf',
   );
 
   assert.equal(checkSheet.getCell('A5').value, 26204);
   assert.equal(checkSheet.getCell('D5').value, 'PAKET-TEXT');
   assert.equal(checkSheet.getCell('F5').value, 'Probe 1');
   assert.equal(checkSheet.getCell('G5').value, '12 cm');
+  assert.equal(checkSheet.getCell('H5').value, 'Sand, Kunststoff (2x 1L; 250mL) Glas (1L)');
   assert.equal(checkSheet.getCell('J5').value, 'Gewicht: 1.2 kg\nGeruch: neutral\nBemerkung: trocken');
   assert.equal(checkSheet.getCell('J5').alignment.wrapText, true);
   assert.equal(checkSheet.getCell('A6').value, 26205);
   assert.equal(checkSheet.getCell('D6').value, 'FREITEXT');
   assert.equal(checkSheet.getCell('F6').value, 'Probe 2');
   assert.equal(checkSheet.getCell('G6').value, '');
-  assert.equal(checkSheet.getCell('J6').value, 'Gewicht: 2.5 kg\nGeruch: -\nBemerkung: -');
+  assert.equal(checkSheet.getCell('J6').value, 'Gewicht: 2.5 kg');
 
   assert.equal(checkSheet.getCell('A7').value, null);
 });
 
-test('appendOrderBlockToYearSheet scans suffix numbers and writes clean new numbers', async () => {
+test('appendOrderBlockToYearSheet writes transport line in header I when probentransport is set', async () => {
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'annahme-commit-'));
+  const excelPath = path.join(tmpDir, 'lab.xlsx');
+
+  const workbook = new ExcelJS.Workbook();
+  workbook.addWorksheet('2026');
+  await workbook.xlsx.writeFile(excelPath);
+
+  await appendOrderBlockToYearSheet({
+    config: { yearSheetName: '2026' },
+    rootDir: tmpDir,
+    excelPath,
+    now: new Date('2026-02-13T10:00:00Z'),
+    termin: null,
+    order: {
+      kunde: 'Kunde A',
+      probentransport: 'AG',
+      probenEingangDatum: '2026-02-13',
+      proben: [{ probenbezeichnung: 'Probe 1' }],
+    },
+  });
+
+  const check = new ExcelJS.Workbook();
+  await check.xlsx.readFile(excelPath);
+  const checkSheet = check.getWorksheet('2026');
+  assert.equal(
+    checkSheet.getCell('I2').value,
+    'Kunde A\nTransport: AG',
+  );
+});
+
+test('header I uses only Probenahmedatum when Eingang is today', async () => {
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'annahme-commit-'));
+  const excelPath = path.join(tmpDir, 'lab.xlsx');
+  const now = new Date('2026-02-13T10:00:00Z');
+  const workbook = new ExcelJS.Workbook();
+  workbook.addWorksheet('2026');
+  await workbook.xlsx.writeFile(excelPath);
+
+  await appendOrderBlockToYearSheet({
+    config: { yearSheetName: '2026' },
+    rootDir: tmpDir,
+    excelPath,
+    now,
+    termin: null,
+    order: {
+      kunde: 'Kunde A',
+      probenahmedatum: '2026-02-12',
+      probenEingangDatum: '2026-02-13',
+      proben: [{ probenbezeichnung: 'Probe 1' }],
+    },
+  });
+
+  const check = new ExcelJS.Workbook();
+  await check.xlsx.readFile(excelPath);
+  const checkSheet = check.getWorksheet('2026');
+  assert.equal(checkSheet.getCell('I2').value, 'Kunde A\nProbenahme: 12.02.2026');
+});
+
+test('header I skips both date lines when Probenahmedatum is empty and Eingang is today', async () => {
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'annahme-commit-'));
+  const excelPath = path.join(tmpDir, 'lab.xlsx');
+  const now = new Date('2026-02-13T10:00:00Z');
+  const workbook = new ExcelJS.Workbook();
+  workbook.addWorksheet('2026');
+  await workbook.xlsx.writeFile(excelPath);
+
+  await appendOrderBlockToYearSheet({
+    config: { yearSheetName: '2026' },
+    rootDir: tmpDir,
+    excelPath,
+    now,
+    termin: null,
+    order: {
+      kunde: 'Kunde A',
+      probenEingangDatum: '2026-02-13',
+      proben: [{ probenbezeichnung: 'Probe 1' }],
+    },
+  });
+
+  const check = new ExcelJS.Workbook();
+  await check.xlsx.readFile(excelPath);
+  const checkSheet = check.getWorksheet('2026');
+  assert.equal(checkSheet.getCell('I2').value, 'Kunde A');
+});
+
+test('header I adds Eingangsdatum when Eingang differs from today', async () => {
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'annahme-commit-'));
+  const excelPath = path.join(tmpDir, 'lab.xlsx');
+  const now = new Date('2026-02-13T10:00:00Z');
+  const workbook = new ExcelJS.Workbook();
+  workbook.addWorksheet('2026');
+  await workbook.xlsx.writeFile(excelPath);
+
+  await appendOrderBlockToYearSheet({
+    config: { yearSheetName: '2026' },
+    rootDir: tmpDir,
+    excelPath,
+    now,
+    termin: null,
+    order: {
+      kunde: 'Kunde A',
+      probenahmedatum: '2026-02-10',
+      probenEingangDatum: '2026-02-12',
+      proben: [{ probenbezeichnung: 'Probe 1' }],
+    },
+  });
+
+  const check = new ExcelJS.Workbook();
+  await check.xlsx.readFile(excelPath);
+  const checkSheet = check.getWorksheet('2026');
+  assert.equal(
+    checkSheet.getCell('I2').value,
+    'Kunde A\nProbenahme: 10.02.2026\nEingangsdatum: 12.02.2026',
+  );
+});
+
+test('appendOrderBlockToYearSheet parses suffix sample numbers and writes clean new numbers', async () => {
   const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'annahme-commit-'));
   const excelPath = path.join(tmpDir, 'lab.xlsx');
   const now = new Date('2026-02-13T10:00:00Z');
@@ -136,7 +261,47 @@ test('appendOrderBlockToYearSheet scans suffix numbers and writes clean new numb
   assert.equal(checkSheet.getCell('A8').value, 26204);
 });
 
-test('appendOrderBlockToYearSheet parses leading digits for lab numbers with suffix', async () => {
+test('appendOrderBlockToYearSheet writes header containers and only material in probes when sameContainersForAll is true', async () => {
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'annahme-commit-'));
+  const excelPath = path.join(tmpDir, 'lab.xlsx');
+
+  const workbook = new ExcelJS.Workbook();
+  workbook.addWorksheet('2026');
+  await workbook.xlsx.writeFile(excelPath);
+
+  await appendOrderBlockToYearSheet({
+    config: { yearSheetName: '2026' },
+    rootDir: tmpDir,
+    excelPath,
+    now: new Date('2026-02-13T10:00:00Z'),
+    termin: '2026-02-19',
+    order: {
+      kunde: 'Kunde A',
+      projekt: 'Projekt X',
+      projektnummer: 'P-123',
+      eilig: false,
+      probenEingangDatum: '2026-02-13',
+      sameContainersForAll: true,
+      headerContainers: {
+        mode: 'perOrder',
+        items: ['K:1L', 'K:1L', 'G:500mL'],
+      },
+      proben: [
+        { probenbezeichnung: 'Probe 1', material: 'Boden' },
+        { probenbezeichnung: 'Probe 2', material: '' },
+      ],
+    },
+  });
+
+  const check = new ExcelJS.Workbook();
+  await check.xlsx.readFile(excelPath);
+  const checkSheet = check.getWorksheet('2026');
+  assert.equal(checkSheet.getCell('H2').value, 'Kunststoff (2x 1L) Glas (500mL)');
+  assert.equal(checkSheet.getCell('H3').value, 'Boden');
+  assert.equal(checkSheet.getCell('H4').value, '');
+});
+
+test('appendOrderBlockToYearSheet parses lab numbers with suffix when finding max', async () => {
   const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'annahme-commit-'));
   const excelPath = path.join(tmpDir, 'lab.xlsx');
   const now = new Date('2026-02-14T10:00:00Z');
@@ -195,7 +360,7 @@ test('appendOrderBlockToYearSheet does not map weight into column G', async () =
   await check.xlsx.readFile(excelPath);
   const checkSheet = check.getWorksheet('2026');
   assert.equal(checkSheet.getCell('G3').value, '');
-  assert.equal(checkSheet.getCell('J3').value, 'Gewicht: 1.2 kg\nGeruch: -\nBemerkung: -');
+  assert.equal(checkSheet.getCell('J3').value, 'Gewicht: 1.2 kg');
 });
 
 test('appendOrderBlockToYearSheet writes hint when sampleNotArrived is true', async () => {
@@ -227,6 +392,105 @@ test('appendOrderBlockToYearSheet writes hint when sampleNotArrived is true', as
   await check.xlsx.readFile(excelPath);
   const checkSheet = check.getWorksheet('2026');
   assert.equal(checkSheet.getCell('J2').value, '');
+});
+
+test('appendOrderBlockToYearSheet keeps header J as single termin line when kopfBemerkung is empty', async () => {
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'annahme-commit-'));
+  const excelPath = path.join(tmpDir, 'lab.xlsx');
+
+  const workbook = new ExcelJS.Workbook();
+  workbook.addWorksheet('2026');
+  await workbook.xlsx.writeFile(excelPath);
+
+  await appendOrderBlockToYearSheet({
+    config: { yearSheetName: '2026' },
+    rootDir: tmpDir,
+    excelPath,
+    now: new Date('2026-02-13T10:00:00Z'),
+    termin: '2026-02-19',
+    order: {
+      kunde: 'Kunde A',
+      projekt: 'Projekt X',
+      projektnummer: 'P-123',
+      eilig: false,
+      kopfBemerkung: '',
+      probenEingangDatum: '2026-02-13',
+      proben: [{ probenbezeichnung: 'Probe 1', matrixTyp: 'Boden' }],
+    },
+  });
+
+  const check = new ExcelJS.Workbook();
+  await check.xlsx.readFile(excelPath);
+  const checkSheet = check.getWorksheet('2026');
+  assert.equal(checkSheet.getCell('J2').value, 'Termin: Do 19.02.2026');
+});
+
+test('appendOrderBlockToYearSheet writes kopfBemerkung only to header J and keeps header D empty', async () => {
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'annahme-commit-'));
+  const excelPath = path.join(tmpDir, 'lab.xlsx');
+
+  const workbook = new ExcelJS.Workbook();
+  workbook.addWorksheet('2026');
+  await workbook.xlsx.writeFile(excelPath);
+
+  await appendOrderBlockToYearSheet({
+    config: { yearSheetName: '2026' },
+    rootDir: tmpDir,
+    excelPath,
+    now: new Date('2026-02-13T10:00:00Z'),
+    termin: '2026-02-19',
+    order: {
+      kunde: 'Kunde A',
+      projekt: 'Projekt X',
+      projektnummer: 'P-123',
+      eilig: false,
+      kopfBemerkung: 'PB an Hans',
+      auftragsnotiz: 'PB an Hans',
+      probenEingangDatum: '2026-02-13',
+      proben: [{ probenbezeichnung: 'Probe 1', matrixTyp: 'Boden' }],
+    },
+  });
+
+  const check = new ExcelJS.Workbook();
+  await check.xlsx.readFile(excelPath);
+  const checkSheet = check.getWorksheet('2026');
+  assert.equal(checkSheet.getCell('D2').value, '');
+  assert.equal(checkSheet.getCell('J2').value, 'Termin: Do 19.02.2026\nPB an Hans');
+});
+
+test('appendOrderBlockToYearSheet writes adresseBlock in header J starting at second line', async () => {
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'annahme-commit-'));
+  const excelPath = path.join(tmpDir, 'lab.xlsx');
+
+  const workbook = new ExcelJS.Workbook();
+  workbook.addWorksheet('2026');
+  await workbook.xlsx.writeFile(excelPath);
+
+  await appendOrderBlockToYearSheet({
+    config: { yearSheetName: '2026' },
+    rootDir: tmpDir,
+    excelPath,
+    now: new Date('2026-02-13T10:00:00Z'),
+    termin: '2026-02-19',
+    order: {
+      kunde: 'Kunde A',
+      projektName: 'Projekt X',
+      projektnummer: 'P-123',
+      eilig: false,
+      probenEingangDatum: '2026-02-13',
+      adresseBlock: 'Kunde A GmbH\nzH Max Muster\nMusterstrasse 1\n12345 MUSTERSTADT',
+      kopfBemerkung: 'Wird bei Adresse nicht in J geschrieben',
+      proben: [{ probenbezeichnung: 'Probe 1', matrixTyp: 'Boden' }],
+    },
+  });
+
+  const check = new ExcelJS.Workbook();
+  await check.xlsx.readFile(excelPath);
+  const checkSheet = check.getWorksheet('2026');
+  assert.equal(
+    checkSheet.getCell('J2').value,
+    'Termin: Do 19.02.2026\nKunde A GmbH\nzH Max Muster\nMusterstrasse 1\n12345 MUSTERSTADT',
+  );
 });
 
 test('appendOrderBlockToYearSheet sets wrapText and auto row height for new probe rows', async () => {

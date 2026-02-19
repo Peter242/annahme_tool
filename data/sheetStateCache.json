@@ -1,0 +1,16 @@
+{
+  "version": 2,
+  "excelPath": "C:\\Annahme\\Annahme.xlsx",
+  "yearSheetName": "2026",
+  "fileMtimeMs": 1771530024073.1892,
+  "excelFileSize": 413654,
+  "lastWriteTime": "2026-02-19T19:40:24.073Z",
+  "yearPrefix": "26",
+  "colAHash50": "e00a9f14d1afbc9d2bbefde9e810038d122a8369",
+  "lastUsedRow": 178,
+  "lastLabNo": 25160468,
+  "orderSeqByPrefix": {
+    "1902268": 1
+  },
+  "updatedAt": "2026-02-19T19:40:24.113Z"
+}

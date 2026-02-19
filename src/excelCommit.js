@@ -2,6 +2,7 @@ const path = require('path');
 const ExcelJS = require('exceljs');
 const { getSheetState, buildTodayPrefix } = require('./sheetState');
 const { readPackages } = require('./packages/store');
+const { renderColumnHFromProbe, renderContainersSummary } = require('./containers');
 
 function pad2(value) {
   return String(value).padStart(2, '0');
@@ -16,20 +17,47 @@ function resolveAbsoluteExcelPath(excelPath, rootDir) {
   return path.isAbsolute(excelPath) ? excelPath : path.join(rootDir, excelPath);
 }
 
-function buildHeaderCellI(order) {
+function rowHasContentAToJ(sheet, rowNumber) {
+  for (let column = 1; column <= 10; column += 1) {
+    const raw = sheet.getCell(rowNumber, column).value;
+    if (raw !== null && raw !== undefined && String(raw).trim() !== '') {
+      return true;
+    }
+  }
+  return false;
+}
+
+function isSameCalendarDay(dateA, dateB) {
+  if (!(dateA instanceof Date) || !(dateB instanceof Date)) {
+    return false;
+  }
+  return dateA.getFullYear() === dateB.getFullYear()
+    && dateA.getMonth() === dateB.getMonth()
+    && dateA.getDate() === dateB.getDate();
+}
+
+function buildHeaderCellI(order, now = new Date()) {
   const kunde = order.auftraggeberKurz || order.kunde || '';
-  const projekt = order.projektname || order.projekt || '';
+  const projekt = order.projektName || order.projektname || order.projekt || '';
   const projektNrLine = order.projektnummer ? `Projekt Nr: ${order.projektnummer}` : '';
   const projektLine = projekt ? `Projekt: ${projekt}` : '';
-  const rawProbenahme = order.probenahmedatum || order.probenEingangDatum || '';
+  const rawProbenahme = order.probenahmedatum || '';
   const probenahme = formatGermanDateOnly(rawProbenahme);
   const probenahmeLine = probenahme ? `Probenahme: ${probenahme}` : '';
+  const eingangParsed = parseFlexibleDate(order.probenEingangDatum || '');
+  const eingangLine = (eingangParsed && !isSameCalendarDay(eingangParsed, now))
+    ? `Eingangsdatum: ${formatGermanDateOnly(eingangParsed)}`
+    : '';
+  const transportRaw = String(order.probentransport || '').trim().toUpperCase();
+  const transportLine = (transportRaw === 'CUA' || transportRaw === 'AG') ? `Transport: ${transportRaw}` : '';
   const lines = [
     kunde,
     order.ansprechpartner || '',
     projektNrLine,
     projektLine,
     probenahmeLine,
+    eingangLine,
+    transportLine,
   ].filter((line) => String(line).trim() !== '');
 
   return lines.join('\n');
@@ -39,6 +67,13 @@ function buildHeaderCellJ(order, termin) {
   const rawTermin = order.terminDatum || termin || '';
   const kuerzel = order.kuerzel || order.erfasstKuerzel || '';
   const formattedTermin = formatGermanTermin(rawTermin);
+  const adresseBlock = String(order.adresseBlock || '')
+    .replace(/\r\n?/g, '\n')
+    .split('\n')
+    .map((line) => line.trim())
+    .filter((line) => line !== '')
+    .join('\n');
+  const kopfBemerkung = String(order.kopfBemerkung || order.auftragsnotiz || '').trim();
   const firstLineParts = [];
   if (String(kuerzel).trim()) {
     firstLineParts.push(String(kuerzel).trim());
@@ -49,10 +84,16 @@ function buildHeaderCellJ(order, termin) {
   if (formattedTermin) {
     firstLineParts.push(`Termin: ${formattedTermin}`);
   }
-  const lines = [
-    firstLineParts.join(' ').trim(),
-    order.email ? `Mail: ${order.email}` : '',
-  ].filter((line) => String(line).trim() !== '');
+  const lines = [];
+  const terminLine = firstLineParts.join(' ').trim();
+  if (terminLine) {
+    lines.push(terminLine);
+  }
+  if (adresseBlock) {
+    lines.push(adresseBlock);
+  } else if (kopfBemerkung) {
+    lines.push(kopfBemerkung);
+  }
 
   return lines.join('\n');
 }
@@ -144,16 +185,11 @@ function resolveColumnG(probe) {
   return '';
 }
 
-function resolveColumnH(probe) {
+function resolveColumnH(probe, config) {
   if (probe.materialGebinde) {
     return String(probe.materialGebinde).trim();
   }
-
-  const material = probe.material ? String(probe.material).trim() : '';
-  const gebinde = probe.gebinde ? String(probe.gebinde).trim() : '';
-  const combined = `${material} ${gebinde}`.trim();
-
-  return combined || (probe.matrixTyp ? String(probe.matrixTyp).trim() : '');
+  return renderColumnHFromProbe(probe, { config });
 }
 
 function clamp(value, min, max) {
@@ -170,17 +206,24 @@ function lineCountFromText(text) {
 }
 
 function buildProbeCellJ(probe) {
-  const gewicht = (probe.gewicht !== undefined && probe.gewicht !== null && String(probe.gewicht).trim() !== '')
-    ? `${String(probe.gewicht).trim()} kg`
-    : '-';
+  const lines = [];
+  if (probe.gewicht !== undefined && probe.gewicht !== null && String(probe.gewicht).trim() !== '') {
+    lines.push(`Gewicht: ${String(probe.gewicht).trim()} kg`);
+  }
   const geruchRaw = probe.geruch || probe.geruchAuffaelligkeit || '';
-  const geruch = String(geruchRaw).trim() || '-';
-  const bemerkung = String(probe.bemerkung || '').trim() || '-';
-  return `Gewicht: ${gewicht}\nGeruch: ${geruch}\nBemerkung: ${bemerkung}`;
+  if (String(geruchRaw).trim() !== '') {
+    lines.push(`Geruch: ${String(geruchRaw).trim()}`);
+  }
+  const bemerkung = String(probe.bemerkung || '').trim();
+  if (bemerkung !== '') {
+    lines.push(`Bemerkung: ${bemerkung}`);
+  }
+  return lines.join('\n');
 }
 
 async function appendOrderBlockToYearSheet(params) {
-  const { config, rootDir, excelPath, order, termin, now = new Date(), packages } = params;
+  const { config, rootDir, excelPath, order, termin, cacheHint = null, now = new Date(), packages } = params;
+  const probes = Array.isArray(order.proben) ? order.proben : [];
   const workbook = new ExcelJS.Workbook();
   const absoluteExcelPath = resolveAbsoluteExcelPath(excelPath, rootDir);
   await workbook.xlsx.readFile(absoluteExcelPath);
@@ -191,17 +234,38 @@ async function appendOrderBlockToYearSheet(params) {
     throw new Error(`Jahresblatt ${yearSheetName} nicht gefunden`);
   }
 
-  const state = getSheetState(sheet, now);
-  const appendRow = state.lastUsedRow + 2;
-
   const todayPrefix = buildTodayPrefix(now);
-  const nextSeq = state.maxOrderSeqToday + 1;
+  let state = null;
+  let appendRow = null;
+  let nextSeq = null;
+  let maxOrderSeqToday = null;
+  let startLabNo = null;
+
+  if (cacheHint && Number.isInteger(cacheHint.appendRow) && cacheHint.appendRow > 0) {
+    const hintAppendRow = cacheHint.appendRow;
+    const rowBusy = rowHasContentAToJ(sheet, hintAppendRow);
+    const prefixMatch = String(cacheHint.todayPrefix || '') === todayPrefix;
+    if (!rowBusy && prefixMatch) {
+      appendRow = hintAppendRow;
+      maxOrderSeqToday = Number.isInteger(cacheHint.maxOrderSeqToday) ? cacheHint.maxOrderSeqToday : 0;
+      nextSeq = Number.isInteger(cacheHint.nextSeq) ? cacheHint.nextSeq : (maxOrderSeqToday + 1);
+      startLabNo = Number.isInteger(cacheHint.startLabNo) ? cacheHint.startLabNo : 10000;
+    }
+  }
+
+  if (!Number.isInteger(appendRow) || !Number.isInteger(nextSeq) || !Number.isInteger(startLabNo)) {
+    state = getSheetState(sheet, now);
+    appendRow = state.lastUsedRow + 2;
+    maxOrderSeqToday = state.maxOrderSeqToday;
+    nextSeq = state.maxOrderSeqToday + 1;
+    startLabNo = Math.max(state.maxLabNumber, 9999) + 1;
+  }
+
   if (nextSeq > 99) {
     throw new Error(`Maximale Tagessequenz erreicht fuer Prefix ${todayPrefix}`);
   }
 
   const orderNo = `${todayPrefix}${pad2(nextSeq)}`;
-  const startLabNo = Math.max(state.maxLabNumber, 9999) + 1;
   const sampleNos = [];
 
   const packageSource = Array.isArray(packages) ? packages : readPackages();
@@ -210,12 +274,20 @@ async function appendOrderBlockToYearSheet(params) {
   sheet.getCell(appendRow, 1).value = orderNo;
   sheet.getCell(appendRow, 2).value = 'y';
   sheet.getCell(appendRow, 3).value = 'y';
-  sheet.getCell(appendRow, 4).value = order.auftragsnotiz ? String(order.auftragsnotiz) : '';
+  sheet.getCell(appendRow, 4).value = '';
   sheet.getCell(appendRow, 5).value = order.pbTyp || 'PB';
-  sheet.getCell(appendRow, 9).value = buildHeaderCellI(order);
+  const quickConfig = {
+    quickContainerPlastic: Array.isArray(config.quickContainerPlastic) ? config.quickContainerPlastic : undefined,
+    quickContainerGlass: Array.isArray(config.quickContainerGlass) ? config.quickContainerGlass : undefined,
+  };
+  const headerSummary = order.sameContainersForAll
+    ? renderContainersSummary(order.headerContainers, { config: quickConfig })
+    : '';
+  sheet.getCell(appendRow, 8).value = headerSummary;
+  sheet.getCell(appendRow, 9).value = buildHeaderCellI(order, now);
   sheet.getCell(appendRow, 10).value = buildHeaderCellJ(order, termin);
 
-  order.proben.forEach((probe, index) => {
+  probes.forEach((probe, index) => {
     const rowNumber = appendRow + 1 + index;
     const labNumber = startLabNo + index;
     sampleNos.push(labNumber);
@@ -230,7 +302,7 @@ async function appendOrderBlockToYearSheet(params) {
     sheet.getCell(rowNumber, 4).alignment = { wrapText: true };
     sheet.getCell(rowNumber, 6).value = probe.probenbezeichnung ? String(probe.probenbezeichnung) : '';
     sheet.getCell(rowNumber, 7).value = resolveColumnG(probe);
-    sheet.getCell(rowNumber, 8).value = resolveColumnH(probe);
+    sheet.getCell(rowNumber, 8).value = resolveColumnH(probe, quickConfig);
     sheet.getCell(rowNumber, 10).value = probeCellJ;
     sheet.getCell(rowNumber, 10).alignment = { wrapText: true };
     row.height = rowHeight;
@@ -240,13 +312,17 @@ async function appendOrderBlockToYearSheet(params) {
 
   const firstSampleNo = sampleNos.length > 0 ? sampleNos[0] : null;
   const lastSampleNo = sampleNos.length > 0 ? sampleNos[sampleNos.length - 1] : null;
-  const endRow = appendRow + order.proben.length;
+  const endRow = appendRow + probes.length;
   const endRowRange = `A${appendRow}:J${endRow}`;
 
   return {
     ok: true,
     saved: true,
     writer: 'exceljs',
+    todayPrefix,
+    maxOrderSeqToday,
+    nextSeq,
+    computedOrderNo: orderNo,
     orderNo,
     auftragsnummer: orderNo,
     sampleNos,

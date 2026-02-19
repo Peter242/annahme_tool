@@ -58,6 +58,14 @@ function createStableId(baseId, taken) {
   return candidate;
 }
 
+function splitTextLines(text) {
+  return String(text || '')
+    .replace(/\r\n?/g, '\n')
+    .split('\n')
+    .map((line) => line.trim())
+    .filter((line) => line !== '');
+}
+
 async function importPackagesFromExcel(excelPath, sheetName = DEFAULT_SHEET_NAME) {
   const workbook = new ExcelJS.Workbook();
   const absoluteExcelPath = path.resolve(excelPath);
@@ -77,23 +85,30 @@ async function importPackagesFromExcel(excelPath, sheetName = DEFAULT_SHEET_NAME
     const code = cellToString(row.getCell(2)).trim();
     const text = cellToString(row.getCell(3)).trim();
 
-    if (!name || !text) {
+    if (!text) {
       continue;
     }
 
     const baseId = toBaseId(code || name);
     const id = createStableId(baseId, takenIds);
+    const lines = splitTextLines(text);
+    const firstLine = lines[0] || '';
+    const secondLine = lines[1] || '';
+    const displayName = String(name || firstLine || code || id).trim();
+    const shortText = String(secondLine || '').trim();
 
     packages.push({
       id,
       name,
       code,
       text,
+      displayName,
+      shortText,
       row: rowNumber,
     });
   }
 
-  return packages;
+  return packages.sort((a, b) => String(a.displayName || a.name || '').localeCompare(String(b.displayName || b.name || ''), 'de'));
 }
 
 module.exports = {

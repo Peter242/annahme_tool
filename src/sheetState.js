@@ -47,43 +47,150 @@ function rowHasContentInAToJ(sheet, rowNumber) {
   return false;
 }
 
-function getSheetState(sheet, now = new Date()) {
+function extractOrderCore(valueString) {
+  const normalized = cellValueToString(valueString).trim();
+  if (!normalized) {
+    return null;
+  }
+
+  const match = normalized.match(/^(\d{6}8\d{2})(?!\d)/);
+  if (!match) {
+    return null;
+  }
+
+  const core = match[1];
+  return core;
+}
+
+function extractLeadingDigits(valueString) {
+  const normalized = cellValueToString(valueString).trim();
+  if (!normalized) {
+    return '';
+  }
+  const match = normalized.match(/^(\d+)/);
+  return match ? match[1] : '';
+}
+
+function extractOrderSeqForTodayPrefix(valueString, todayPrefix) {
+  const core = extractOrderCore(valueString);
+  if (!core || !core.startsWith(todayPrefix)) {
+    return null;
+  }
+
+  const seq = Number.parseInt(core.slice(-2), 10);
+  return Number.isFinite(seq) ? seq : null;
+}
+
+function resolveYearPrefix(sheet, now = new Date()) {
+  const sheetName = String(sheet?.name || '').trim();
+  const fromSheet = sheetName.match(/^(\d{4})$/);
+  const year = fromSheet ? Number.parseInt(fromSheet[1], 10) : now.getFullYear();
+  return pad2(year % 100);
+}
+
+function extractLeadingLabNumber(valueString) {
+  const normalized = cellValueToString(valueString).trim();
+  if (!normalized) {
+    return null;
+  }
+
+  if (extractOrderCore(normalized)) {
+    return null;
+  }
+  const match = normalized.match(/^(\d{5,6})([A-Za-z]|-\d+)?$/);
+  if (!match) {
+    return null;
+  }
+  const digits = match[1];
+
+  const parsed = Number.parseInt(digits, 10);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+function isLikelyLabNo(valueString, yearPrefix) {
+  const extracted = extractLeadingLabNumber(valueString);
+  if (!Number.isFinite(extracted)) {
+    return false;
+  }
+  return true;
+}
+
+function scanLabNumberCandidates(sheet, options = {}) {
+  const debugScan = Boolean(options.debugScan);
+  const debugLogger = typeof options.debugLogger === 'function'
+    ? options.debugLogger
+    : console.log;
+  const candidates = [];
+  let maxLabNumber = 0;
+  for (let rowNumber = 1; rowNumber <= sheet.rowCount; rowNumber += 1) {
+    const rawColA = sheet.getRow(rowNumber).getCell(1).value;
+    const rawText = cellValueToString(rawColA).trim();
+    if (!rawText) {
+      continue;
+    }
+    const parsed = extractLeadingLabNumber(rawColA);
+    if (!Number.isFinite(parsed)) {
+      if (debugScan) {
+        const startsWithDigits = /^\d/.test(rawText);
+        const hasEightDigitLead = /^\d{8}/.test(rawText);
+        if (startsWithDigits && !extractOrderCore(rawText)) {
+          const reason = hasEightDigitLead ? 'ignored_foreign_labno' : 'ignored_non_matching_labno';
+          debugLogger(`[sheet-scan] row=${rowNumber} value="${rawText}" reason=${reason}`);
+        }
+      }
+      continue;
+    }
+    candidates.push({
+      row: rowNumber,
+      raw: rawText,
+      parsed,
+    });
+    if (parsed > maxLabNumber) {
+      maxLabNumber = parsed;
+    }
+  }
+  return {
+    maxLabNumber,
+    candidates,
+  };
+}
+
+function getSheetState(sheet, now = new Date(), options = {}) {
+  const debugScan = Boolean(options.debugScan);
+  const debugLogger = typeof options.debugLogger === 'function'
+    ? options.debugLogger
+    : console.log;
   const todayPrefix = buildTodayPrefix(now);
 
   let lastUsedRow = 0;
   let maxLabNumber = 0;
   let maxOrderSeqToday = 0;
-
+  const labScan = scanLabNumberCandidates(sheet, { debugScan, debugLogger });
+  maxLabNumber = labScan.maxLabNumber;
   for (let rowNumber = 1; rowNumber <= sheet.rowCount; rowNumber += 1) {
     if (rowHasContentInAToJ(sheet, rowNumber)) {
       lastUsedRow = rowNumber;
     }
 
-    const colA = cellValueToString(sheet.getRow(rowNumber).getCell(1).value).trim();
+    const rawColA = sheet.getRow(rowNumber).getCell(1).value;
+    const colA = cellValueToString(rawColA).trim();
     if (!colA) {
       continue;
     }
 
-    const orderCoreMatch = colA.match(/^(\d{6}8\d{2})/);
-    if (orderCoreMatch) {
-      const core = orderCoreMatch[1];
-      if (core.startsWith(todayPrefix)) {
-        const seq = Number.parseInt(core.slice(-2), 10);
-        if (Number.isFinite(seq) && seq > maxOrderSeqToday) {
-          maxOrderSeqToday = seq;
-        }
+    const seqForToday = extractOrderSeqForTodayPrefix(rawColA, todayPrefix);
+    if (Number.isFinite(seqForToday)) {
+      if (seqForToday > maxOrderSeqToday) {
+        maxOrderSeqToday = seqForToday;
       }
       continue;
     }
 
-    const labMatch = colA.match(/^(\d+)/);
-    if (!labMatch) {
-      continue;
-    }
-
-    const labNumber = Number.parseInt(labMatch[1], 10);
-    if (Number.isFinite(labNumber) && labNumber > maxLabNumber) {
-      maxLabNumber = labNumber;
+    if (debugScan) {
+      const hasOrderDigits = /^\d{6}\d{2,}/.test(colA);
+      if (hasOrderDigits && !extractOrderCore(colA)) {
+        debugLogger(`[sheet-scan] row=${rowNumber} value="${colA}" reason=ignored_foreign_order`);
+      }
     }
   }
 
@@ -97,4 +204,9 @@ function getSheetState(sheet, now = new Date()) {
 module.exports = {
   getSheetState,
   buildTodayPrefix,
+  extractOrderCore,
+  extractOrderSeqForTodayPrefix,
+  isLikelyLabNo,
+  extractLeadingLabNumber,
+  scanLabNumberCandidates,
 };

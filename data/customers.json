@@ -1,0 +1,24 @@
+{
+  "cua": {
+    "key": "cua",
+    "kunde": "CUA",
+    "ansprechpartner": "de Vries",
+    "email": "de@vries.de",
+    "adresseBlock": "Ansprechpartner: Peter,\nEMail: CUA@Peter.de",
+    "kopfBemerkung": "RN an Dr Döring",
+    "usageCount": 1,
+    "lastUsed": "2026-02-17T20:49:01.521Z",
+    "updatedAt": "2026-02-18T21:58:01.150Z"
+  },
+  "peter": {
+    "key": "peter",
+    "kunde": "Peter",
+    "ansprechpartner": "de Vries",
+    "email": "de@vries.de",
+    "adresseBlock": "Chemisches Untersuchungsamt GmbH\nzH Herr Olk\nZum Nordkai 16\n26725 EMDEN",
+    "kopfBemerkung": "RN an Anna",
+    "usageCount": 8,
+    "lastUsed": "2026-02-19T19:40:24.114Z",
+    "updatedAt": "2026-02-19T19:40:24.114Z"
+  }
+}

@@ -4,6 +4,7 @@
   "writerBackend": "com",
   "excelPath": "./data/lab.xlsx",
   "yearSheetName": "",
+  "allowAutoOpenExcel": false,
   "writerHost": "http://localhost:3000",
   "writerToken": "change-me",
   "backupEnabled": true,
@@ -12,5 +13,28 @@
   "backupRetentionDays": 14,
   "backupZip": false,
   "uiShowPackagePreview": true,
+  "uiKuerzelPreset": [
+    "AD",
+    "DV",
+    "LB",
+    "DH",
+    "SE",
+    "JO",
+    "RS",
+    "KH"
+  ],
+  "uiRequiredFields": [
+    "kunde",
+    "projektName",
+    "projektnummer",
+    "ansprechpartner",
+    "email",
+    "kuerzel",
+    "proben[0].probenbezeichnung",
+    "proben[0].packageId"
+  ],
+  "uiRequireAtLeastOneSample": true,
+  "uiWarnOnly": true,
+  "uiBlockOnMissing": false,
   "uiDefaultEilig": "ja"
 }

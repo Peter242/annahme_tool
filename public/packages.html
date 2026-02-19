@@ -1,0 +1,328 @@
+<!doctype html>
+<html lang="de">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>CUA Paketverwaltung</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <div class="page">
+      <header class="topbar">
+        <a class="brand" href="/">
+          <img src="/assets/cua-logo.png" alt="CUA Logo" />
+        </a>
+        <h1 class="app-brand-title">CUA Paketverwaltung</h1>
+        <div class="topbar-actions">
+          <button type="button" id="theme-toggle" class="theme-toggle">Light</button>
+          <a class="btn-link" href="/settings.html">ZurÃ¼ck zu Settings</a>
+        </div>
+      </header>
+
+      <main class="panel">
+        <h1 class="page-title">Pakete</h1>
+        <p class="meta" id="packages-status">Pakete geladen: -</p>
+
+        <div class="packages-page-layout">
+          <aside class="packages-sidebar">
+            <button id="import-packages-btn" type="button" class="primary">Pakete aus Excel neu importieren</button>
+            <button id="reset-cache-btn" type="button" class="secondary">Cache zurÃ¼cksetzen</button>
+            <input id="packages-search" type="text" placeholder="Pakete suchen..." />
+          </aside>
+
+          <section>
+            <div class="packages-list-wrap">
+              <table class="packages-table">
+                <thead>
+                  <tr>
+                    <th>Name</th>
+                    <th>Code</th>
+                    <th>Excel Row</th>
+                    <th>Kurzvorschau</th>
+                  </tr>
+                </thead>
+                <tbody id="packages-table-body"></tbody>
+              </table>
+            </div>
+
+            <div id="package-detail" class="package-detail" style="margin-top: 0.7rem;">
+              <h2>Kein Paket ausgewÃ¤hlt</h2>
+              <p class="meta">WÃ¤hlen Sie ein Paket aus der Liste.</p>
+            </div>
+          </section>
+        </div>
+      </main>
+    </div>
+
+    <div id="toast-container" class="toast-wrap"></div>
+
+    <script>
+      const THEME_KEY = 'cua-theme';
+      const themeToggle = document.getElementById('theme-toggle');
+      const packagesStatus = document.getElementById('packages-status');
+      const packagesSearch = document.getElementById('packages-search');
+      const packagesTableBody = document.getElementById('packages-table-body');
+      const packageDetail = document.getElementById('package-detail');
+      const importPackagesButton = document.getElementById('import-packages-btn');
+      const resetCacheButton = document.getElementById('reset-cache-btn');
+
+      let packageEntries = [];
+      let activePackageId = '';
+      let lastImportText = '';
+
+      function applyTheme(theme) {
+        const resolved = theme === 'light' ? 'light' : 'dark';
+        document.documentElement.setAttribute('data-theme', resolved);
+        localStorage.setItem(THEME_KEY, resolved);
+        themeToggle.textContent = resolved === 'dark' ? 'Light' : 'Dark';
+      }
+      applyTheme(localStorage.getItem(THEME_KEY) || 'dark');
+      themeToggle.addEventListener('click', () => {
+        const current = document.documentElement.getAttribute('data-theme') || 'dark';
+        applyTheme(current === 'dark' ? 'light' : 'dark');
+      });
+
+      function decodeMojibakeText(input) {
+        return String(input || '')
+          .replace(/ÃƒÂ¤/g, 'Ã¤')
+          .replace(/Ãƒâ€ž/g, 'Ã„')
+          .replace(/ÃƒÂ¶/g, 'Ã¶')
+          .replace(/Ãƒâ€“/g, 'Ã–')
+          .replace(/ÃƒÂ¼/g, 'Ã¼')
+          .replace(/ÃƒÅ“/g, 'Ãœ')
+          .replace(/ÃƒÅ¸/g, 'ÃŸ')
+          .replace(/Ã¯Â¿Â½/g, 'Ã¶');
+      }
+
+      function normalizeUiEncoding(root = document.body) {
+        if (!root) return;
+        const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+        let node = walker.nextNode();
+        while (node) {
+          node.nodeValue = decodeMojibakeText(node.nodeValue);
+          node = walker.nextNode();
+        }
+        root.querySelectorAll('*').forEach((el) => {
+          ['title', 'aria-label', 'placeholder'].forEach((attr) => {
+            if (!el.hasAttribute(attr)) return;
+            el.setAttribute(attr, decodeMojibakeText(el.getAttribute(attr)));
+          });
+        });
+      }
+
+      normalizeUiEncoding(document.body);
+
+      function showToast(type, message) {
+        const toastContainer = document.getElementById('toast-container');
+        const el = document.createElement('div');
+        el.className = `toast ${type || 'info'}`;
+        el.textContent = decodeMojibakeText(message);
+        toastContainer.appendChild(el);
+        setTimeout(() => el.remove(), 4200);
+      }
+
+      function packageDisplayName(entry) {
+        return String(entry?.displayName || entry?.name || firstNonEmptyLine(entry?.text) || entry?.code || entry?.id || '').trim();
+      }
+
+      function packageText(entry) {
+        return String(entry?.text || '').replace(/\r\n?/g, '\n');
+      }
+
+      function firstNonEmptyLine(value) {
+        const lines = String(value || '').replace(/\r\n?/g, '\n').split('\n');
+        return lines.map((line) => line.trim()).find((line) => line) || '';
+      }
+
+      function secondNonEmptyLine(value) {
+        const lines = String(value || '')
+          .replace(/\r\n?/g, '\n')
+          .split('\n')
+          .map((line) => line.trim())
+          .filter(Boolean);
+        return lines[1] || '';
+      }
+
+      function packagePreview(entry) {
+        return String(entry?.shortText || secondNonEmptyLine(entry?.text) || '').trim();
+      }
+
+      function setStatusText() {
+        const importInfo = lastImportText ? `, letzter Import: ${lastImportText}` : '';
+        packagesStatus.textContent = `Pakete geladen: ${packageEntries.length}${importInfo}`;
+      }
+
+      function escapeHtml(value) {
+        return String(value || '')
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;')
+          .replace(/'/g, '&#039;');
+      }
+
+      function renderDetail(entry) {
+        if (!entry) {
+          packageDetail.innerHTML = '<h2>Kein Paket ausgewÃ¤hlt</h2><p class="meta">WÃ¤hlen Sie ein Paket aus der Liste.</p>';
+          normalizeUiEncoding(packageDetail);
+          return;
+        }
+        const name = packageDisplayName(entry);
+        const codeOrId = entry?.code ? `Code: ${entry.code}` : `ID: ${entry?.id || '-'}`;
+        const row = entry?.row === null || entry?.row === undefined ? '-' : String(entry.row);
+        const text = packageText(entry);
+        packageDetail.innerHTML = `
+          <h2>${escapeHtml(name)}</h2>
+          <p class="meta">${escapeHtml(codeOrId)} | Excel Row: ${escapeHtml(row)}</p>
+          <div class="actions" style="margin-top:0.4rem;">
+            <button id="copy-package-text" type="button" class="secondary">Kopieren</button>
+          </div>
+          <div class="package-text">${escapeHtml(text)}</div>
+        normalizeUiEncoding(packageDetail);
+        `;
+        const copyButton = document.getElementById('copy-package-text');
+        copyButton.addEventListener('click', async () => {
+          try {
+            await navigator.clipboard.writeText(text);
+            showToast('success', 'Parametertext kopiert');
+          } catch (_error) {
+            showToast('error', 'Kopieren fehlgeschlagen');
+          }
+        });
+      }
+
+      function selectPackageById(id) {
+        activePackageId = id;
+        const selected = packageEntries.find((entry) => entry.id === id) || null;
+        renderDetail(selected);
+        renderList();
+      }
+
+      function filteredPackages() {
+        const q = String(packagesSearch.value || '').trim().toLocaleLowerCase('de-DE');
+        const sorted = [...packageEntries].sort((a, b) => packageDisplayName(a).localeCompare(packageDisplayName(b), 'de'));
+        if (!q) return sorted;
+        return sorted.filter((entry) => {
+          const haystack = [
+            packageDisplayName(entry),
+            packagePreview(entry),
+            String(entry?.code || ''),
+            String(entry?.id || ''),
+            packageText(entry),
+          ].join(' ').toLocaleLowerCase('de-DE');
+          return haystack.includes(q);
+        });
+      }
+
+      function renderList() {
+        const rows = filteredPackages();
+        packagesTableBody.innerHTML = '';
+        rows.forEach((entry) => {
+          const tr = document.createElement('tr');
+          if (entry.id === activePackageId) tr.className = 'is-active';
+          tr.innerHTML = `
+            <td>
+              <button type="button" data-id="${escapeHtml(entry.id)}">
+                <div class="pkg-name">${escapeHtml(packageDisplayName(entry))}</div>
+              </button>
+            </td>
+            <td><span class="pkg-meta">${escapeHtml(entry.code || '-')}</span></td>
+            <td><span class="pkg-meta">${escapeHtml(entry.row === null || entry.row === undefined ? '-' : String(entry.row))}</span></td>
+            <td><span class="pkg-preview">${escapeHtml(packagePreview(entry) || '-')}</span></td>
+          `;
+          const pickButton = tr.querySelector('button[data-id]');
+          pickButton.addEventListener('click', () => selectPackageById(entry.id));
+          packagesTableBody.appendChild(tr);
+        });
+
+        if (rows.length < 1) {
+          const tr = document.createElement('tr');
+          tr.innerHTML = '<td colspan="4" class="meta">Keine Pakete gefunden</td>';
+          packagesTableBody.appendChild(tr);
+        }
+      }
+
+      async function loadPackages() {
+        const response = await fetch('/api/packages', { cache: 'no-store' });
+        const data = await response.json();
+        if (!response.ok || !Array.isArray(data)) {
+          throw new Error(data.message || 'Pakete konnten nicht geladen werden');
+        }
+        packageEntries = data.map((entry) => ({
+          ...entry,
+          text: String(entry?.text || '').replace(/\r\n?/g, '\n'),
+        }));
+        setStatusText();
+        renderList();
+        if (!activePackageId && packageEntries.length > 0) {
+          selectPackageById(packageEntries[0].id);
+        } else {
+          const stillExists = packageEntries.some((entry) => entry.id === activePackageId);
+          if (!stillExists && packageEntries.length > 0) {
+            selectPackageById(packageEntries[0].id);
+          } else if (stillExists) {
+            renderDetail(packageEntries.find((entry) => entry.id === activePackageId));
+          } else {
+            renderDetail(null);
+          }
+        }
+      }
+
+      packagesSearch.addEventListener('input', renderList);
+
+      importPackagesButton.addEventListener('click', async () => {
+        try {
+          importPackagesButton.disabled = true;
+          importPackagesButton.classList.add('loading');
+          const response = await fetch('/api/packages/import', { method: 'POST' });
+          const data = await response.json();
+          if (!response.ok || !data.ok) {
+            throw new Error(data.message || 'Import fehlgeschlagen');
+          }
+          if (Array.isArray(data.packages)) {
+            packageEntries = data.packages.map((entry) => ({
+              ...entry,
+              text: String(entry?.text || '').replace(/\r\n?/g, '\n'),
+            }));
+            lastImportText = new Date().toLocaleString('de-DE');
+            setStatusText();
+            renderList();
+            if (packageEntries.length > 0) {
+              const keep = packageEntries.some((entry) => entry.id === activePackageId) ? activePackageId : packageEntries[0].id;
+              selectPackageById(keep);
+            } else {
+              activePackageId = '';
+              renderDetail(null);
+            }
+          } else {
+            await loadPackages();
+          }
+          showToast('success', 'Pakete importiert');
+        } catch (error) {
+          showToast('error', error.message);
+        } finally {
+          importPackagesButton.classList.remove('loading');
+          importPackagesButton.disabled = false;
+        }
+      });
+
+      resetCacheButton.addEventListener('click', async () => {
+        try {
+          const response = await fetch('/api/state/reset', { method: 'POST' });
+          const data = await response.json();
+          if (!response.ok || !data.ok) {
+            throw new Error(data.message || 'Cache reset fehlgeschlagen');
+          }
+          showToast('success', 'Cache zurÃ¼ckgesetzt');
+          await loadPackages();
+        } catch (error) {
+          showToast('error', error.message);
+        }
+      });
+
+      loadPackages().catch((error) => {
+        showToast('error', error.message);
+      });
+    </script>
+  </body>
+</html>

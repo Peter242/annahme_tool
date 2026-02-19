@@ -33,9 +33,42 @@ test('importPackagesFromExcel reads rows and creates stable ids', async () => {
   const result = await importPackagesFromExcel(excelPath);
 
   assert.deepEqual(result, [
-    { id: 'no3', name: 'Nitrat', code: 'NO3', text: 'Text A', row: 2 },
-    { id: 'no3_2', name: 'Nitrat 2', code: 'NO3', text: 'Text B', row: 3 },
-    { id: 'sulfat', name: 'Sulfat', code: '', text: 'Text C', row: 4 },
+    {
+      id: 'no3',
+      name: 'Nitrat',
+      code: 'NO3',
+      text: 'Text A',
+      displayName: 'Nitrat',
+      shortText: '',
+      row: 2,
+    },
+    {
+      id: 'no3_2',
+      name: 'Nitrat 2',
+      code: 'NO3',
+      text: 'Text B',
+      displayName: 'Nitrat 2',
+      shortText: '',
+      row: 3,
+    },
+    {
+      id: 'sulfat',
+      name: 'Sulfat',
+      code: '',
+      text: 'Text C',
+      displayName: 'Sulfat',
+      shortText: '',
+      row: 4,
+    },
+    {
+      id: 'skip',
+      name: '',
+      code: 'SKIP',
+      text: 'Text D',
+      displayName: 'Text D',
+      shortText: '',
+      row: 5,
+    },
   ]);
 });
 
@@ -49,4 +82,23 @@ test('importPackagesFromExcel throws when sheet is missing', async () => {
     importPackagesFromExcel(excelPath),
     /Sheet Vorlagen nicht gefunden/,
   );
+});
+
+test('importPackagesFromExcel reads updated excel content on every import', async () => {
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'annahme-import-'));
+  const excelPath = path.join(tmpDir, 'packages.xlsx');
+
+  await createWorkbook(excelPath, 'Vorlagen', [
+    ['Name', 'Code', 'Parametertext'],
+    ['Nitrat', 'NO3', 'Text Alt'],
+  ]);
+  const first = await importPackagesFromExcel(excelPath);
+  assert.equal(first[0].text, 'Text Alt');
+
+  await createWorkbook(excelPath, 'Vorlagen', [
+    ['Name', 'Code', 'Parametertext'],
+    ['Nitrat', 'NO3', 'Text Neu TEST123'],
+  ]);
+  const second = await importPackagesFromExcel(excelPath);
+  assert.equal(second[0].text, 'Text Neu TEST123');
 });
