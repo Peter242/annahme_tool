@@ -211,6 +211,36 @@ function lineCountFromText(text) {
   return 1 + newlines;
 }
 
+function buildHeaderRowValues(params = {}) {
+  const {
+    orderNo = 'ORDER_NO',
+    order = {},
+    termin = null,
+    config = {},
+    now = new Date(),
+  } = params;
+  const quickConfig = {
+    quickContainerPlastic: Array.isArray(config.quickContainerPlastic) ? config.quickContainerPlastic : undefined,
+    quickContainerGlass: Array.isArray(config.quickContainerGlass) ? config.quickContainerGlass : undefined,
+  };
+  const headerSummary = order.sameContainersForAll
+    ? renderContainersSummary(order.headerContainers, { config: quickConfig })
+    : '';
+
+  return [
+    orderNo,
+    'y',
+    'y',
+    '',
+    order.pbTyp || 'PB',
+    '',
+    '',
+    headerSummary,
+    buildHeaderCellI(order, now),
+    buildHeaderCellJ(order, termin, config),
+  ];
+}
+
 async function appendOrderBlockToYearSheet(params) {
   const { config, rootDir, excelPath, order, termin, cacheHint = null, now = new Date(), packages } = params;
   const probes = Array.isArray(order.proben) ? order.proben : [];
@@ -328,4 +358,5 @@ async function appendOrderBlockToYearSheet(params) {
 module.exports = {
   appendOrderBlockToYearSheet,
   resolveYearSheetName,
+  buildHeaderRowValues,
 };

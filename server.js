@@ -1,4 +1,4 @@
-const fs = require('fs');
+﻿const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
 const express = require('express');
@@ -1235,7 +1235,22 @@ function parseOrderOrRespond(req, res) {
 app.use(express.json({
   type: ['application/json', 'application/*+json'],
 }));
-app.use(express.static(path.join(__dirname, 'public')));
+app.use(express.static(path.join(__dirname, 'public'), {
+  setHeaders(res, filePath) {
+    const ext = path.extname(filePath).toLowerCase();
+    if (ext === '.html') {
+      res.setHeader('Content-Type', 'text/html; charset=utf-8');
+      return;
+    }
+    if (ext === '.css') {
+      res.setHeader('Content-Type', 'text/css; charset=utf-8');
+      return;
+    }
+    if (ext === '.js') {
+      res.setHeader('Content-Type', 'application/javascript; charset=utf-8');
+    }
+  },
+}));
 app.get('/packages', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'packages.html'));
 });
@@ -1963,3 +1978,6 @@ app.listen(port, () => {
       console.warn(`[sheet-cache] init failed: ${error.message}`);
     });
 });
+
+
+

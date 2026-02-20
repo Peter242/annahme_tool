@@ -1,7 +1,7 @@
-<!doctype html>
+﻿<!doctype html>
 <html lang="de">
   <head>
-    <meta charset="UTF-8" />
+    <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>CUA Annahme</title>
     <link rel="stylesheet" href="/styles.css" />
@@ -301,7 +301,7 @@
 
     <div id="customer-delete-modal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="customer-delete-modal-title">
       <div class="modal-card modal-card-small">
-        <h3 id="customer-delete-modal-title">Kunde wirklich l�schen</h3>
+        <h3 id="customer-delete-modal-title">Kunde wirklich löschen</h3>
         <p id="customer-delete-modal-text" class="meta"></p>
         <div class="modal-actions">
           <button type="button" id="customer-delete-cancel" class="secondary">Abbrechen</button>
@@ -371,54 +371,11 @@
         });
       }
 
-      function decodeMojibakeText(input) {
-        let value = String(input || '');
-        if (!value) return value;
-        value = value
-          .replace(/Ã¤/g, 'ä')
-          .replace(/Ã„/g, 'Ä')
-          .replace(/Ã¶/g, 'ö')
-          .replace(/Ã–/g, 'Ö')
-          .replace(/Ã¼/g, 'ü')
-          .replace(/Ãœ/g, 'Ü')
-          .replace(/ÃŸ/g, 'ß')
-          .replace(/âœ“/g, '✓')
-          .replace(/â—/g, '◐')
-          .replace(/âš™/g, '⚙')
-          .replace(/â—/g, '◍')
-          .replace(/â—Œ/g, '◌')
-          .replace(/â§‰/g, '⧉')
-          .replace(/âœ•/g, '✕')
-          .replace(/ï¿½/g, 'ö');
-        return value;
-      }
-
-      function normalizeUiEncoding(root = document.body) {
-        if (!root) return;
-        const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
-        let node = walker.nextNode();
-        while (node) {
-          node.nodeValue = decodeMojibakeText(node.nodeValue);
-          node = walker.nextNode();
-        }
-        root.querySelectorAll('*').forEach((el) => {
-          ['title', 'aria-label', 'placeholder', 'value'].forEach((attr) => {
-            if (!el.hasAttribute(attr)) return;
-            el.setAttribute(attr, decodeMojibakeText(el.getAttribute(attr)));
-          });
-        });
-        const settingsLink = root.querySelector('.topbar-actions a[aria-label="Settings"]');
-        if (settingsLink) settingsLink.textContent = '⚙';
-        if (themeToggle) themeToggle.textContent = '◐';
-      }
-
-      normalizeUiEncoding(document.body);
-
       const toastContainer = document.getElementById('toast-container');
       function showToast(type, message) {
         const el = document.createElement('div');
         el.className = `toast ${type || 'info'}`;
-        el.textContent = decodeMojibakeText(message);
+        el.textContent = String(message || '');
         toastContainer.appendChild(el);
         setTimeout(() => {
           el.remove();
@@ -736,9 +693,9 @@
           const deleteButton = document.createElement('button');
           deleteButton.type = 'button';
           deleteButton.className = 'secondary icon-btn danger';
-          deleteButton.title = `Kunde l�schen: ${String(entry.kunde || '')}`;
-          deleteButton.setAttribute('aria-label', `Kunde l�schen: ${String(entry.kunde || '')}`);
-          deleteButton.textContent = '🗑';
+          deleteButton.title = `Kunde löschen: ${String(entry.kunde || '')}`;
+          deleteButton.setAttribute('aria-label', `Kunde löschen: ${String(entry.kunde || '')}`);
+          deleteButton.textContent = '✕';
           deleteButton.addEventListener('click', (event) => {
             event.preventDefault();
             event.stopPropagation();
@@ -804,7 +761,7 @@
 
       function openCustomerDeleteModal(entry) {
         pendingCustomerDeleteEntry = entry;
-        customerDeleteModalText.textContent = `Kunde wirklich l�schen: ${String(entry?.kunde || '')}`;
+        customerDeleteModalText.textContent = `Kunde wirklich löschen: ${String(entry?.kunde || '')}`;
         customerDeleteModal.classList.remove('hidden');
         setTimeout(() => customerDeleteConfirm.focus(), 0);
         return new Promise((resolve) => {
@@ -1613,7 +1570,7 @@
           return;
         }
         commitFeedback.classList.add(type);
-        commitFeedback.textContent = decodeMojibakeText(message);
+        commitFeedback.textContent = String(message || '');
       }
 
       function setAllFormControlsDisabled(isDisabled, allowIds = []) {
@@ -1677,7 +1634,7 @@
 
       function normalizeApiError(data, fallbackMessage = '') {
         const payload = data && typeof data === 'object' ? data : {};
-        const userMessage = decodeMojibakeText(String(payload.userMessage || payload.message || fallbackMessage || 'Fehler')).trim();
+        const userMessage = String(payload.userMessage || payload.message || fallbackMessage || 'Fehler').trim();
         let debug = null;
         if (payload.debug && typeof payload.debug === 'object') {
           debug = payload.debug;
@@ -1801,8 +1758,8 @@
         const geruchButton = probeElement.querySelector('[data-action="geruch"]');
         const nameInput = probeElement.querySelector('[name="probenbezeichnung"]');
 
-        if (gebindeButton) gebindeButton.textContent = '◍';
-        if (geruchButton) geruchButton.textContent = '◌';
+        if (gebindeButton) gebindeButton.textContent = '◐';
+        if (geruchButton) geruchButton.textContent = '◍';
         if (duplicateButton) duplicateButton.textContent = '⧉';
         if (deleteButton) deleteButton.textContent = '✕';
 
@@ -2245,3 +2202,7 @@
     </script>
   </body>
 </html>
+
+
+
+

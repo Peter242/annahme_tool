@@ -1,7 +1,7 @@
-<!doctype html>
+﻿<!doctype html>
 <html lang="de">
   <head>
-    <meta charset="UTF-8" />
+    <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Quick Buttons Glas</title>
     <link rel="stylesheet" href="/styles.css" />
@@ -75,7 +75,7 @@
           const up = document.createElement('button');
           up.type = 'button';
           up.className = 'secondary';
-          up.textContent = '↑';
+          up.textContent = '⧉'';
           up.disabled = index === 0;
           up.addEventListener('click', () => moveItem(index, -1));
           actions.appendChild(up);
@@ -83,7 +83,7 @@
           const down = document.createElement('button');
           down.type = 'button';
           down.className = 'secondary';
-          down.textContent = '↓';
+          down.textContent = '⧉"';
           down.disabled = index === items.length - 1;
           down.addEventListener('click', () => moveItem(index, 1));
           actions.appendChild(down);
@@ -143,3 +143,6 @@
     </script>
   </body>
 </html>
+
+
+

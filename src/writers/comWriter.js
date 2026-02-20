@@ -67,35 +67,51 @@ function buildComSampleRowPreview(sample = {}, labNo = 'LAB_NO', config = {}) {
   ];
 }
 
+function buildComPayload(params) {
+  const {
+    config = {},
+    rootDir,
+    excelPath,
+    order,
+    termin,
+    cacheHint = null,
+    now = new Date(),
+  } = params;
+  const absoluteExcelPath = resolveAbsoluteExcelPath(excelPath, rootDir);
+  const normalizedProbes = (Array.isArray(order?.proben) ? order.proben : []).map((probe) => ({
+    ...probe,
+    probeJ: buildProbeJ(probe),
+  }));
+  return {
+    payload: {
+      excelPath: absoluteExcelPath,
+      workbookFullName: absoluteExcelPath,
+      yearSheetName: resolveYearSheetName(config, now),
+      excelWriteAddressBlock: config.excelWriteAddressBlock !== false,
+      allowAutoOpenExcel: false,
+      now: now.toISOString(),
+      termin: termin || null,
+      cacheHint,
+      order: {
+        ...(order || {}),
+        proben: normalizedProbes,
+      },
+    },
+    normalizedProbes,
+  };
+}
+
 async function writeOrderBlockWithCom(params) {
   if (process.platform !== 'win32') {
     throw new Error('COM writer ist nur auf Windows verfuegbar');
   }
 
-  const { config, rootDir, excelPath, order, termin, cacheHint = null, now = new Date() } = params;
+  const { config, rootDir, order } = params;
   if (config.allowAutoOpenExcel === true) {
     throw new Error(FORBIDDEN_ATTACH_ONLY_MESSAGE);
   }
-  const absoluteExcelPath = resolveAbsoluteExcelPath(excelPath, rootDir);
   const t0 = Date.now();
-  const normalizedProbes = (Array.isArray(order?.proben) ? order.proben : []).map((probe) => ({
-    ...probe,
-    probeJ: buildProbeJ(probe),
-  }));
-  const payload = {
-    excelPath: absoluteExcelPath,
-    workbookFullName: absoluteExcelPath,
-    yearSheetName: resolveYearSheetName(config, now),
-    excelWriteAddressBlock: config.excelWriteAddressBlock !== false,
-    allowAutoOpenExcel: false,
-    now: now.toISOString(),
-    termin: termin || null,
-    cacheHint,
-    order: {
-      ...(order || {}),
-      proben: normalizedProbes,
-    },
-  };
+  const { payload, normalizedProbes } = buildComPayload(params);
 
   // Hard preflight validation before invoking PowerShell COM writer.
   const preflightRows = [
@@ -148,4 +164,5 @@ module.exports = {
   validateComRows,
   buildComHeaderRowPreview,
   buildComSampleRowPreview,
+  buildComPayload,
 };

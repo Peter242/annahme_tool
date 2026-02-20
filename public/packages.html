@@ -1,7 +1,7 @@
-<!doctype html>
+﻿<!doctype html>
 <html lang="de">
   <head>
-    <meta charset="UTF-8" />
+    <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>CUA Paketverwaltung</title>
     <link rel="stylesheet" href="/styles.css" />
@@ -15,7 +15,7 @@
         <h1 class="app-brand-title">CUA Paketverwaltung</h1>
         <div class="topbar-actions">
           <button type="button" id="theme-toggle" class="theme-toggle">Light</button>
-          <a class="btn-link" href="/settings.html">ZurÃ¼ck zu Settings</a>
+          <a class="btn-link" href="/settings.html">Zurück zu Settings</a>
         </div>
       </header>
 
@@ -26,7 +26,7 @@
         <div class="packages-page-layout">
           <aside class="packages-sidebar">
             <button id="import-packages-btn" type="button" class="primary">Pakete aus Excel neu importieren</button>
-            <button id="reset-cache-btn" type="button" class="secondary">Cache zurÃ¼cksetzen</button>
+            <button id="reset-cache-btn" type="button" class="secondary">Cache zurücksetzen</button>
             <input id="packages-search" type="text" placeholder="Pakete suchen..." />
           </aside>
 
@@ -46,8 +46,8 @@
             </div>
 
             <div id="package-detail" class="package-detail" style="margin-top: 0.7rem;">
-              <h2>Kein Paket ausgewÃ¤hlt</h2>
-              <p class="meta">WÃ¤hlen Sie ein Paket aus der Liste.</p>
+              <h2>Kein Paket ausgewählt</h2>
+              <p class="meta">Wählen Sie ein Paket aus der Liste.</p>
             </div>
           </section>
         </div>
@@ -82,41 +82,11 @@
         applyTheme(current === 'dark' ? 'light' : 'dark');
       });
 
-      function decodeMojibakeText(input) {
-        return String(input || '')
-          .replace(/ÃƒÂ¤/g, 'Ã¤')
-          .replace(/Ãƒâ€ž/g, 'Ã„')
-          .replace(/ÃƒÂ¶/g, 'Ã¶')
-          .replace(/Ãƒâ€“/g, 'Ã–')
-          .replace(/ÃƒÂ¼/g, 'Ã¼')
-          .replace(/ÃƒÅ“/g, 'Ãœ')
-          .replace(/ÃƒÅ¸/g, 'ÃŸ')
-          .replace(/Ã¯Â¿Â½/g, 'Ã¶');
-      }
-
-      function normalizeUiEncoding(root = document.body) {
-        if (!root) return;
-        const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
-        let node = walker.nextNode();
-        while (node) {
-          node.nodeValue = decodeMojibakeText(node.nodeValue);
-          node = walker.nextNode();
-        }
-        root.querySelectorAll('*').forEach((el) => {
-          ['title', 'aria-label', 'placeholder'].forEach((attr) => {
-            if (!el.hasAttribute(attr)) return;
-            el.setAttribute(attr, decodeMojibakeText(el.getAttribute(attr)));
-          });
-        });
-      }
-
-      normalizeUiEncoding(document.body);
-
       function showToast(type, message) {
         const toastContainer = document.getElementById('toast-container');
         const el = document.createElement('div');
         el.className = `toast ${type || 'info'}`;
-        el.textContent = decodeMojibakeText(message);
+        el.textContent = String(message || '');
         toastContainer.appendChild(el);
         setTimeout(() => el.remove(), 4200);
       }
@@ -163,8 +133,7 @@
 
       function renderDetail(entry) {
         if (!entry) {
-          packageDetail.innerHTML = '<h2>Kein Paket ausgewÃ¤hlt</h2><p class="meta">WÃ¤hlen Sie ein Paket aus der Liste.</p>';
-          normalizeUiEncoding(packageDetail);
+          packageDetail.innerHTML = '<h2>Kein Paket ausgewählt</h2><p class="meta">Wählen Sie ein Paket aus der Liste.</p>';
           return;
         }
         const name = packageDisplayName(entry);
@@ -178,7 +147,6 @@
             <button id="copy-package-text" type="button" class="secondary">Kopieren</button>
           </div>
           <div class="package-text">${escapeHtml(text)}</div>
-        normalizeUiEncoding(packageDetail);
         `;
         const copyButton = document.getElementById('copy-package-text');
         copyButton.addEventListener('click', async () => {
@@ -313,7 +281,7 @@
           if (!response.ok || !data.ok) {
             throw new Error(data.message || 'Cache reset fehlgeschlagen');
           }
-          showToast('success', 'Cache zurÃ¼ckgesetzt');
+          showToast('success', 'Cache Zurückgesetzt');
           await loadPackages();
         } catch (error) {
           showToast('error', error.message);
@@ -326,3 +294,7 @@
     </script>
   </body>
 </html>
+
+
+
+

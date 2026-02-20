@@ -5,6 +5,7 @@ const {
   validateComRows,
   buildComHeaderRowPreview,
   buildComSampleRowPreview,
+  buildComPayload,
 } = require('../src/writers/comWriter');
 
 test('writeOrderBlock rejects com backend on non-windows', async () => {
@@ -62,4 +63,31 @@ test('com preflight validation fails on malformed row shape', () => {
     () => validateComRows(['A|B|C'], 'test'),
     /expectedCols=10/i,
   );
+});
+
+test('com payload keeps excelWriteAddressBlock and adresseBlock for commit worker', () => {
+  const baseParams = {
+    rootDir: 'C:\\repo',
+    excelPath: 'C:\\repo\\data\\lab.xlsx',
+    now: new Date('2026-02-20T10:00:00Z'),
+    termin: '2026-02-24',
+    order: {
+      adresseBlock: 'Kunde A GmbH\nMusterstrasse 1\n12345 MUSTERSTADT',
+      proben: [{ probenbezeichnung: 'Probe 1' }],
+    },
+  };
+
+  const onPayload = buildComPayload({
+    ...baseParams,
+    config: { yearSheetName: '2026', excelWriteAddressBlock: true },
+  }).payload;
+  const offPayload = buildComPayload({
+    ...baseParams,
+    config: { yearSheetName: '2026', excelWriteAddressBlock: false },
+  }).payload;
+
+  assert.equal(onPayload.excelWriteAddressBlock, true);
+  assert.equal(offPayload.excelWriteAddressBlock, false);
+  assert.equal(onPayload.order.adresseBlock, 'Kunde A GmbH\nMusterstrasse 1\n12345 MUSTERSTADT');
+  assert.equal(offPayload.order.adresseBlock, 'Kunde A GmbH\nMusterstrasse 1\n12345 MUSTERSTADT');
 });

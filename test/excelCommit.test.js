@@ -4,8 +4,28 @@ const fs = require('fs');
 const path = require('path');
 const os = require('os');
 const ExcelJS = require('exceljs');
-const { appendOrderBlockToYearSheet } = require('../src/excelCommit');
+const { appendOrderBlockToYearSheet, buildHeaderRowValues } = require('../src/excelCommit');
 const { buildTodayPrefix } = require('../src/sheetState');
+
+test('header row mapping keeps column D empty and writes kopfBemerkung only to column J under Termin', () => {
+  const row = buildHeaderRowValues({
+    orderNo: '130226801',
+    termin: '2026-02-19',
+    now: new Date('2026-02-13T10:00:00Z'),
+    order: {
+      kunde: 'Kunde A',
+      kopfBemerkung: 'RN an Anna',
+      probenEingangDatum: '2026-02-13',
+    },
+    config: { yearSheetName: '2026' },
+  });
+
+  assert.equal(Array.isArray(row), true);
+  assert.equal(row.length, 10);
+  assert.equal(row[3], '');
+  assert.match(String(row[9]), /Termin:/);
+  assert.equal(String(row[9]).split('\n')[1], 'RN an Anna');
+});
 
 test('appendOrderBlockToYearSheet appends header and probes to year sheet end', async () => {
   const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'annahme-commit-'));
@@ -491,6 +511,39 @@ test('appendOrderBlockToYearSheet writes kopfBemerkung only to header J and keep
   const checkSheet = check.getWorksheet('2026');
   assert.equal(checkSheet.getCell('D2').value, '');
   assert.equal(checkSheet.getCell('J2').value, 'Termin: Do 19.02.2026\nPB an Hans');
+});
+
+test('appendOrderBlockToYearSheet keeps header D empty and writes RN an Anna only in header J', async () => {
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'annahme-commit-'));
+  const excelPath = path.join(tmpDir, 'lab.xlsx');
+
+  const workbook = new ExcelJS.Workbook();
+  workbook.addWorksheet('2026');
+  await workbook.xlsx.writeFile(excelPath);
+
+  await appendOrderBlockToYearSheet({
+    config: { yearSheetName: '2026' },
+    rootDir: tmpDir,
+    excelPath,
+    now: new Date('2026-02-13T10:00:00Z'),
+    termin: '2026-02-19',
+    order: {
+      kunde: 'Kunde A',
+      projekt: 'Projekt X',
+      projektnummer: 'P-123',
+      eilig: false,
+      kopfBemerkung: 'RN an Anna',
+      auftragsnotiz: 'RN an Anna',
+      probenEingangDatum: '2026-02-13',
+      proben: [{ probenbezeichnung: 'Probe 1', matrixTyp: 'Boden' }],
+    },
+  });
+
+  const check = new ExcelJS.Workbook();
+  await check.xlsx.readFile(excelPath);
+  const checkSheet = check.getWorksheet('2026');
+  assert.equal(checkSheet.getCell('D2').value, '');
+  assert.equal(checkSheet.getCell('J2').value, 'Termin: Do 19.02.2026\nRN an Anna');
 });
 
 test('appendOrderBlockToYearSheet writes adresseBlock in header J when excelWriteAddressBlock is true', async () => {
