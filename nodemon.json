@@ -9,10 +9,18 @@
   ],
   "ext": "js,json,html,ps1",
   "ignore": [
+    "**/data/**",
+    "**/logs/**",
+    "**/*.jsonl",
     "data/**",
+    "data\\**",
+    "**\\data\\**",
     "logs/**",
+    "logs\\**",
+    "**\\logs\\**",
     "backups/**",
     "*.log",
-    "**/cache.json"
+    "**/cache.json",
+    "**/sheetStateCache.json"
   ]
 }

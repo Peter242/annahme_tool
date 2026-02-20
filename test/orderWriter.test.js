@@ -28,6 +28,7 @@ test('writeOrderBlock accepts comExceljs alias for exceljs backend', async () =>
 test('com preflight row builder creates 10 columns for header and sample rows', () => {
   const header = buildComHeaderRowPreview({
     auftragsnotiz: 'Notiz',
+    kopfBemerkung: 'Hinweis Kopf',
     pbTyp: 'PB',
   });
   const sample = buildComSampleRowPreview({
@@ -41,7 +42,19 @@ test('com preflight row builder creates 10 columns for header and sample rows', 
   assert.equal(Array.isArray(sample), true);
   assert.equal(header.length, 10);
   assert.equal(sample.length, 10);
+  assert.equal(header[3], '');
+  assert.equal(sample[9], '');
   assert.doesNotThrow(() => validateComRows([header, sample], 'test'));
+});
+
+test('com preflight sample preview renders probeJ from present fields only', () => {
+  const gewichtOnly = buildComSampleRowPreview({ gewicht: 2 }, 26204);
+  const gewichtGeruch = buildComSampleRowPreview({ gewicht: 2, geruch: 'muffig' }, 26205);
+  const bemerkungOnly = buildComSampleRowPreview({ bemerkung: 'wenig Material' }, 26206);
+
+  assert.equal(gewichtOnly[9], 'Gewicht: 2 kg');
+  assert.equal(gewichtGeruch[9], 'Gewicht: 2 kg; Geruch: muffig');
+  assert.equal(bemerkungOnly[9], 'wenig Material');
 });
 
 test('com preflight validation fails on malformed row shape', () => {

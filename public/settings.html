@@ -1,484 +1,488 @@
-﻿<!doctype html>
+<!doctype html>
 <html lang="de">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>CUA Settings</title>
+    <title>Einstellungen</title>
     <link rel="stylesheet" href="/styles.css" />
+    <link rel="stylesheet" href="/settings/common.css" />
   </head>
   <body>
-    <div class="page">
+    <div class="settings-shell">
       <header class="topbar">
         <a class="brand" href="/">
           <img src="/assets/cua-logo.png" alt="CUA Logo" />
         </a>
-        <h1 class="app-brand-title">CUA Annahme</h1>
+        <h1 class="app-brand-title">Einstellungen</h1>
         <div class="topbar-actions">
           <button type="button" id="theme-toggle" class="theme-toggle">Light</button>
           <a class="btn-link" href="/">Zurück</a>
         </div>
       </header>
 
-      <main class="panel">
-        <h1 class="page-title">Einstellungen</h1>
-        <p class="meta" id="meta">Mode: - | excelPath: -</p>
+      <div class="settings-layout">
+        <aside class="settings-nav">
+          <button type="button" class="is-active" data-target="allgemein">Allgemein</button>
+          <button type="button" data-target="workflow">Workflow</button>
+          <button type="button" data-target="backups">Backups</button>
+          <button type="button" data-target="listen">Listen & Vorlagen</button>
+        </aside>
 
-        <fieldset>
-          <legend>Basis (Ebene 1)</legend>
-          <div class="grid">
-            <div>
-              <label for="excel-path">excelPath</label>
-              <input id="excel-path" type="text" />
-            </div>
+        <main class="settings-content">
+          <section id="allgemein" class="settings-section is-active">
+            <h2>Allgemein</h2>
+            <p class="settings-note">Hier stellst du Pfad und Basisverhalten der Excel-Anbindung ein.</p>
 
-            <div>
-              <label for="year-sheet-name">yearSheetName (leer = aktuelles Jahr)</label>
-              <input id="year-sheet-name" type="text" />
-            </div>
+            <div class="settings-grid">
+              <div class="settings-row-full">
+                <label for="excel-path">Excel-Datei</label>
+                <div class="action-row" style="margin-top:0;">
+                  <input id="excel-path" type="text" placeholder="z. B. C:\Annahme\Annahme.xlsx" />
+                  <button type="button" id="pick-file" class="secondary">Datei auswählen</button>
+                  <input id="pick-file-input" type="file" accept=".xlsx,.xlsm,.xls" class="hidden" />
+                </div>
+                <div class="field-help">Die API erwartet einen serverseitigen Pfad. Der Dateiname aus dem Dialog kann als Hilfe übernommen werden.</div>
+                <div id="excel-path-msg" class="inline-error hidden"></div>
+              </div>
 
-            <div>
-              <label for="backup-policy">backupPolicy</label>
-              <select id="backup-policy">
-                <option value="daily">daily</option>
-                <option value="interval">interval</option>
-              </select>
-            </div>
+              <div>
+                <label for="year-sheet-name">Jahresblatt (optional)</label>
+                <input id="year-sheet-name" type="text" placeholder="leer = aktuelles Jahr" />
+                <div class="field-help">Wenn leer, wird automatisch das Blatt für das aktuelle Jahr verwendet.</div>
+              </div>
 
-            <div>
-              <label for="backup-interval">backupIntervalMinutes</label>
-              <input id="backup-interval" type="number" min="1" step="1" />
-            </div>
+              <div>
+                <label>Writer Backend</label>
+                <div id="writer-backend" class="readonly-chip">-</div>
+                <div class="action-row">
+                  <a class="btn-link" href="/settings/advanced">Advanced öffnen</a>
+                </div>
+              </div>
 
-            <div>
-              <label for="backup-retention">backupRetentionDays</label>
-              <input id="backup-retention" type="number" min="0" step="1" />
-            </div>
+              <div class="settings-row-full">
+                <label>Pfad prüfen</label>
+                <div class="action-row" style="margin-top:0;">
+                  <button type="button" id="validate-path" class="secondary">Pfad prüfen</button>
+                </div>
+                <div id="validate-msg" class="inline-ok hidden"></div>
+              </div>
 
-            <div>
-              <label for="ui-default-eilig">uiDefaultEilig</label>
-              <select id="ui-default-eilig">
-                <option value="ja">ja</option>
-                <option value="nein">nein</option>
-              </select>
-            </div>
-
-            <div>
-              <label>backupEnabled</label>
-              <div class="check-row">
-                <input id="backup-enabled" type="checkbox" />
-                <span>aktiv</span>
+              <div class="settings-row-full">
+                <label>Cache zurücksetzen</label>
+                <div class="field-help">Löscht nur den Laufzeit-Cache. Die eigentliche Excel-Datei bleibt unverändert.</div>
+                <div class="action-row" style="margin-top:0.5rem;">
+                  <button type="button" id="reset-cache" class="secondary">Cache zurücksetzen</button>
+                </div>
+                <div id="cache-msg" class="inline-ok hidden"></div>
               </div>
             </div>
 
-            <div>
-              <label>backupZip</label>
-              <div class="check-row">
-                <input id="backup-zip" type="checkbox" />
-                <span>.zip statt .xlsx</span>
+            <div class="action-row">
+              <button type="button" id="save-allgemein" class="primary">Änderungen speichern</button>
+            </div>
+          </section>
+
+          <section id="workflow" class="settings-section">
+            <h2>Workflow</h2>
+            <p class="settings-note">Steuert, wie strikt die Eingabeoberfläche bei der Auftragserfassung arbeitet.</p>
+
+            <div class="settings-grid">
+              <div class="settings-row-full">
+                <label for="ui-default-eilig">Eilig-Default</label>
+                <select id="ui-default-eilig">
+                  <option value="ja">Ja (Standard)</option>
+                  <option value="nein">Nein (Standard)</option>
+                </select>
+              </div>
+
+              <div class="settings-row-full">
+                <div class="toggle-row">
+                  <label class="switch">
+                    <input id="ui-warn-only" type="checkbox" />
+                    <span class="slider"></span>
+                  </label>
+                  <div>
+                    <div class="toggle-label">Warnungen statt Blockieren</div>
+                    <div class="toggle-desc">Fehlende Pflichtangaben werden als Hinweis angezeigt.</div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="settings-row-full">
+                <div class="toggle-row">
+                  <label class="switch">
+                    <input id="ui-block-on-missing" type="checkbox" />
+                    <span class="slider"></span>
+                  </label>
+                  <div>
+                    <div class="toggle-label">Bei fehlenden Feldern blockieren</div>
+                    <div class="toggle-desc">Commit wird verhindert, bis wichtige Felder gepflegt sind.</div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="settings-row-full">
+                <div class="toggle-row">
+                  <label class="switch">
+                    <input id="ui-require-at-least-one-sample" type="checkbox" />
+                    <span class="slider"></span>
+                  </label>
+                  <div>
+                    <div class="toggle-label">Mindestens eine Probe empfehlen</div>
+                    <div class="toggle-desc">Zeigt Hinweis, wenn ein Auftrag ohne Probe erstellt wird.</div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="settings-row-full">
+                <div class="toggle-row">
+                  <label class="switch">
+                    <input id="excel-write-address-block" type="checkbox" />
+                    <span class="slider"></span>
+                  </label>
+                  <div>
+                    <div class="toggle-label">Anschrift in Excel übertragen</div>
+                    <div class="toggle-desc">Schreibt den Anschrift-Block in Kopfspalte J.</div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="settings-row-full">
+                <div class="toggle-row">
+                  <label class="switch">
+                    <input id="ui-show-package-preview" type="checkbox" />
+                    <span class="slider"></span>
+                  </label>
+                  <div>
+                    <div class="toggle-label">Paketvorschau anzeigen</div>
+                    <div class="toggle-desc">Blendet Pakettexte direkt in der Erfassungsoberfläche ein.</div>
+                  </div>
+                </div>
               </div>
             </div>
 
-            <div>
-              <label>uiShowPackagePreview</label>
-              <div class="check-row">
-                <input id="ui-show-package-preview" type="checkbox" />
-                <span>Vorschau anzeigen</span>
+            <div class="action-row">
+              <button type="button" id="save-workflow" class="primary">Änderungen speichern</button>
+            </div>
+          </section>
+
+          <section id="backups" class="settings-section">
+            <h2>Backups</h2>
+            <p class="settings-note">Definiert, wann Sicherungen erstellt und wie lange sie aufbewahrt werden.</p>
+
+            <div class="settings-grid">
+              <div class="settings-row-full">
+                <div class="toggle-row">
+                  <label class="switch">
+                    <input id="backup-enabled" type="checkbox" />
+                    <span class="slider"></span>
+                  </label>
+                  <div>
+                    <div class="toggle-label">Backups aktiv</div>
+                    <div class="toggle-desc">Erstellt Sicherungen vor dem Commit.</div>
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <label for="backup-policy">Backup-Intervall</label>
+                <select id="backup-policy">
+                  <option value="daily">Täglich</option>
+                  <option value="interval">Alle X Minuten</option>
+                </select>
+              </div>
+
+              <div id="backup-interval-wrap">
+                <label for="backup-interval">Intervall in Minuten</label>
+                <input id="backup-interval" type="number" min="1" step="1" />
+              </div>
+
+              <div>
+                <label for="backup-retention">Aufbewahrung (Tage)</label>
+                <input id="backup-retention" type="number" min="0" step="1" />
+              </div>
+
+              <div>
+                <div class="toggle-row">
+                  <label class="switch">
+                    <input id="backup-zip" type="checkbox" />
+                    <span class="slider"></span>
+                  </label>
+                  <div>
+                    <div class="toggle-label">ZIP-Backups</div>
+                    <div class="toggle-desc">Speichert Sicherungen als ZIP statt XLSX.</div>
+                  </div>
+                </div>
               </div>
             </div>
 
-            <div>
-              <label for="ui-required-fields">uiRequiredFields (ein Feldpfad pro Zeile)</label>
-              <textarea id="ui-required-fields" rows="8"></textarea>
+            <div class="action-row">
+              <button type="button" id="save-backups" class="primary">Änderungen speichern</button>
             </div>
+          </section>
 
-            <div>
-              <label>uiRequireAtLeastOneSample</label>
-              <div class="check-row">
-                <input id="ui-require-at-least-one-sample" type="checkbox" />
-                <span>Mindestens eine Probe empfehlen</span>
-              </div>
+          <section id="listen" class="settings-section">
+            <h2>Listen & Vorlagen</h2>
+            <p class="settings-note">Diese Bereiche werden in separaten Seiten gepflegt, damit die Hauptseite übersichtlich bleibt.</p>
+            <div class="list-links">
+              <a class="link-card" href="/settings/kuerzel">
+                <strong>Kürzel Presets verwalten</strong>
+                <span>Chips hinzufügen, löschen und speichern</span>
+              </a>
+              <a class="link-card" href="/settings/gebinde/plastik">
+                <strong>Gebinde Quick Buttons Kunststoff</strong>
+                <span>Sortierbare Liste mit Add/Remove/Move</span>
+              </a>
+              <a class="link-card" href="/settings/gebinde/glas">
+                <strong>Gebinde Quick Buttons Glas</strong>
+                <span>Sortierbare Liste mit Add/Remove/Move</span>
+              </a>
+              <a class="link-card" href="/settings/required">
+                <strong>Required Fields</strong>
+                <span>Freundliche Checkliste statt Feldpfade</span>
+              </a>
+              <a class="link-card" href="/packages">
+                <strong>Pakete verwalten</strong>
+                <span>Öffnet die bestehende Paketverwaltung</span>
+              </a>
             </div>
-
-            <div>
-              <label>uiWarnOnly</label>
-              <div class="check-row">
-                <input id="ui-warn-only" type="checkbox" />
-                <span>Nur Warnung statt Hard-Block</span>
-              </div>
-            </div>
-
-            <div>
-              <label>uiBlockOnMissing</label>
-              <div class="check-row">
-                <input id="ui-block-on-missing" type="checkbox" />
-                <span>Blockieren bei fehlenden wichtigen Feldern</span>
-              </div>
-            </div>
-
-            <div>
-              <label>Kürzel Presets</label>
-              <div id="ui-kuerzel-preset-list" class="preset-list"></div>
-              <div class="actions" style="margin-top: 0.45rem;">
-                <input id="ui-kuerzel-preset-new" type="text" placeholder="Neues Kürzel" />
-                <button id="ui-kuerzel-preset-add" type="button" class="secondary">Hinzufügen</button>
-              </div>
-            </div>
-
-            <div>
-              <label for="quick-container-plastic">Quick Buttons Kunststoff (eine Option pro Zeile)</label>
-              <textarea id="quick-container-plastic" rows="8"></textarea>
-            </div>
-
-            <div>
-              <label for="quick-container-glass">Quick Buttons Glas (eine Option pro Zeile)</label>
-              <textarea id="quick-container-glass" rows="8"></textarea>
-            </div>
-          </div>
-
-          <div class="actions" style="margin-top: 0.8rem;">
-            <button id="save-basic" type="button" class="primary">Basis speichern</button>
-            <button id="validate-path" type="button" class="secondary">Pfad prüfen</button>
-            <button id="reset-cache" type="button" class="secondary">Cache zurücksetzen</button>
-          </div>
-        </fieldset>
-
-        <fieldset>
-          <legend>Advanced (Ebene 2)</legend>
-          <div class="grid">
-            <div>
-              <label for="mode">mode</label>
-              <select id="mode">
-                <option value="single">single</option>
-                <option value="writer">writer</option>
-                <option value="client">client</option>
-              </select>
-            </div>
-
-            <div>
-              <label for="writer-host">writerHost</label>
-              <input id="writer-host" type="text" />
-            </div>
-
-            <div>
-              <label for="writer-backend">writerBackend</label>
-              <select id="writer-backend">
-                <option value="com">com</option>
-                <option value="exceljs">exceljs</option>
-              </select>
-            </div>
-
-            <div>
-              <label for="writer-token">writerToken</label>
-              <input id="writer-token" type="password" autocomplete="off" />
-            </div>
-
-            <div>
-              <label for="admin-key">Admin Key (nur für Ebene 2)</label>
-              <input id="admin-key" type="password" autocomplete="off" />
-            </div>
-          </div>
-
-          <div class="actions" style="margin-top: 0.8rem;">
-            <button id="save-advanced" type="button" class="primary">Advanced speichern</button>
-          </div>
-        </fieldset>
-
-        <fieldset>
-          <legend>Pakete</legend>
-          <div class="actions">
-            <a class="btn-link" href="/packages">Pakete verwalten</a>
-          </div>
-          <p class="meta" id="packages-summary">Pakete geladen: -</p>
-        </fieldset>
-
-        <pre id="status" class="result-box"></pre>
-        <pre id="validate-result" class="result-box"></pre>
-      </main>
+          </section>
+        </main>
+      </div>
     </div>
 
     <div id="toast-container" class="toast-wrap"></div>
 
+    <script src="/settings/common.js"></script>
     <script>
-      const THEME_KEY = 'cua-theme';
-      const themeToggle = document.getElementById('theme-toggle');
-      function applyTheme(theme) {
-        const resolved = theme === 'light' ? 'light' : 'dark';
-        document.documentElement.setAttribute('data-theme', resolved);
-        localStorage.setItem(THEME_KEY, resolved);
-        themeToggle.textContent = resolved === 'dark' ? 'Light' : 'Dark';
-      }
-      applyTheme(localStorage.getItem(THEME_KEY) || 'dark');
-      themeToggle.addEventListener('click', () => {
-        const current = document.documentElement.getAttribute('data-theme') || 'dark';
-        applyTheme(current === 'dark' ? 'light' : 'dark');
-      });
+      initThemeToggle('theme-toggle');
 
-      const toastContainer = document.getElementById('toast-container');
-      function showToast(type, message) {
-        const el = document.createElement('div');
-        el.className = `toast ${type || 'info'}`;
-        el.textContent = message;
-        toastContainer.appendChild(el);
-        setTimeout(() => el.remove(), 4200);
-      }
+      const navButtons = Array.from(document.querySelectorAll('.settings-nav button[data-target]'));
+      const sections = Array.from(document.querySelectorAll('.settings-section'));
 
-      const meta = document.getElementById('meta');
-      const packagesSummary = document.getElementById('packages-summary');
-      const status = document.getElementById('status');
-      const validateResult = document.getElementById('validate-result');
+      const state = {};
 
       const excelPathInput = document.getElementById('excel-path');
+      const pickFileButton = document.getElementById('pick-file');
+      const pickFileInput = document.getElementById('pick-file-input');
       const yearSheetNameInput = document.getElementById('year-sheet-name');
+      const writerBackendValue = document.getElementById('writer-backend');
+      const validatePathButton = document.getElementById('validate-path');
+      const validateMsg = document.getElementById('validate-msg');
+      const excelPathMsg = document.getElementById('excel-path-msg');
+      const resetCacheButton = document.getElementById('reset-cache');
+      const cacheMsg = document.getElementById('cache-msg');
+
+      const uiDefaultEiligInput = document.getElementById('ui-default-eilig');
+      const uiWarnOnlyInput = document.getElementById('ui-warn-only');
+      const uiBlockOnMissingInput = document.getElementById('ui-block-on-missing');
+      const uiRequireAtLeastOneSampleInput = document.getElementById('ui-require-at-least-one-sample');
+      const excelWriteAddressBlockInput = document.getElementById('excel-write-address-block');
+      const uiShowPackagePreviewInput = document.getElementById('ui-show-package-preview');
+
       const backupEnabledInput = document.getElementById('backup-enabled');
       const backupPolicyInput = document.getElementById('backup-policy');
+      const backupIntervalWrap = document.getElementById('backup-interval-wrap');
       const backupIntervalInput = document.getElementById('backup-interval');
       const backupRetentionInput = document.getElementById('backup-retention');
       const backupZipInput = document.getElementById('backup-zip');
-      const uiShowPackagePreviewInput = document.getElementById('ui-show-package-preview');
-      const uiKuerzelPresetList = document.getElementById('ui-kuerzel-preset-list');
-      const uiKuerzelPresetNewInput = document.getElementById('ui-kuerzel-preset-new');
-      const uiKuerzelPresetAddButton = document.getElementById('ui-kuerzel-preset-add');
-      const uiRequiredFieldsInput = document.getElementById('ui-required-fields');
-      const uiRequireAtLeastOneSampleInput = document.getElementById('ui-require-at-least-one-sample');
-      const uiWarnOnlyInput = document.getElementById('ui-warn-only');
-      const uiBlockOnMissingInput = document.getElementById('ui-block-on-missing');
-      const uiDefaultEiligInput = document.getElementById('ui-default-eilig');
-      const quickContainerPlasticInput = document.getElementById('quick-container-plastic');
-      const quickContainerGlassInput = document.getElementById('quick-container-glass');
 
-      const modeInput = document.getElementById('mode');
-      const writerHostInput = document.getElementById('writer-host');
-      const writerBackendInput = document.getElementById('writer-backend');
-      const writerTokenInput = document.getElementById('writer-token');
-      const adminKeyInput = document.getElementById('admin-key');
-
-      const saveBasicButton = document.getElementById('save-basic');
-      const saveAdvancedButton = document.getElementById('save-advanced');
-      const validatePathButton = document.getElementById('validate-path');
-      const resetCacheButton = document.getElementById('reset-cache');
-
-      let currentConfig = null;
-      let kuerzelPresets = ['AD', 'DV', 'LB', 'DH', 'SE', 'JO', 'RS', 'KH'];
-
-      function setStatus(payload) {
-        status.textContent = JSON.stringify(payload, null, 2);
-      }
-
-      function setValidateResult(payload) {
-        validateResult.textContent = JSON.stringify(payload, null, 2);
-      }
-
-      function fillForm(config) {
-        currentConfig = config;
-        meta.textContent = `Mode: ${config.mode} | excelPath: ${config.excelPath}`;
-
-        excelPathInput.value = config.excelPath || '';
-        yearSheetNameInput.value = config.yearSheetName || '';
-        backupEnabledInput.checked = Boolean(config.backupEnabled);
-        backupPolicyInput.value = config.backupPolicy || 'daily';
-        backupIntervalInput.value = config.backupIntervalMinutes ?? 60;
-        backupRetentionInput.value = config.backupRetentionDays ?? 14;
-        backupZipInput.checked = Boolean(config.backupZip);
-        uiShowPackagePreviewInput.checked = Boolean(config.uiShowPackagePreview);
-        kuerzelPresets = normalizeKuerzelPresetList(config.uiKuerzelPreset);
-        if (kuerzelPresets.length === 0) {
-          kuerzelPresets = ['AD', 'DV', 'LB', 'DH', 'SE', 'JO', 'RS', 'KH'];
-        }
-        renderKuerzelPresetList();
-        uiRequiredFieldsInput.value = Array.isArray(config.uiRequiredFields) ? config.uiRequiredFields.join('\n') : '';
-        uiRequireAtLeastOneSampleInput.checked = config.uiRequireAtLeastOneSample !== false;
-        uiWarnOnlyInput.checked = config.uiWarnOnly !== false;
-        uiBlockOnMissingInput.checked = Boolean(config.uiBlockOnMissing);
-        uiDefaultEiligInput.value = config.uiDefaultEilig || 'ja';
-        quickContainerPlasticInput.value = Array.isArray(config.quickContainerPlastic) ? config.quickContainerPlastic.join('\n') : '';
-        quickContainerGlassInput.value = Array.isArray(config.quickContainerGlass) ? config.quickContainerGlass.join('\n') : '';
-
-        modeInput.value = config.mode || 'single';
-        writerHostInput.value = config.writerHost || '';
-        writerBackendInput.value = config.writerBackend || 'com';
-      }
-
-      async function loadConfig() {
-        const response = await fetch('/api/config');
-        const data = await response.json();
-        if (!response.ok || !data.ok) {
-          throw new Error(data.message || 'Config konnte nicht geladen werden');
-        }
-        fillForm(data.config);
-      }
-
-      async function loadPackagesSummary() {
-        const response = await fetch('/api/packages', { cache: 'no-store' });
-        const data = await response.json();
-        if (!response.ok || !Array.isArray(data)) {
-          throw new Error(data.message || 'Pakete konnten nicht geladen werden');
-        }
-        packagesSummary.textContent = `Pakete geladen: ${data.length}`;
-      }
-
-      async function saveConfig(payload, adminKey = '') {
-        const headers = { 'Content-Type': 'application/json' };
-        if (adminKey) headers['x-admin-key'] = adminKey;
-
-        const response = await fetch('/api/config', {
-          method: 'POST',
-          headers,
-          body: JSON.stringify(payload),
+      function showSection(target) {
+        navButtons.forEach((button) => {
+          button.classList.toggle('is-active', button.dataset.target === target);
         });
+        sections.forEach((section) => {
+          section.classList.toggle('is-active', section.id === target);
+        });
+      }
 
-        const data = await response.json();
-        setStatus(data);
-        if (response.ok && data.ok) {
-          fillForm(data.config);
-          showToast('success', 'Einstellungen gespeichert');
+      navButtons.forEach((button) => {
+        button.addEventListener('click', () => showSection(button.dataset.target));
+      });
+
+      function renderFromState() {
+        excelPathInput.value = state.excelPath || '';
+        yearSheetNameInput.value = state.yearSheetName || '';
+        writerBackendValue.textContent = state.writerBackend || '-';
+
+        uiDefaultEiligInput.value = state.uiDefaultEilig || 'ja';
+        uiWarnOnlyInput.checked = state.uiWarnOnly !== false;
+        uiBlockOnMissingInput.checked = Boolean(state.uiBlockOnMissing);
+        uiRequireAtLeastOneSampleInput.checked = state.uiRequireAtLeastOneSample !== false;
+        excelWriteAddressBlockInput.checked = state.excelWriteAddressBlock !== false;
+        uiShowPackagePreviewInput.checked = Boolean(state.uiShowPackagePreview);
+
+        backupEnabledInput.checked = Boolean(state.backupEnabled);
+        backupPolicyInput.value = state.backupPolicy || 'daily';
+        backupIntervalInput.value = Number(state.backupIntervalMinutes || 60);
+        backupRetentionInput.value = Number(state.backupRetentionDays || 14);
+        backupZipInput.checked = Boolean(state.backupZip);
+        backupIntervalWrap.classList.toggle('hidden', backupPolicyInput.value !== 'interval');
+      }
+
+      function clearMessages() {
+        [validateMsg, excelPathMsg, cacheMsg].forEach((el) => {
+          el.classList.add('hidden');
+          el.textContent = '';
+          el.classList.remove('inline-error', 'inline-ok');
+        });
+      }
+
+      function updateStateFromGeneral() {
+        state.excelPath = String(excelPathInput.value || '').trim();
+        state.yearSheetName = String(yearSheetNameInput.value || '').trim();
+      }
+
+      function updateStateFromWorkflow() {
+        state.uiDefaultEilig = uiDefaultEiligInput.value;
+        state.uiWarnOnly = uiWarnOnlyInput.checked;
+        state.uiBlockOnMissing = uiBlockOnMissingInput.checked;
+        state.uiRequireAtLeastOneSample = uiRequireAtLeastOneSampleInput.checked;
+        state.excelWriteAddressBlock = excelWriteAddressBlockInput.checked;
+        state.uiShowPackagePreview = uiShowPackagePreviewInput.checked;
+      }
+
+      function updateStateFromBackups() {
+        state.backupEnabled = backupEnabledInput.checked;
+        state.backupPolicy = backupPolicyInput.value;
+        state.backupIntervalMinutes = Number(backupIntervalInput.value);
+        state.backupRetentionDays = Number(backupRetentionInput.value);
+        state.backupZip = backupZipInput.checked;
+      }
+
+      function mergeAndRender(config) {
+        Object.assign(state, config);
+        renderFromState();
+      }
+
+      pickFileButton.addEventListener('click', () => pickFileInput.click());
+      pickFileInput.addEventListener('change', () => {
+        const file = pickFileInput.files && pickFileInput.files[0];
+        if (!file) return;
+        const current = String(excelPathInput.value || '');
+        const pieces = current.split(/[\\/]/);
+        if (pieces.length > 1) {
+          pieces[pieces.length - 1] = file.name;
+          excelPathInput.value = pieces.join(current.includes('\\') ? '\\' : '/');
         } else {
-          showToast('error', data.message || 'Speichern fehlgeschlagen');
+          excelPathInput.value = file.name;
         }
-      }
+      });
 
-      function parseMultilineList(value) {
-        const seen = new Set();
-        const items = [];
-        String(value || '').split(/\r?\n/).forEach((line) => {
-          const normalized = line.trim().replace(/\s+/g, ' ');
-          if (!normalized || seen.has(normalized)) return;
-          seen.add(normalized);
-          items.push(normalized);
-        });
-        return items;
-      }
+      backupPolicyInput.addEventListener('change', () => {
+        backupIntervalWrap.classList.toggle('hidden', backupPolicyInput.value !== 'interval');
+      });
 
-      function normalizeKuerzelPresetValue(value) {
-        return String(value || '').trim().replace(/\s+/g, ' ').toUpperCase();
-      }
-
-      function normalizeKuerzelPresetList(values) {
-        const seen = new Set();
-        const result = [];
-        (Array.isArray(values) ? values : []).forEach((item) => {
-          const normalized = normalizeKuerzelPresetValue(item);
-          if (!normalized || seen.has(normalized)) return;
-          seen.add(normalized);
-          result.push(normalized);
-        });
-        return result;
-      }
-
-      function renderKuerzelPresetList() {
-        uiKuerzelPresetList.innerHTML = '';
-        kuerzelPresets.forEach((preset) => {
-          const row = document.createElement('div');
-          row.className = 'preset-item';
-          const label = document.createElement('span');
-          label.textContent = preset;
-          const removeButton = document.createElement('button');
-          removeButton.type = 'button';
-          removeButton.className = 'secondary danger';
-          removeButton.textContent = 'Löschen';
-          removeButton.addEventListener('click', () => {
-            kuerzelPresets = kuerzelPresets.filter((item) => item !== preset);
-            renderKuerzelPresetList();
-          });
-          row.appendChild(label);
-          row.appendChild(removeButton);
-          uiKuerzelPresetList.appendChild(row);
-        });
-      }
-
-      saveBasicButton.addEventListener('click', async () => {
+      document.getElementById('save-allgemein').addEventListener('click', async () => {
+        clearMessages();
+        updateStateFromGeneral();
+        if (!state.excelPath) {
+          excelPathMsg.textContent = 'Bitte einen Excel-Pfad eingeben.';
+          excelPathMsg.classList.remove('hidden');
+          return;
+        }
         try {
-          await saveConfig({
-            excelPath: excelPathInput.value.trim(),
-            yearSheetName: yearSheetNameInput.value.trim(),
-            backupEnabled: backupEnabledInput.checked,
-            backupPolicy: backupPolicyInput.value,
-            backupIntervalMinutes: Number(backupIntervalInput.value),
-            backupRetentionDays: Number(backupRetentionInput.value),
-            backupZip: backupZipInput.checked,
-            uiShowPackagePreview: uiShowPackagePreviewInput.checked,
-            uiKuerzelPreset: normalizeKuerzelPresetList(kuerzelPresets),
-            uiRequiredFields: parseMultilineList(uiRequiredFieldsInput.value),
-            uiRequireAtLeastOneSample: uiRequireAtLeastOneSampleInput.checked,
-            uiWarnOnly: uiWarnOnlyInput.checked,
-            uiBlockOnMissing: uiBlockOnMissingInput.checked,
-            uiDefaultEilig: uiDefaultEiligInput.value,
-            quickContainerPlastic: parseMultilineList(quickContainerPlasticInput.value),
-            quickContainerGlass: parseMultilineList(quickContainerGlassInput.value),
+          const config = await saveConfig({
+            excelPath: state.excelPath,
+            yearSheetName: state.yearSheetName,
           });
+          mergeAndRender(config);
+          showToast('success', 'Gespeichert');
         } catch (error) {
-          setStatus({ ok: false, message: error.message });
+          excelPathMsg.textContent = error.message;
+          excelPathMsg.classList.remove('hidden');
           showToast('error', error.message);
         }
       });
 
-      uiKuerzelPresetAddButton.addEventListener('click', () => {
-        const next = normalizeKuerzelPresetValue(uiKuerzelPresetNewInput.value);
-        if (!next) return;
-        if (!kuerzelPresets.includes(next)) {
-          kuerzelPresets.push(next);
-          kuerzelPresets = normalizeKuerzelPresetList(kuerzelPresets);
-          renderKuerzelPresetList();
-        }
-        uiKuerzelPresetNewInput.value = '';
-        uiKuerzelPresetNewInput.focus();
-      });
-      uiKuerzelPresetNewInput.addEventListener('keydown', (event) => {
-        if (event.key === 'Enter') {
-          event.preventDefault();
-          uiKuerzelPresetAddButton.click();
+      document.getElementById('save-workflow').addEventListener('click', async () => {
+        updateStateFromWorkflow();
+        try {
+          const config = await saveConfig({
+            uiDefaultEilig: state.uiDefaultEilig,
+            uiWarnOnly: state.uiWarnOnly,
+            uiBlockOnMissing: state.uiBlockOnMissing,
+            uiRequireAtLeastOneSample: state.uiRequireAtLeastOneSample,
+            excelWriteAddressBlock: state.excelWriteAddressBlock,
+            uiShowPackagePreview: state.uiShowPackagePreview,
+          });
+          mergeAndRender(config);
+          showToast('success', 'Gespeichert');
+        } catch (error) {
+          showToast('error', error.message);
         }
       });
 
-      saveAdvancedButton.addEventListener('click', async () => {
+      document.getElementById('save-backups').addEventListener('click', async () => {
+        updateStateFromBackups();
+        if (state.backupPolicy === 'interval' && (!Number.isFinite(state.backupIntervalMinutes) || state.backupIntervalMinutes < 1)) {
+          showToast('error', 'Bitte ein gültiges Intervall größer 0 Minuten eintragen.');
+          return;
+        }
+        if (!Number.isFinite(state.backupRetentionDays) || state.backupRetentionDays < 0) {
+          showToast('error', 'Aufbewahrungstage müssen 0 oder größer sein.');
+          return;
+        }
         try {
-          await saveConfig(
-            {
-              mode: modeInput.value,
-              writerHost: writerHostInput.value.trim(),
-              writerBackend: writerBackendInput.value,
-              writerToken: writerTokenInput.value,
-            },
-            adminKeyInput.value,
-          );
+          const config = await saveConfig({
+            backupEnabled: state.backupEnabled,
+            backupPolicy: state.backupPolicy,
+            backupIntervalMinutes: state.backupIntervalMinutes,
+            backupRetentionDays: state.backupRetentionDays,
+            backupZip: state.backupZip,
+          });
+          mergeAndRender(config);
+          showToast('success', 'Gespeichert');
         } catch (error) {
-          setStatus({ ok: false, message: error.message });
           showToast('error', error.message);
         }
       });
 
       validatePathButton.addEventListener('click', async () => {
+        clearMessages();
+        updateStateFromGeneral();
+        if (!state.excelPath) {
+          excelPathMsg.textContent = 'Bitte zuerst einen Pfad eintragen.';
+          excelPathMsg.classList.remove('hidden');
+          return;
+        }
         try {
-          const excelPath = excelPathInput.value.trim();
-          const query = new URLSearchParams({ excelPath }).toString();
-          const response = await fetch(`/api/config/validate?${query}`);
-          const data = await response.json();
-          setValidateResult(data);
-          showToast(response.ok ? 'success' : 'error', response.ok ? 'Pfad geprüft' : 'Pfadprüfung fehlgeschlagen');
+          await validateExcelPath(state.excelPath);
+          validateMsg.textContent = 'Pfad ist gültig und die Datei kann gelesen werden.';
+          validateMsg.classList.remove('hidden');
+          validateMsg.classList.add('inline-ok');
+          showToast('success', 'Pfad geprüft');
         } catch (error) {
-          setValidateResult({ ok: false, message: error.message });
-          showToast('error', error.message);
+          validateMsg.textContent = error.message.includes('nicht gefunden')
+            ? 'Pfad existiert nicht oder Datei wurde nicht gefunden.'
+            : error.message;
+          validateMsg.classList.remove('hidden');
+          validateMsg.classList.add('inline-error');
+          showToast('error', validateMsg.textContent);
         }
       });
 
       resetCacheButton.addEventListener('click', async () => {
+        clearMessages();
         try {
-          const response = await fetch('/api/state/reset', { method: 'POST' });
-          const data = await response.json();
-          setStatus(data);
-          showToast(response.ok ? 'success' : 'error', response.ok ? 'Cache zurückgesetzt' : (data.message || 'Cache reset fehlgeschlagen'));
+          await resetCache();
+          cacheMsg.textContent = 'Cache wurde zurückgesetzt.';
+          cacheMsg.classList.remove('hidden');
+          cacheMsg.classList.add('inline-ok');
+          showToast('success', 'Cache zurückgesetzt');
         } catch (error) {
-          setStatus({ ok: false, message: error.message });
+          cacheMsg.textContent = error.message;
+          cacheMsg.classList.remove('hidden');
+          cacheMsg.classList.add('inline-error');
           showToast('error', error.message);
         }
       });
 
-      Promise.all([loadConfig(), loadPackagesSummary()])
-        .then(() => {
-          setStatus({ ok: true, message: 'Settings geladen' });
-          showToast('success', 'Settings geladen');
+      loadConfig()
+        .then((config) => {
+          mergeAndRender(config);
         })
         .catch((error) => {
-          setStatus({ ok: false, message: error.message });
           showToast('error', error.message);
         });
     </script>

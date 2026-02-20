@@ -4,6 +4,7 @@
   "writerBackend": "com",
   "excelPath": "./data/lab.xlsx",
   "yearSheetName": "",
+  "excelWriteAddressBlock": true,
   "allowAutoOpenExcel": false,
   "writerHost": "http://localhost:3000",
   "writerToken": "change-me",

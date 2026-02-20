@@ -9,9 +9,10 @@ const { ensureBackupBeforeCommit } = require('./src/backup');
 const { importPackagesFromExcel } = require('./src/packages/importFromExcel');
 const { readPackages, writePackages, invalidatePackagesCache } = require('./src/packages/store');
 const { createImportPackagesHandler } = require('./src/packages/importRoute');
-const { getSheetState, buildTodayPrefix, scanLabNumberCandidates } = require('./src/sheetState');
+const { getSheetState, buildTodayPrefix } = require('./src/sheetState');
 const { writeOrderBlock } = require('./src/orderWriter');
 const { writeComTestCell } = require('./src/writers/comTestWriter');
+const { getComWorkerClient } = require('./src/writers/comWorkerClient');
 const { calculateTermin } = require('./src/termin');
 const {
   QUICK_CONTAINER_DEFAULTS,
@@ -30,6 +31,7 @@ const configSchema = z
     writerBackend: z.enum(['exceljs', 'com', 'comExceljs']),
     excelPath: z.string().trim().min(1),
     yearSheetName: z.string(),
+    excelWriteAddressBlock: z.boolean(),
     allowAutoOpenExcel: z.boolean(),
     writerHost: z.string().trim(),
     writerToken: z.string(),
@@ -64,6 +66,7 @@ const defaultConfig = {
   writerBackend: 'com',
   excelPath: './data/lab.xlsx',
   yearSheetName: '',
+  excelWriteAddressBlock: true,
   allowAutoOpenExcel: false,
   writerHost: 'http://localhost:3000',
   writerToken: 'dev-writer-token',
@@ -197,6 +200,13 @@ function extractWriterDebug(errorMessage) {
   };
 }
 
+function isExcelNotOpenMessage(message) {
+  const text = String(message || '');
+  return text.includes('Annahme.xlsx muss offen sein')
+    || text.includes('Annahme muss ge\u00f6ffnet sein')
+    || text.includes('Annahme muss geöffnet sein');
+}
+
 function normalizeQuickListPayload(values) {
   const seen = new Set();
   const result = [];
@@ -244,38 +254,12 @@ function readSheetStateCacheFromDisk() {
   }
 }
 
-function writeSheetStateCacheToDisk(cache) {
-  const dir = path.dirname(sheetStateCachePath);
-  fs.mkdirSync(dir, { recursive: true });
-  const normalizeForCompare = (value) => {
-    if (!value || typeof value !== 'object') {
-      return value;
-    }
-    const clone = JSON.parse(JSON.stringify(value));
-    if (clone && typeof clone === 'object') {
-      delete clone.updatedAt;
-    }
-    return clone;
-  };
-
-  let existing = null;
-  try {
-    if (fs.existsSync(sheetStateCachePath)) {
-      const raw = fs.readFileSync(sheetStateCachePath, 'utf-8');
-      existing = raw.trim() ? JSON.parse(raw) : null;
-    }
-  } catch (_error) {
-    existing = null;
-  }
-
-  const nextComparable = JSON.stringify(normalizeForCompare(cache));
-  const existingComparable = JSON.stringify(normalizeForCompare(existing));
-  if (existingComparable === nextComparable) {
-    return false;
-  }
-
-  fs.writeFileSync(sheetStateCachePath, `${JSON.stringify(cache, null, 2)}\n`, 'utf-8');
-  return true;
+function persistSheetStateCache(cache, force = false) {
+  // Runtime cache writes are intentionally disabled to avoid nodemon restart loops
+  // from generated files in the project tree. Cache remains in-memory for runtime use.
+  void cache;
+  void force;
+  return false;
 }
 
 function getExcelFileMeta(absoluteExcelPath) {
@@ -373,35 +357,6 @@ function isSheetStateCacheValid(cache, context) {
   return true;
 }
 
-function isCachePlausibleAgainstSheet(cache, context, probe) {
-  if (!cache || !probe || !probe.sheet) {
-    return false;
-  }
-
-  const sheet = probe.sheet;
-  const colAHash50 = String(probe.colAHash50 || '');
-  if (String(cache.colAHash50 || '') !== colAHash50) {
-    return false;
-  }
-
-  const cachedLastUsedRow = Number.parseInt(String(cache.lastUsedRow || 0), 10);
-  if (Number.isInteger(cachedLastUsedRow) && cachedLastUsedRow > 0) {
-    const aValue = cellValueToString(sheet.getCell(cachedLastUsedRow, 1).value).trim();
-    if (aValue !== '') {
-      return false;
-    }
-  }
-
-  const lastLabNo = Number.parseInt(String(cache.lastLabNo || 0), 10);
-  if (Number.isFinite(lastLabNo) && lastLabNo > 0) {
-    if (lastLabNo < 1000) {
-      return false;
-    }
-  }
-
-  return true;
-}
-
 function normalizeOrderSeqByPrefix(orderSeqByPrefix) {
   const out = {};
   if (!orderSeqByPrefix || typeof orderSeqByPrefix !== 'object') {
@@ -419,12 +374,6 @@ function normalizeOrderSeqByPrefix(orderSeqByPrefix) {
 async function buildFullScanSheetStateCache(context, now = new Date()) {
   const probe = await probeSheetCacheState(context);
   const { sheet, colAHash50 } = probe;
-  const labScan = scanLabNumberCandidates(sheet);
-  const topCandidates = [...labScan.candidates]
-    .sort((a, b) => b.parsed - a.parsed)
-    .slice(0, 10);
-  console.log(`[sheet-cache] lab-candidates top10=${JSON.stringify(topCandidates)}`);
-  console.log(`[sheet-cache] selected lastLabNo=${labScan.maxLabNumber}`);
   const state = getSheetState(sheet, now);
   const todayPrefix = buildTodayPrefix(now);
   return {
@@ -460,38 +409,21 @@ async function ensureSheetStateCache(config, now = new Date()) {
   };
 
   if (sheetStateCache && isSheetStateCacheValid(sheetStateCache, context)) {
-    try {
-      const probe = await probeSheetCacheState(context);
-      if (isCachePlausibleAgainstSheet(sheetStateCache, context, probe)) {
-        return sheetStateCache;
-      }
-      console.warn('[sheet-cache] in-memory cache invalid, running rescan');
-    } catch (error) {
-      console.warn(`[sheet-cache] in-memory validation failed: ${error.message}`);
-    }
+    return sheetStateCache;
   }
 
   const fromDisk = readSheetStateCacheFromDisk();
   if (isSheetStateCacheValid(fromDisk, context)) {
-    const normalizedCache = {
+    sheetStateCache = {
       ...fromDisk,
       orderSeqByPrefix: normalizeOrderSeqByPrefix(fromDisk.orderSeqByPrefix),
     };
-    try {
-      const probe = await probeSheetCacheState(context);
-      if (isCachePlausibleAgainstSheet(normalizedCache, context, probe)) {
-        sheetStateCache = normalizedCache;
-        return sheetStateCache;
-      }
-      console.warn('[sheet-cache] disk cache invalid, running rescan');
-    } catch (error) {
-      console.warn(`[sheet-cache] disk validation failed: ${error.message}`);
-    }
+    return sheetStateCache;
   }
 
   const rebuilt = await buildFullScanSheetStateCache(context, now);
   sheetStateCache = rebuilt;
-  writeSheetStateCacheToDisk(rebuilt);
+  persistSheetStateCache(rebuilt, true);
   return sheetStateCache;
 }
 
@@ -926,6 +858,7 @@ function buildOrderSchemaInfo() {
 const level1Fields = [
   'excelPath',
   'yearSheetName',
+  'excelWriteAddressBlock',
   'allowAutoOpenExcel',
   'backupEnabled',
   'backupPolicy',
@@ -948,6 +881,7 @@ const allEditableFields = [...level1Fields, ...level2Fields];
 const configUpdateSchema = z.object({
   excelPath: z.string().trim().min(1).optional(),
   yearSheetName: z.string().optional(),
+  excelWriteAddressBlock: z.boolean().optional(),
   allowAutoOpenExcel: z.boolean().optional(),
   backupEnabled: z.boolean().optional(),
   backupPolicy: z.enum(['daily', 'interval']).optional(),
@@ -1298,36 +1232,6 @@ function parseOrderOrRespond(req, res) {
   return normalizedOrder;
 }
 
-function logCommit(entry) {
-  const logsDir = path.join(__dirname, 'logs');
-  const logPath = path.join(logsDir, 'commit-log.jsonl');
-  fs.mkdirSync(logsDir, { recursive: true });
-  fs.appendFileSync(logPath, `${JSON.stringify(entry)}\n`, 'utf-8');
-}
-
-function logError(entry) {
-  const logsDir = path.join(__dirname, 'logs');
-  const logPath = path.join(logsDir, 'error-log.jsonl');
-  fs.mkdirSync(logsDir, { recursive: true });
-  fs.appendFileSync(logPath, `${JSON.stringify(entry)}\n`, 'utf-8');
-}
-
-app.use((req, res, next) => {
-  const contentType = String(req.headers['content-type'] || '');
-  if (contentType.toLowerCase().includes('application/json')) {
-    const charsetMatch = contentType.match(/charset=([^;]+)/i);
-    if (charsetMatch) {
-      const charset = String(charsetMatch[1] || '').trim().toLowerCase();
-      if (charset !== 'utf-8' && charset !== 'utf8') {
-        return res.status(415).json({
-          ok: false,
-          message: `Nur UTF-8 JSON wird unterstuetzt (charset=${charset})`,
-        });
-      }
-    }
-  }
-  return next();
-});
 app.use(express.json({
   type: ['application/json', 'application/*+json'],
 }));
@@ -1894,25 +1798,13 @@ app.post('/api/order/commit', async (req, res) => {
     }
     const fullMessage = `Writer fehlgeschlagen (${usedBackend}): ${error.message}`;
     const parsedWriterError = extractWriterDebug(error.message);
-    const normalizedUserMessage = (
-      parsedWriterError.userMessage.includes('Annahme.xlsx muss offen sein')
-      || parsedWriterError.userMessage.includes('Annahme muss geöffnet sein')
-    )
+    const normalizedUserMessage = isExcelNotOpenMessage(parsedWriterError.userMessage)
       ? EXCEL_NOT_OPEN_USER_MESSAGE
       : parsedWriterError.userMessage;
     const userMessage = normalizedUserMessage === EXCEL_NOT_OPEN_USER_MESSAGE
       ? EXCEL_NOT_OPEN_USER_MESSAGE
       : `Writer fehlgeschlagen (${usedBackend}): ${normalizedUserMessage}`;
     const debug = normalizedUserMessage === EXCEL_NOT_OPEN_USER_MESSAGE ? undefined : (parsedWriterError.debug || undefined);
-    logError({
-      timestamp: new Date().toISOString(),
-      operation: 'commit',
-      writerBackend: usedBackend,
-      message: fullMessage,
-      userMessage,
-      debug: parsedWriterError.debug || undefined,
-      clientRequestId: clientRequestId || undefined,
-    });
     return res.status(400).json({
       ok: false,
       message: fullMessage,
@@ -1975,27 +1867,10 @@ app.post('/api/order/commit', async (req, res) => {
       updatedAt: new Date().toISOString(),
     };
     sheetStateCache = updatedCache;
-    writeSheetStateCacheToDisk(updatedCache);
+    persistSheetStateCache(updatedCache, false);
   }
 
   console.log(`[commit] writer=${usedBackend} order=${orderNo || 'n/a'} rows=${endRowRange || 'n/a'}`);
-
-  logCommit({
-    timestamp: new Date().toISOString(),
-    mode: config.mode,
-    writerBackend: usedBackend,
-    kunde: orderForWrite.kunde,
-    projektName: orderForWrite.projektName,
-    projektnummer: orderForWrite.projektnummer,
-    kopfBemerkung: orderForWrite.kopfBemerkung || orderForWrite.auftragsnotiz || '',
-    probeCount: orderForWrite.proben.length,
-    backup,
-    warnings: commitWarnings,
-    orderNumberPreview: preview.orderNumberPreview,
-    termin: preview.termin,
-    writerResult: writeResult,
-  });
-
   const responsePayload = {
     ok: true,
     writer: usedBackend,
@@ -2055,6 +1930,29 @@ app.post('/api/order', (req, res) => {
 app.listen(port, () => {
   const config = getConfig();
   console.log(`Server laeuft auf http://localhost:${port} (mode=${config.mode}, excelPath=${config.excelPath})`);
+  if (resolveCommitWriterBackend(config) === 'com') {
+    const workerClient = getComWorkerClient(__dirname);
+    workerClient.start()
+      .then(() => {
+        console.log('[com-worker] started');
+        const warmupPayload = {
+          __warmup: true,
+          excelPath: resolveExcelPath(config.excelPath),
+          yearSheetName: getYearSheetName(config),
+          allowAutoOpenExcel: false,
+        };
+        return workerClient.request(warmupPayload, {
+          timeoutMs: 10000,
+          retryOnFailure: false,
+        });
+      })
+      .then(() => {
+        console.log('[com-worker] warmup complete');
+      })
+      .catch((error) => {
+        console.warn(`[com-worker] start failed: ${error.message}`);
+      });
+  }
   ensureSheetStateCache(config, new Date())
     .then((cache) => {
       console.log(

@@ -426,6 +426,16 @@
       }
 
       function setButtonLoading(button, isLoading, loadingLabel, idleLabel) {
+        if (!button) return;
+        if (isLoading) {
+          if (!button.dataset.lockWidthPx) {
+            button.dataset.lockWidthPx = String(Math.ceil(button.getBoundingClientRect().width));
+          }
+          button.style.minWidth = `${button.dataset.lockWidthPx}px`;
+        } else {
+          button.style.minWidth = '';
+          delete button.dataset.lockWidthPx;
+        }
         button.disabled = isLoading;
         button.classList.toggle('loading', isLoading);
         if (loadingLabel || idleLabel) {
@@ -542,6 +552,7 @@
       let activeProbeForGeruchModal = null;
       let commitInFlight = false;
       let draftInFlight = false;
+      let commitClickLocked = false;
       let commitSlowTimer = null;
       let lastFailedCommitContext = null;
       let activeGebindeTarget = null;
@@ -2173,30 +2184,39 @@
       });
 
       commitButton.addEventListener('click', async () => {
-        if (commitInFlight || draftInFlight) return;
-        const payload = buildPayload();
-        const canSend = await confirmBeforeSend(payload);
-        if (!canSend) return;
-        payload.clientRequestId = createClientRequestId();
+        if (commitInFlight || draftInFlight || commitClickLocked) return;
+        commitClickLocked = true;
+        setButtonLoading(commitButton, true, 'Sende...', 'Commit senden');
+        try {
+          const payload = buildPayload();
+          const canSend = await confirmBeforeSend(payload);
+          if (!canSend) return;
+          payload.clientRequestId = createClientRequestId();
 
-        if (appConfig.mode === 'writer') {
-          const writerToken = sessionStorage.getItem('writerToken') || '';
-          const writerLoginOk = sessionStorage.getItem('writerLoginOk') === '1';
-          if (!writerToken || !writerLoginOk) {
-            const data = { ok: false, message: 'Kein Writer Login vorhanden. Bitte zuerst in Settings anmelden.' };
-            showToast('error', data.message);
-            showErrorPanel(data.message, data);
+          if (appConfig.mode === 'writer') {
+            const writerToken = sessionStorage.getItem('writerToken') || '';
+            const writerLoginOk = sessionStorage.getItem('writerLoginOk') === '1';
+            if (!writerToken || !writerLoginOk) {
+              const data = { ok: false, message: 'Kein Writer Login vorhanden. Bitte zuerst in Settings anmelden.' };
+              showToast('error', data.message);
+              showErrorPanel(data.message, data);
+              return;
+            }
+            await sendOrder('/api/order/commit', {
+              extraHeaders: { 'x-ui-request': '1', 'x-writer-token': writerToken },
+              payload,
+              isCommit: true,
+            });
             return;
           }
-          await sendOrder('/api/order/commit', {
-            extraHeaders: { 'x-ui-request': '1', 'x-writer-token': writerToken },
-            payload,
-            isCommit: true,
-          });
-          return;
-        }
 
-        await sendOrder('/api/order/commit', { payload, isCommit: true });
+          await sendOrder('/api/order/commit', { payload, isCommit: true });
+        } finally {
+          commitClickLocked = false;
+          if (!commitInFlight) {
+            setButtonLoading(commitButton, false, 'Sende...', 'Commit senden');
+          }
+        }
       });
 
       retryCommitButton.addEventListener('click', async () => {

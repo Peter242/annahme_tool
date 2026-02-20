@@ -17,6 +17,7 @@ async function writeComTestCell(params) {
   const payload = {
     excelPath: absoluteExcelPath,
     workbookFullName: absoluteExcelPath,
+    allowAutoOpenExcel: false,
     cellPath,
     value: params.value,
   };

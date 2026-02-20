@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="de">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Required Fields</title>
+    <link rel="stylesheet" href="/styles.css" />
+    <link rel="stylesheet" href="/settings/common.css" />
+  </head>
+  <body>
+    <div class="settings-shell">
+      <header class="topbar">
+        <a class="brand" href="/">
+          <img src="/assets/cua-logo.png" alt="CUA Logo" />
+        </a>
+        <h1 class="app-brand-title">Required Fields</h1>
+        <div class="topbar-actions">
+          <button type="button" id="theme-toggle" class="theme-toggle">Light</button>
+          <a class="btn-link" href="/settings.html">Zurück</a>
+        </div>
+      </header>
+
+      <main class="editor-card">
+        <h2>Pflichtfelder konfigurieren</h2>
+        <p class="settings-note">Du wählst hier Felder über klare Namen aus. Intern werden weiterhin die bekannten Feldpfade gespeichert.</p>
+
+        <div id="check-list" class="check-list"></div>
+
+        <div class="action-row">
+          <button id="save" type="button" class="primary">Änderungen speichern</button>
+        </div>
+      </main>
+    </div>
+
+    <div id="toast-container" class="toast-wrap"></div>
+
+    <script src="/settings/common.js"></script>
+    <script>
+      initThemeToggle('theme-toggle');
+
+      const fieldOptions = [
+        { id: 'kunde', path: 'kunde', label: 'Kunde', desc: 'Auftraggeber-Name' },
+        { id: 'projektName', path: 'projektName', label: 'Projektname', desc: 'Projektbezeichnung im Kopf' },
+        { id: 'projektnummer', path: 'projektnummer', label: 'Projektnummer', desc: 'Externe Projekt-/Vorgangsnummer' },
+        { id: 'ansprechpartner', path: 'ansprechpartner', label: 'Ansprechpartner', desc: 'Kontaktperson beim Kunden' },
+        { id: 'email', path: 'email', label: 'E-Mail', desc: 'Kontakt-E-Mail im Kopf' },
+        { id: 'kuerzel', path: 'kuerzel', label: 'Kürzel', desc: 'Erfasser-Kürzel' },
+        { id: 'probeName', path: 'proben[0].probenbezeichnung', label: 'Probe: Bezeichnung', desc: 'Name der ersten Probe' },
+        { id: 'probePackage', path: 'proben[0].packageId', label: 'Probe: Paket', desc: 'Paketzuordnung der ersten Probe' },
+      ];
+
+      const pseudoOption = {
+        id: 'atLeastOneSample',
+        label: 'Mindestens eine Probe',
+        desc: 'Zusätzliche Empfehlung bei leerer Probenliste',
+      };
+
+      let selectedPaths = new Set();
+      let atLeastOneSample = true;
+
+      function render() {
+        const root = document.getElementById('check-list');
+        root.innerHTML = '';
+        fieldOptions.forEach((option) => {
+          const row = document.createElement('div');
+          row.className = 'check-item';
+          const checked = selectedPaths.has(option.path) ? 'checked' : '';
+          row.innerHTML = `
+            <label>
+              <input type="checkbox" data-path="${option.path}" ${checked} />
+              <span><strong>${option.label}</strong><br /><small>${option.desc}</small></span>
+            </label>
+          `;
+          root.appendChild(row);
+        });
+
+        const pseudo = document.createElement('div');
+        pseudo.className = 'check-item';
+        pseudo.innerHTML = `
+          <label>
+            <input type="checkbox" id="at-least-one-sample" ${atLeastOneSample ? 'checked' : ''} />
+            <span><strong>${pseudoOption.label}</strong><br /><small>${pseudoOption.desc}</small></span>
+          </label>
+        `;
+        root.appendChild(pseudo);
+
+        root.querySelectorAll('input[data-path]').forEach((input) => {
+          input.addEventListener('change', () => {
+            const path = input.dataset.path;
+            if (input.checked) selectedPaths.add(path);
+            else selectedPaths.delete(path);
+          });
+        });
+        const pseudoInput = document.getElementById('at-least-one-sample');
+        pseudoInput.addEventListener('change', () => {
+          atLeastOneSample = pseudoInput.checked;
+        });
+      }
+
+      document.getElementById('save').addEventListener('click', async () => {
+        try {
+          const uiRequiredFields = fieldOptions
+            .map((option) => option.path)
+            .filter((path) => selectedPaths.has(path));
+          await saveConfig({
+            uiRequiredFields,
+            uiRequireAtLeastOneSample: atLeastOneSample,
+          });
+          showToast('success', 'Gespeichert');
+        } catch (error) {
+          showToast('error', error.message);
+        }
+      });
+
+      loadConfig()
+        .then((config) => {
+          selectedPaths = new Set(Array.isArray(config.uiRequiredFields) ? config.uiRequiredFields : []);
+          atLeastOneSample = config.uiRequireAtLeastOneSample !== false;
+          render();
+        })
+        .catch((error) => showToast('error', error.message));
+    </script>
+  </body>
+</html>

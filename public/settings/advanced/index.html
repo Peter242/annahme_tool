@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="de">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Advanced Einstellungen</title>
+    <link rel="stylesheet" href="/styles.css" />
+    <link rel="stylesheet" href="/settings/common.css" />
+  </head>
+  <body>
+    <div class="settings-shell">
+      <header class="topbar">
+        <a class="brand" href="/">
+          <img src="/assets/cua-logo.png" alt="CUA Logo" />
+        </a>
+        <h1 class="app-brand-title">Advanced Einstellungen</h1>
+        <div class="topbar-actions">
+          <button type="button" id="theme-toggle" class="theme-toggle">Light</button>
+          <a class="btn-link" href="/settings.html">Zurück</a>
+        </div>
+      </header>
+
+      <main class="editor-card">
+        <h2>Advanced</h2>
+        <p class="settings-note">Änderungen in diesem Bereich betreffen den Betriebsmodus und Writer-Zugang.</p>
+
+        <div class="settings-grid">
+          <div>
+            <label for="mode">Betriebsmodus</label>
+            <select id="mode">
+              <option value="single">Single</option>
+              <option value="writer">Writer</option>
+              <option value="client">Client</option>
+            </select>
+          </div>
+
+          <div>
+            <label for="writer-host">Writer Host</label>
+            <input id="writer-host" type="text" />
+          </div>
+
+          <div>
+            <label for="writer-backend">Writer Backend</label>
+            <select id="writer-backend">
+              <option value="com">COM</option>
+              <option value="exceljs">ExcelJS</option>
+            </select>
+          </div>
+
+          <div>
+            <label for="writer-token">Writer Token</label>
+            <input id="writer-token" type="password" autocomplete="off" />
+          </div>
+
+          <div class="settings-row-full">
+            <label for="admin-key">Admin Key</label>
+            <input id="admin-key" type="password" autocomplete="off" />
+            <div class="field-help">Erforderlich für Änderungen in diesem Bereich.</div>
+          </div>
+        </div>
+
+        <div class="action-row">
+          <button type="button" id="save" class="primary">Änderungen speichern</button>
+        </div>
+        <div id="error" class="inline-error hidden"></div>
+      </main>
+    </div>
+
+    <div id="toast-container" class="toast-wrap"></div>
+
+    <script src="/settings/common.js"></script>
+    <script>
+      initThemeToggle('theme-toggle');
+
+      const modeInput = document.getElementById('mode');
+      const writerHostInput = document.getElementById('writer-host');
+      const writerBackendInput = document.getElementById('writer-backend');
+      const writerTokenInput = document.getElementById('writer-token');
+      const adminKeyInput = document.getElementById('admin-key');
+      const errorEl = document.getElementById('error');
+
+      function setError(message) {
+        errorEl.textContent = message || '';
+        errorEl.classList.toggle('hidden', !message);
+      }
+
+      loadConfig()
+        .then((config) => {
+          modeInput.value = config.mode || 'single';
+          writerHostInput.value = config.writerHost || '';
+          writerBackendInput.value = config.writerBackend || 'com';
+        })
+        .catch((error) => {
+          setError(error.message);
+          showToast('error', error.message);
+        });
+
+      document.getElementById('save').addEventListener('click', async () => {
+        setError('');
+        try {
+          await saveConfig({
+            mode: modeInput.value,
+            writerHost: String(writerHostInput.value || '').trim(),
+            writerBackend: writerBackendInput.value,
+            writerToken: writerTokenInput.value,
+          }, adminKeyInput.value);
+          writerTokenInput.value = '';
+          adminKeyInput.value = '';
+          showToast('success', 'Gespeichert');
+        } catch (error) {
+          setError(error.message);
+          showToast('error', error.message);
+        }
+      });
+    </script>
+  </body>
+</html>

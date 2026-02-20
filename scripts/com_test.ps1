@@ -12,6 +12,8 @@ $OutputEncoding = $utf8NoBom
 
 $targetPath = $null
 $mode = ''
+$excelOpenRequiredMessage = ('Fehler: Annahme muss ge' + [char]246 + 'ffnet sein. Bitte ' + [char]246 + 'ffnen und erneut versuchen')
+$forbiddenAttachOnlyMessage = 'FORBIDDEN: attempted to start Excel or open workbook'
 
 function ToStr {
   param([object]$v)
@@ -65,8 +67,17 @@ try {
 
   $excel = $null
   $wb = $null
-  $openedByScript = $false
-  $createdExcelByScript = $false
+  $allowAutoOpenExcel = $false
+  if ($payload.PSObject.Properties.Name -contains 'allowAutoOpenExcel') {
+    try {
+      $allowAutoOpenExcel = [bool]$payload.allowAutoOpenExcel
+    } catch {
+      $allowAutoOpenExcel = $false
+    }
+  }
+  if ($allowAutoOpenExcel -eq $true) {
+    throw $forbiddenAttachOnlyMessage
+  }
 
   try {
     $excel = [Runtime.InteropServices.Marshal]::GetActiveObject('Excel.Application')
@@ -75,16 +86,9 @@ try {
   }
 
   if ($null -eq $excel) {
-    $excel = New-Object -ComObject Excel.Application
-    $createdExcelByScript = $true
-    $mode = 'started'
+    [Console]::Error.WriteLine('[worker] attach failed: no running Excel')
+    throw $excelOpenRequiredMessage
   }
-  if ($null -eq $excel) {
-    throw 'Excel.Application konnte nicht gestartet werden'
-  }
-
-  $excel.Visible = $true
-  $excel.DisplayAlerts = $false
 
   foreach ($candidate in $excel.Workbooks) {
     $candidateFullName = ToStr $candidate.FullName
@@ -109,17 +113,8 @@ try {
   }
 
   if ($null -eq $wb) {
-    $wb = $excel.Workbooks.Open($targetPath, $null, $false)
-    $openedByScript = $true
-    if ($createdExcelByScript -eq $true) {
-      $mode = 'started'
-    } else {
-      $mode = 'opened'
-    }
-  }
-
-  if ($null -eq $wb) {
-    throw 'Workbook not found/opened'
+    [Console]::Error.WriteLine(('[worker] attach failed: workbook not open: ' + [string]$targetPath))
+    throw $excelOpenRequiredMessage
   }
 
   $sheet = $wb.Worksheets.Item($sheetName)
@@ -160,13 +155,6 @@ try {
     $excelHwnd = $null
   }
 
-  if ($openedByScript -eq $true) {
-    $wb.Close($true)
-  }
-  if ($createdExcelByScript -eq $true) {
-    $excel.Quit()
-  }
-
   @{
     ok = $true
     writtenValue = $value
@@ -193,3 +181,4 @@ try {
   } | ConvertTo-Json -Compress
   exit 1
 }
+

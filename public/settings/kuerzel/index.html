@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="de">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Kürzel Presets</title>
+    <link rel="stylesheet" href="/styles.css" />
+    <link rel="stylesheet" href="/settings/common.css" />
+  </head>
+  <body>
+    <div class="settings-shell">
+      <header class="topbar">
+        <a class="brand" href="/">
+          <img src="/assets/cua-logo.png" alt="CUA Logo" />
+        </a>
+        <h1 class="app-brand-title">Kürzel Presets</h1>
+        <div class="topbar-actions">
+          <button type="button" id="theme-toggle" class="theme-toggle">Light</button>
+          <a class="btn-link" href="/settings.html">Zurück</a>
+        </div>
+      </header>
+
+      <main class="editor-card">
+        <h2>Kürzel verwalten</h2>
+        <p class="settings-note">Kürzel werden als Chips dargestellt. Neue Kürzel können direkt ergänzt werden.</p>
+
+        <div class="action-row" style="margin-top:0;">
+          <input id="new-kuerzel" type="text" placeholder="z. B. AD" />
+          <button id="add-kuerzel" type="button" class="secondary">Hinzufügen</button>
+        </div>
+
+        <div id="chips" class="chips" style="margin-top:0.7rem;"></div>
+
+        <div class="action-row">
+          <button id="save" type="button" class="primary">Änderungen speichern</button>
+        </div>
+      </main>
+    </div>
+
+    <div id="toast-container" class="toast-wrap"></div>
+
+    <script src="/settings/common.js"></script>
+    <script>
+      initThemeToggle('theme-toggle');
+
+      let items = [];
+
+      function normalizeKuerzel(value) {
+        return String(value || '').trim().replace(/\s+/g, ' ').toUpperCase();
+      }
+
+      function render() {
+        const chips = document.getElementById('chips');
+        chips.innerHTML = '';
+        items.forEach((item) => {
+          const chip = document.createElement('div');
+          chip.className = 'chip';
+          chip.innerHTML = `<span>${item}</span>`;
+          const remove = document.createElement('button');
+          remove.type = 'button';
+          remove.textContent = '×';
+          remove.title = `${item} entfernen`;
+          remove.addEventListener('click', () => {
+            items = items.filter((entry) => entry !== item);
+            render();
+          });
+          chip.appendChild(remove);
+          chips.appendChild(chip);
+        });
+      }
+
+      function addCurrentInput() {
+        const input = document.getElementById('new-kuerzel');
+        const value = normalizeKuerzel(input.value);
+        if (!value) return;
+        if (!items.includes(value)) {
+          items.push(value);
+          items.sort((a, b) => a.localeCompare(b, 'de'));
+          render();
+        }
+        input.value = '';
+        input.focus();
+      }
+
+      document.getElementById('add-kuerzel').addEventListener('click', addCurrentInput);
+      document.getElementById('new-kuerzel').addEventListener('keydown', (event) => {
+        if (event.key === 'Enter') {
+          event.preventDefault();
+          addCurrentInput();
+        }
+      });
+
+      document.getElementById('save').addEventListener('click', async () => {
+        try {
+          const config = await saveConfig({ uiKuerzelPreset: items });
+          items = Array.isArray(config.uiKuerzelPreset) ? config.uiKuerzelPreset.map(normalizeKuerzel).filter(Boolean) : [];
+          render();
+          showToast('success', 'Gespeichert');
+        } catch (error) {
+          showToast('error', error.message);
+        }
+      });
+
+      loadConfig()
+        .then((config) => {
+          items = Array.isArray(config.uiKuerzelPreset) ? config.uiKuerzelPreset.map(normalizeKuerzel).filter(Boolean) : [];
+          render();
+        })
+        .catch((error) => showToast('error', error.message));
+    </script>
+  </body>
+</html>

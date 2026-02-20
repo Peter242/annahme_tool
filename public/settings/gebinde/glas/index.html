@@ -1,0 +1,145 @@
+<!doctype html>
+<html lang="de">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Quick Buttons Glas</title>
+    <link rel="stylesheet" href="/styles.css" />
+    <link rel="stylesheet" href="/settings/common.css" />
+  </head>
+  <body>
+    <div class="settings-shell">
+      <header class="topbar">
+        <a class="brand" href="/">
+          <img src="/assets/cua-logo.png" alt="CUA Logo" />
+        </a>
+        <h1 class="app-brand-title">Glas Quick Buttons</h1>
+        <div class="topbar-actions">
+          <button type="button" id="theme-toggle" class="theme-toggle">Light</button>
+          <a class="btn-link" href="/settings.html">Zurück</a>
+        </div>
+      </header>
+
+      <main class="editor-card">
+        <h2>Buttons sortieren und pflegen</h2>
+        <p class="settings-note">Liste bearbeiten mit Hinzufügen, Entfernen und Reihenfolge ändern.</p>
+
+        <div class="action-row" style="margin-top:0;">
+          <input id="new-item" type="text" placeholder="z. B. 1L + H2SO4" />
+          <button id="add-item" type="button" class="secondary">Hinzufügen</button>
+        </div>
+
+        <div id="list" class="list-editor" style="margin-top:0.7rem;"></div>
+
+        <div class="action-row">
+          <button id="save" type="button" class="primary">Änderungen speichern</button>
+        </div>
+      </main>
+    </div>
+
+    <div id="toast-container" class="toast-wrap"></div>
+
+    <script src="/settings/common.js"></script>
+    <script>
+      initThemeToggle('theme-toggle');
+      let items = [];
+
+      function normalizeEntry(value) {
+        return String(value || '').trim().replace(/\s+/g, ' ');
+      }
+
+      function moveItem(index, delta) {
+        const nextIndex = index + delta;
+        if (nextIndex < 0 || nextIndex >= items.length) return;
+        const copy = [...items];
+        const tmp = copy[index];
+        copy[index] = copy[nextIndex];
+        copy[nextIndex] = tmp;
+        items = copy;
+        render();
+      }
+
+      function render() {
+        const root = document.getElementById('list');
+        root.innerHTML = '';
+        items.forEach((item, index) => {
+          const row = document.createElement('div');
+          row.className = 'list-item';
+          const label = document.createElement('div');
+          label.textContent = item;
+          row.appendChild(label);
+
+          const actions = document.createElement('div');
+          actions.className = 'list-actions';
+
+          const up = document.createElement('button');
+          up.type = 'button';
+          up.className = 'secondary';
+          up.textContent = '↑';
+          up.disabled = index === 0;
+          up.addEventListener('click', () => moveItem(index, -1));
+          actions.appendChild(up);
+
+          const down = document.createElement('button');
+          down.type = 'button';
+          down.className = 'secondary';
+          down.textContent = '↓';
+          down.disabled = index === items.length - 1;
+          down.addEventListener('click', () => moveItem(index, 1));
+          actions.appendChild(down);
+
+          const remove = document.createElement('button');
+          remove.type = 'button';
+          remove.className = 'secondary danger';
+          remove.textContent = 'Entfernen';
+          remove.addEventListener('click', () => {
+            items.splice(index, 1);
+            render();
+          });
+          actions.appendChild(remove);
+
+          row.appendChild(actions);
+          root.appendChild(row);
+        });
+      }
+
+      function addFromInput() {
+        const input = document.getElementById('new-item');
+        const value = normalizeEntry(input.value);
+        if (!value) return;
+        if (!items.includes(value)) {
+          items.push(value);
+          render();
+        }
+        input.value = '';
+        input.focus();
+      }
+
+      document.getElementById('add-item').addEventListener('click', addFromInput);
+      document.getElementById('new-item').addEventListener('keydown', (event) => {
+        if (event.key === 'Enter') {
+          event.preventDefault();
+          addFromInput();
+        }
+      });
+
+      document.getElementById('save').addEventListener('click', async () => {
+        try {
+          const config = await saveConfig({ quickContainerGlass: items });
+          items = Array.isArray(config.quickContainerGlass) ? config.quickContainerGlass.map(normalizeEntry).filter(Boolean) : [];
+          render();
+          showToast('success', 'Gespeichert');
+        } catch (error) {
+          showToast('error', error.message);
+        }
+      });
+
+      loadConfig()
+        .then((config) => {
+          items = Array.isArray(config.quickContainerGlass) ? config.quickContainerGlass.map(normalizeEntry).filter(Boolean) : [];
+          render();
+        })
+        .catch((error) => showToast('error', error.message));
+    </script>
+  </body>
+</html>

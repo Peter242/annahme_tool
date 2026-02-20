@@ -11,6 +11,24 @@ $OutputEncoding = $utf8NoBom
 $targetPath = $null
 $script:CurrentWhere = 'init'
 $script:CurrentDetail = ''
+$script:Timings = @{}
+$script:Timer = [System.Diagnostics.Stopwatch]::StartNew()
+$script:DebugEnabled = $false
+$script:ForbiddenAttachOnlyMessage = 'FORBIDDEN: attempted to start Excel or open workbook'
+
+function Mark-Time {
+  param([string]$name)
+  if ([string]::IsNullOrWhiteSpace($name)) { return }
+  $script:Timings[$name] = [int][Math]::Round($script:Timer.Elapsed.TotalMilliseconds)
+}
+
+function Elapsed-Since {
+  param(
+    [int]$start,
+    [int]$ending
+  )
+  return [int][Math]::Max(0, ($ending - $start))
+}
 
 function Get-TypeName {
   param([object]$value)
@@ -34,6 +52,7 @@ function Write-DebugType {
     [object]$value
   )
 
+  if ($script:DebugEnabled -ne $true) { return }
   $typeName = Get-TypeName -value $value
   $valueText = if ($null -eq $value) { '<null>' } else { [string]$value }
   Write-Host "[writer-debug] $name type=$typeName value=$valueText"
@@ -91,7 +110,7 @@ function Get-SheetState {
       continue
     }
 
-    $labMatch = [regex]::Match($a, '^(\d+)')
+    $labMatch = [regex]::Match($a, '^(\d{5,6})([A-Za-z]|-\d+)?$')
     if ($labMatch.Success) {
       $lab = [int]$labMatch.Groups[1].Value
       if ($lab -gt $maxLabNumber) { $maxLabNumber = $lab }
@@ -220,7 +239,8 @@ function ParseDateOrNull {
 function Build-HeaderJ {
   param(
     [object]$order,
-    [object]$termin
+    [object]$termin,
+    [bool]$writeAddressBlock = $true
   )
 
   $lines = @()
@@ -236,6 +256,25 @@ function Build-HeaderJ {
   if ($firstLineParts.Count -gt 0) {
     $lines += (($firstLineParts | ForEach-Object { [string]$_ }) -join ' ')
   }
+  $kopfBemerkung = [string]$order.kopfBemerkung
+  if (-not [string]::IsNullOrWhiteSpace($kopfBemerkung)) {
+    $lines += $kopfBemerkung.Trim()
+  }
+  if ($writeAddressBlock -eq $true) {
+    $adresseBlock = [string]$order.adresseBlock
+    if (-not [string]::IsNullOrWhiteSpace($adresseBlock)) {
+      $adresseLines = @()
+      foreach ($line in ($adresseBlock -replace "`r`n?", "`n").Split("`n")) {
+        $trimmedLine = [string]$line
+        if (-not [string]::IsNullOrWhiteSpace($trimmedLine)) {
+          $adresseLines += $trimmedLine.Trim()
+        }
+      }
+      if ($adresseLines.Count -gt 0) {
+        $lines += (($adresseLines | ForEach-Object { [string]$_ }) -join "`n")
+      }
+    }
+  }
   if (-not [string]::IsNullOrWhiteSpace([string]$order.email)) {
     $lines += ('Mail: ' + [string]$order.email)
   }
@@ -245,16 +284,24 @@ function Build-HeaderJ {
 
 function Build-ProbeJ {
   param([object]$probe)
-
-  $gewichtValue = '-'
+  $provided = [string]$probe.probeJ
+  if (-not [string]::IsNullOrWhiteSpace($provided)) {
+    return $provided.Trim()
+  }
+  $parts = @()
   if ($null -ne $probe.gewicht -and -not [string]::IsNullOrWhiteSpace([string]$probe.gewicht)) {
-    $gewichtValue = ([string]$probe.gewicht + ' kg')
+    $parts += ('Gewicht: ' + [string]$probe.gewicht + ' kg')
   }
   $geruchRaw = if (-not [string]::IsNullOrWhiteSpace([string]$probe.geruch)) { [string]$probe.geruch } else { [string]$probe.geruchAuffaelligkeit }
-  $geruchValue = if ([string]::IsNullOrWhiteSpace($geruchRaw)) { '-' } else { [string]$geruchRaw }
-  $bemerkungValue = if ([string]::IsNullOrWhiteSpace([string]$probe.bemerkung)) { '-' } else { [string]$probe.bemerkung }
+  if (-not [string]::IsNullOrWhiteSpace($geruchRaw)) {
+    $parts += ('Geruch: ' + [string]$geruchRaw)
+  }
+  $bemerkungValue = [string]$probe.bemerkung
+  if (-not [string]::IsNullOrWhiteSpace($bemerkungValue)) {
+    $parts += $bemerkungValue.Trim()
+  }
 
-  return "Gewicht: $gewichtValue`nGeruch: $geruchValue`nBemerkung: $bemerkungValue"
+  return (($parts | ForEach-Object { [string]$_ }) -join '; ')
 }
 
 function Normalize-ParameterTextForCompare {
@@ -269,8 +316,17 @@ function Normalize-ParameterTextForCompare {
 }
 
 try {
+  Mark-Time 'start'
   Set-ErrorContext -where 'payload.parse' -detail 'reading payload json'
   $payload = Get-Content -LiteralPath $PayloadPath -Raw | ConvertFrom-Json
+  if ($payload.PSObject.Properties.Name -contains 'debugCom') {
+    try {
+      $script:DebugEnabled = [bool]$payload.debugCom
+    } catch {
+      $script:DebugEnabled = $false
+    }
+  }
+  Mark-Time 'payload.parsed'
   Write-DebugType -name 'payload.excelPath' -value $payload.excelPath
   Write-DebugType -name 'payload.yearSheetName' -value $payload.yearSheetName
   Write-DebugType -name 'payload.now' -value $payload.now
@@ -290,28 +346,20 @@ try {
     }
   }
   $excelOpenRequiredMessage = 'Fehler: Annahme muss geöffnet sein. Bitte öffnen und erneut versuchen'
-  $createdExcelByScript = $false
-  $openedByScript = $false
-
   try {
     $excel = [Runtime.InteropServices.Marshal]::GetActiveObject('Excel.Application')
   } catch {
     $excel = $null
   }
+  Mark-Time 'excel.connect'
 
   if ($null -eq $excel) {
-    if ($allowAutoOpenExcel -ne $true) {
-      throw $excelOpenRequiredMessage
-    }
-    $excel = New-Object -ComObject Excel.Application
-    $createdExcelByScript = $true
+    [Console]::Error.WriteLine('[worker] attach failed: no running Excel')
+    throw $excelOpenRequiredMessage
   }
-  if ($null -eq $excel) {
-    throw 'Excel.Application konnte nicht gestartet werden'
+  if ($allowAutoOpenExcel -eq $true) {
+    throw $script:ForbiddenAttachOnlyMessage
   }
-
-  $excel.Visible = $true
-  $excel.DisplayAlerts = $false
 
   Set-ErrorContext -where 'path.resolve' -detail 'targetPath from payload.excelPath'
   $targetPath = [System.IO.Path]::GetFullPath([string]$payload.excelPath)
@@ -351,47 +399,73 @@ try {
   }
 
   if ($null -eq $wb) {
-    if ($allowAutoOpenExcel -ne $true) {
-      throw $excelOpenRequiredMessage
-    }
-    Set-ErrorContext -where 'workbook.open' -detail "targetPath=$targetPath"
-    try {
-      $wb = $excel.Workbooks.Open($targetPath, $null, $false)
-      $openedByScript = $true
-    } catch {
-      $openMessage = $_.Exception.Message
-      throw "Workbook open failed: $openMessage"
-    }
+    [Console]::Error.WriteLine(('[worker] attach failed: workbook not open: ' + [string]$targetPath))
+    throw $excelOpenRequiredMessage
   }
 
   if ($null -eq $wb) {
-    Set-ErrorContext -where 'workbook.open' -detail "targetPath=$targetPath"
-    throw 'Workbook not found/opened'
+    throw $script:ForbiddenAttachOnlyMessage
   }
+  Mark-Time 'workbook.attach'
 
   Set-ErrorContext -where 'sheet.get' -detail "yearSheetName=$([string]$payload.yearSheetName)"
   $sheet = $wb.Worksheets.Item([string]$payload.yearSheetName)
   if ($null -eq $sheet) {
     throw "Jahresblatt $($payload.yearSheetName) nicht gefunden"
   }
+  Mark-Time 'sheet.get'
 
   Set-ErrorContext -where 'state.compute' -detail 'Get-SheetState + append row'
   $now = [datetime]::Parse([string]$payload.now)
-  $state = Get-SheetState -sheet $sheet -now $now
-  $firstEmptyAtEnd = Find-FirstCompletelyEmptyRow -sheet $sheet -startRow ([int]$state.lastUsedRow + 1)
-  $appendRow = $firstEmptyAtEnd + 1
-  Write-DebugType -name 'state.lastUsedRow' -value $state.lastUsedRow
+  $todayPrefix = Build-TodayPrefix -now $now
+  $appendRow = $null
+  $startLabNo = $null
+  $maxOrderSeqToday = 0
+  $nextSeq = $null
+  $cacheHint = if ($payload.PSObject.Properties.Name -contains 'cacheHint') { $payload.cacheHint } else { $null }
+  $usedCacheHint = $false
+
+  if ($null -ne $cacheHint) {
+    $hintPrefix = [string]$cacheHint.todayPrefix
+    $hintAppendRow = 0
+    $hintStartLabNo = 0
+    $hintMaxSeq = 0
+    $hintNextSeq = 0
+    try { $hintAppendRow = [int]$cacheHint.appendRow } catch { $hintAppendRow = 0 }
+    try { $hintStartLabNo = [int]$cacheHint.startLabNo } catch { $hintStartLabNo = 0 }
+    try { $hintMaxSeq = [int]$cacheHint.maxOrderSeqToday } catch { $hintMaxSeq = 0 }
+    try { $hintNextSeq = [int]$cacheHint.nextSeq } catch { $hintNextSeq = 0 }
+    if ($hintAppendRow -gt 0 -and $hintStartLabNo -gt 0 -and $hintNextSeq -gt 0 -and [string]::Equals($hintPrefix, $todayPrefix, [System.StringComparison]::Ordinal)) {
+      $hintRowA = (Convert-CellValueToText ($sheet.Cells.Item($hintAppendRow, 1).Value2)).Trim()
+      if ($hintRowA -eq '') {
+        $appendRow = $hintAppendRow
+        $startLabNo = $hintStartLabNo
+        $maxOrderSeqToday = $hintMaxSeq
+        $nextSeq = $hintNextSeq
+        $usedCacheHint = $true
+      }
+    }
+  }
+
+  if ($usedCacheHint -ne $true) {
+    $state = Get-SheetState -sheet $sheet -now $now
+    $firstEmptyAtEnd = Find-FirstCompletelyEmptyRow -sheet $sheet -startRow ([int]$state.lastUsedRow + 1)
+    $appendRow = $firstEmptyAtEnd
+    $maxOrderSeqToday = [int]$state.maxOrderSeqToday
+    $nextSeq = $maxOrderSeqToday + 1
+    $startLabNo = [Math]::Max([int]$state.maxLabNumber, 9999) + 1
+    Write-DebugType -name 'state.lastUsedRow' -value $state.lastUsedRow
+  }
+  Mark-Time 'state.computed'
   Write-DebugType -name 'appendRow' -value $appendRow
+  Write-DebugType -name 'usedCacheHint' -value $usedCacheHint
 
   Set-ErrorContext -where 'numbering.compute' -detail 'orderNo + lab numbers'
-  $todayPrefix = Build-TodayPrefix -now $now
-  $nextSeq = [int]$state.maxOrderSeqToday + 1
   if ($nextSeq -gt 99) {
     throw "Maximale Tagessequenz erreicht fuer Prefix $todayPrefix"
   }
 
   $orderNo = $todayPrefix + $nextSeq.ToString('00')
-  $startLabNo = [Math]::Max([int]$state.maxLabNumber, 9999) + 1
   $order = $payload.order
   $sampleNos = @()
   $seenParameterTexts = @{}
@@ -405,10 +479,18 @@ try {
   $sheet.Cells.Item($appendRow, 1).Value2 = $orderNo
   $sheet.Cells.Item($appendRow, 2).Value2 = [string]'y'
   $sheet.Cells.Item($appendRow, 3).Value2 = [string]'y'
-  $sheet.Cells.Item($appendRow, 4).Value2 = [string]$order.auftragsnotiz
+  $sheet.Cells.Item($appendRow, 4).Value2 = [string]''
   $sheet.Cells.Item($appendRow, 5).Value2 = [string]$pbTypValue
   $headerI = [string](Build-HeaderI -order $order)
-  $headerJ = [string](Build-HeaderJ -order $order -termin $payload.termin)
+  $writeAddressBlock = $true
+  if ($payload.PSObject.Properties.Name -contains 'excelWriteAddressBlock') {
+    try {
+      $writeAddressBlock = [bool]$payload.excelWriteAddressBlock
+    } catch {
+      $writeAddressBlock = $true
+    }
+  }
+  $headerJ = [string](Build-HeaderJ -order $order -termin $payload.termin -writeAddressBlock $writeAddressBlock)
   Write-DebugType -name 'headerI' -value $headerI
   Write-DebugType -name 'headerJ' -value $headerJ
   $sheet.Cells.Item($appendRow, 9).Value2 = $headerI
@@ -416,6 +498,7 @@ try {
   $sheet.Cells.Item($appendRow, 10).Value2 = $headerJ
   $sheet.Cells.Item($appendRow, 10).WrapText = $true
   $sheet.Cells.Item($appendRow, 10).Font.Bold = ($order.eilig -eq $true)
+  Mark-Time 'write.header'
 
   Set-ErrorContext -where 'samples.write.loop' -detail "sampleCount=$($order.proben.Count)"
   for ($i = 0; $i -lt $order.proben.Count; $i++) {
@@ -465,12 +548,14 @@ try {
     $sheet.Cells.Item($row, 10).Value2 = [string]$probeJ
     $sheet.Cells.Item($row, 10).WrapText = $true
   }
+  Mark-Time 'write.samples'
 
   Set-ErrorContext -where 'rows.autofit' -detail "appendRow=$appendRow"
   $lastWrittenRow = $appendRow + $order.proben.Count
   for ($row = $appendRow; $row -le $lastWrittenRow; $row++) {
     $sheet.Rows.Item($row).EntireRow.AutoFit() | Out-Null
   }
+  Mark-Time 'rows.autofit'
 
   Set-ErrorContext -where 'workbook.save' -detail 'Save only'
   if ($wb.ReadOnly -eq $true) {
@@ -479,13 +564,14 @@ try {
   }
 
   $wb.Save()
-  if ($openedByScript -eq $true) {
-    $wb.Close($true)
+  Mark-Time 'save.done'
+  if ($script:DebugEnabled -eq $true) {
+    $savedOrderNo = (Convert-CellValueToText ($sheet.Cells.Item($appendRow, 1).Value2)).Trim()
+    if (-not [string]::Equals($savedOrderNo, $orderNo, [System.StringComparison]::Ordinal)) {
+      throw "Save verification failed: expected orderNo=$orderNo actual=$savedOrderNo row=$appendRow"
+    }
   }
-  if ($createdExcelByScript -eq $true) {
-    $excel.Quit()
-  }
-
+  Mark-Time 'verify.readback'
   $firstSampleNo = $null
   $lastSampleNo = $null
   if ($sampleNos.Count -gt 0) {
@@ -493,6 +579,18 @@ try {
     $lastSampleNo = [int]$sampleNos[$sampleNos.Count - 1]
   }
   $endRowRange = "A$appendRow:J$lastWrittenRow"
+  Mark-Time 'done'
+  $timings = @{
+    computeSheetStateMs = (Elapsed-Since -start $script:Timings['sheet.get'] -ending $script:Timings['state.computed'])
+    comConnectMs = (Elapsed-Since -start $script:Timings['payload.parsed'] -ending $script:Timings['excel.connect'])
+    comAttachWorkbookMs = (Elapsed-Since -start $script:Timings['excel.connect'] -ending $script:Timings['workbook.attach'])
+    rangeWriteHeaderMs = (Elapsed-Since -start $script:Timings['state.computed'] -ending $script:Timings['write.header'])
+    rangeWriteSamplesMs = (Elapsed-Since -start $script:Timings['write.header'] -ending $script:Timings['write.samples'])
+    autoFitMs = (Elapsed-Since -start $script:Timings['write.samples'] -ending $script:Timings['rows.autofit'])
+    saveMs = (Elapsed-Since -start $script:Timings['rows.autofit'] -ending $script:Timings['save.done'])
+    verificationMs = (Elapsed-Since -start $script:Timings['save.done'] -ending $script:Timings['verify.readback'])
+    totalMs = (Elapsed-Since -start $script:Timings['start'] -ending $script:Timings['done'])
+  }
 
   @{
     ok = $true
@@ -508,6 +606,7 @@ try {
     ersteProbennr = $firstSampleNo
     letzteProbennr = $lastSampleNo
     endRowRange = $endRowRange
+    timingMs = $timings
   } | ConvertTo-Json -Compress
   exit 0
 } catch {
