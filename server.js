@@ -1756,12 +1756,7 @@ app.post('/api/single-parameter-catalog', (req, res) => {
       }
       if (param.functionGroup !== undefined && param.functionGroup !== null) {
         const value = String(param.functionGroup || '').trim();
-        if (value && value !== 'AN' && value !== 'SM' && value !== 'Organik') {
-          return res.status(400).json({
-            ok: false,
-            message: `Ungültige functionGroup für ${key}. Erlaubt: AN, SM, Organik.`,
-          });
-        }
+        if (!value) param.functionGroup = null;
       }
     }
 

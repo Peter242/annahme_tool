@@ -2,28 +2,33 @@
 
 const searchInput = document.getElementById('sp-search');
 const addButton = document.getElementById('sp-add');
+const editGroupsButton = document.getElementById('edit-groups-btn');
 const saveButton = document.getElementById('sp-save');
 const reloadButton = document.getElementById('sp-reload');
-const addGroupButton = document.getElementById('sp-group-add');
 const warningEl = document.getElementById('sp-warning');
 const statusEl = document.getElementById('sp-status');
 const listEl = document.getElementById('sp-list');
-const groupsListEl = document.getElementById('sp-groups-list');
+const groupsModal = document.getElementById('groups-modal');
+const groupsListEl = document.getElementById('groups-list');
+const groupsAddButton = document.getElementById('groups-add-btn');
+const groupsCancelButton = document.getElementById('groups-cancel');
+const groupsApplyButton = document.getElementById('groups-apply');
 
 const STANDARD_MEDIA = ['FS', 'H2O', '2e', '10e'];
 const STANDARD_LABS = ['EMD', 'HB'];
 const SINGLE_PARAM_CATALOG_UPDATED_AT_KEY = 'singleParamCatalogUpdatedAtV1';
 const DEFAULT_GROUPS = [
-  { key: 'AN', label: 'AN', supportsEluateE: true },
-  { key: 'SM', label: 'SM', supportsEluateE: true },
-  { key: 'Organik', label: 'Organik', supportsEluateE: true },
+  { key: 'AN', label: 'AN' },
+  { key: 'SM', label: 'SM' },
+  { key: 'Organik', label: 'Organik' },
 ];
 
 const state = {
-  catalog: { version: 1, parameters: [] },
+  catalog: { version: 1, parameters: [], groups: [] },
   rows: [],
   visibleIds: [],
   filter: '',
+  groupDraftRows: [],
 };
 
 let rowIdCounter = 0;
@@ -51,11 +56,11 @@ function normalizeGroups(rawGroups) {
     .map((g) => ({
       key: String(g?.key || '').trim(),
       label: String(g?.label || '').trim(),
-      supportsEluateE: g?.supportsEluateE === true,
     }))
-    .filter((g) => g.key);
+    .filter((g) => g.key)
+    .map((g) => ({ ...g, label: g.label || g.key }));
   if (normalized.length > 0) {
-    return normalized.map((g) => ({ ...g, label: g.label || g.key }));
+    return normalized;
   }
   return DEFAULT_GROUPS.map((g) => ({ ...g }));
 }
@@ -110,15 +115,18 @@ function normalizeRowFromCatalog(param = {}, index = 0) {
   };
 }
 
-function normalizeGroupFromCatalog(group = {}, index = 0) {
+function normalizeGroupRow(group = {}, index = 0) {
   const key = String(group?.key || '').trim();
   const label = String(group?.label || '').trim();
+  const name = label || key;
   return {
-    __id: String(group?.__id || '').trim() || nextRowId(`${key || 'group'}_${index}`),
-    key,
-    label: label || key,
-    supportsEluateE: group?.supportsEluateE === true,
+    __id: String(group?.__id || '').trim() || nextRowId(`${name || key || 'group'}_${index}`),
+    name: String(name || '').trim(),
   };
+}
+
+function deriveGroupKey(name) {
+  return String(name || '').trim();
 }
 
 function updateVisibleIds() {
@@ -129,18 +137,6 @@ function updateVisibleIds() {
       return !query || hay.includes(query);
     })
     .map((row) => row.__id);
-}
-
-function createFieldWrap(labelText, span, inputHtml) {
-  const wrap = document.createElement('div');
-  wrap.style.gridColumn = `span ${span}`;
-  const label = document.createElement('label');
-  label.textContent = labelText;
-  wrap.appendChild(label);
-  const holder = document.createElement('div');
-  holder.innerHTML = inputHtml;
-  wrap.appendChild(holder.firstElementChild);
-  return wrap;
 }
 
 function createRowCard(row) {
@@ -254,26 +250,27 @@ function createRowCard(row) {
   return card;
 }
 
-function createGroupRow(group, index) {
+function createGroupDraftRow(group, index) {
   const row = document.createElement('div');
   row.dataset.groupIndex = String(index);
   row.style.display = 'grid';
-  row.style.gridTemplateColumns = '1fr 1fr auto auto';
+  row.style.gridTemplateColumns = '1fr auto';
   row.style.gap = '8px';
   row.style.alignItems = 'center';
   row.style.padding = '6px 0';
   row.style.borderBottom = '1px solid rgba(255,255,255,0.06)';
 
-  const keyWrap = document.createElement('div');
-  keyWrap.innerHTML = `<input type="text" data-group-field="key" placeholder="Key" style="height:30px;" value="${(group.key || '').replace(/"/g, '&quot;')}" />`;
-  const labelWrap = document.createElement('div');
-  labelWrap.innerHTML = `<input type="text" data-group-field="label" placeholder="Label" style="height:30px;" value="${(group.label || '').replace(/"/g, '&quot;')}" />`;
-  const eluateWrap = document.createElement('label');
-  eluateWrap.style.fontSize = '12px';
-  eluateWrap.style.display = 'flex';
-  eluateWrap.style.alignItems = 'center';
-  eluateWrap.style.gap = '6px';
-  eluateWrap.innerHTML = `<input type="checkbox" data-group-field="supportsEluateE" ${group.supportsEluateE ? 'checked' : ''} /> e bei Eluat`;
+  const nameWrap = document.createElement('div');
+  nameWrap.style.display = 'flex';
+  nameWrap.style.flexDirection = 'column';
+  nameWrap.style.gap = '4px';
+  const groupNameValue = String(group.name || '');
+  const derivedKey = deriveGroupKey(groupNameValue);
+  nameWrap.innerHTML = `<input type="text" data-group-field="groupName" placeholder="Gruppenname (z.B. AN)" style="height:30px;" value="${groupNameValue.replace(/"/g, '&quot;')}" />`;
+  const derivedKeyHint = document.createElement('small');
+  derivedKeyHint.className = 'meta';
+  derivedKeyHint.textContent = derivedKey ? `Key: ${derivedKey}` : 'Key: -';
+  nameWrap.appendChild(derivedKeyHint);
   const deleteWrap = document.createElement('div');
   const deleteButton = document.createElement('button');
   deleteButton.type = 'button';
@@ -284,17 +281,14 @@ function createGroupRow(group, index) {
   deleteButton.style.padding = '0 8px';
   deleteWrap.appendChild(deleteButton);
 
-  row.appendChild(keyWrap);
-  row.appendChild(labelWrap);
-  row.appendChild(eluateWrap);
+  row.appendChild(nameWrap);
   row.appendChild(deleteWrap);
   return row;
 }
 
-function renderGroupsEditor() {
+function renderGroupsModalList() {
   groupsListEl.innerHTML = '';
-  const groups = getCatalogGroups();
-  if (groups.length === 0) {
+  if (state.groupDraftRows.length === 0) {
     const empty = document.createElement('div');
     empty.className = 'meta';
     empty.textContent = 'Keine Gruppen';
@@ -302,29 +296,68 @@ function renderGroupsEditor() {
     return;
   }
   const fragment = document.createDocumentFragment();
-  groups.forEach((group, index) => {
-    fragment.appendChild(createGroupRow(group, index));
+  state.groupDraftRows.forEach((group, index) => {
+    fragment.appendChild(createGroupDraftRow(group, index));
   });
   groupsListEl.appendChild(fragment);
 }
 
-function addGroup() {
-  const groups = getCatalogGroups();
-  groups.push(normalizeGroupFromCatalog({ key: '', label: '', supportsEluateE: true }, groups.length));
-  renderGroupsEditor();
-  renderList();
+function openGroupsModal() {
+  state.groupDraftRows = getCatalogGroups().map((group, index) => normalizeGroupRow(group, index));
+  renderGroupsModalList();
+  groupsModal.classList.remove('hidden');
 }
 
-function updateGroupFieldByElement(target) {
+function closeGroupsModal() {
+  groupsModal.classList.add('hidden');
+  state.groupDraftRows = [];
+}
+
+function addGroupDraftRow() {
+  state.groupDraftRows.push(normalizeGroupRow({ name: '' }, state.groupDraftRows.length));
+  renderGroupsModalList();
+}
+
+function updateGroupDraftFieldByElement(target) {
   const field = String(target?.dataset?.groupField || '').trim();
   if (!field) return;
   const row = target.closest('[data-group-index]');
   if (!row) return;
   const index = Number.parseInt(row.dataset.groupIndex, 10);
   if (!Number.isInteger(index) || index < 0) return;
-  const groups = getCatalogGroups();
-  if (!groups[index]) return;
-  groups[index][field] = target.type === 'checkbox' ? target.checked : target.value;
+  if (!state.groupDraftRows[index]) return;
+  if (field === 'groupName') {
+    state.groupDraftRows[index].name = target.value;
+  }
+}
+
+function applyGroupsModal() {
+  const cleanedGroups = [];
+  const seenKeys = new Set();
+  for (const draft of state.groupDraftRows) {
+    const name = String(draft?.name || '').trim();
+    const key = deriveGroupKey(name);
+    if (!name) {
+      showToast('error', 'Gruppenname darf nicht leer sein.');
+      return;
+    }
+    if (seenKeys.has(key)) {
+      showToast('error', `Gruppen-Key doppelt: ${key}`);
+      return;
+    }
+    seenKeys.add(key);
+    cleanedGroups.push({ key, label: name });
+  }
+
+  state.catalog.groups = cleanedGroups;
+  const allowedGroupKeys = new Set(cleanedGroups.map((group) => group.key));
+  state.rows = state.rows.map((row) => {
+    const group = String(row.functionGroup || '').trim();
+    if (!group || allowedGroupKeys.has(group)) return row;
+    return { ...row, functionGroup: null };
+  });
+  closeGroupsModal();
+  renderList();
 }
 
 function renderList() {
@@ -392,11 +425,11 @@ function normalizeCatalogForSave() {
     .map((group) => ({
       key: String(group?.key || '').trim(),
       label: String(group?.label || '').trim(),
-      supportsEluateE: group?.supportsEluateE === true,
     }))
     .filter((group) => group.key)
     .map((group) => ({ ...group, label: group.label || group.key }));
   const allowedGroupKeys = new Set(groups.map((group) => group.key));
+
   const parameters = state.rows.map((row) => {
     const key = String(row.key || '').trim();
     const labelLong = String(row.labelLong || '').trim();
@@ -434,6 +467,7 @@ function normalizeCatalogForSave() {
       functionGroup,
     };
   });
+
   return {
     version: Number(state.catalog.version || 1),
     groups,
@@ -446,11 +480,10 @@ async function loadCatalog() {
   try {
     const catalog = await fetchSingleParamCatalog();
     state.catalog = catalog && typeof catalog === 'object' ? catalog : { version: 1, parameters: [] };
-    state.catalog.groups = normalizeGroups(state.catalog.groups).map((group, index) => normalizeGroupFromCatalog(group, index));
+    state.catalog.groups = normalizeGroups(state.catalog.groups);
     state.rows = (Array.isArray(state.catalog.parameters) ? state.catalog.parameters : [])
       .map((p, index) => normalizeRowFromCatalog(p, index));
     updateVisibleIds();
-    renderGroupsEditor();
     renderList();
     setStatus(`Katalog geladen (${state.rows.length} Parameter).`, false);
   } catch (error) {
@@ -472,7 +505,7 @@ async function saveCatalog() {
     const payload = normalizeCatalogForSave();
     const saved = await saveSingleParamCatalog(payload);
     state.catalog = saved && typeof saved === 'object' ? saved : payload;
-    state.catalog.groups = normalizeGroups(state.catalog.groups).map((group, index) => normalizeGroupFromCatalog(group, index));
+    state.catalog.groups = normalizeGroups(state.catalog.groups);
     const updatedAt = String(state.catalog.updatedAt || '').trim();
     if (updatedAt) {
       localStorage.setItem(SINGLE_PARAM_CATALOG_UPDATED_AT_KEY, updatedAt);
@@ -480,7 +513,6 @@ async function saveCatalog() {
     state.rows = (Array.isArray(state.catalog.parameters) ? state.catalog.parameters : [])
       .map((p, index) => normalizeRowFromCatalog(p, index));
     updateVisibleIds();
-    renderGroupsEditor();
     renderList();
     setStatus(`Gespeichert (${state.rows.length} Parameter).`, false);
     showToast('success', 'Einzelparameter gespeichert');
@@ -514,15 +546,16 @@ listEl.addEventListener('click', (event) => {
 
 groupsListEl.addEventListener('input', (event) => {
   const target = event.target;
-  if (!(target instanceof HTMLInputElement) && !(target instanceof HTMLTextAreaElement) && !(target instanceof HTMLSelectElement)) return;
-  updateGroupFieldByElement(target);
-});
-
-groupsListEl.addEventListener('change', (event) => {
-  const target = event.target;
-  if (!(target instanceof HTMLInputElement) && !(target instanceof HTMLTextAreaElement) && !(target instanceof HTMLSelectElement)) return;
-  updateGroupFieldByElement(target);
-  renderList();
+  if (!(target instanceof HTMLInputElement)) return;
+  updateGroupDraftFieldByElement(target);
+  if (String(target.dataset.groupField || '') === 'groupName') {
+    const row = target.closest('[data-group-index]');
+    const hint = row ? row.querySelector('small.meta') : null;
+    if (hint) {
+      const key = deriveGroupKey(target.value);
+      hint.textContent = key ? `Key: ${key}` : 'Key: -';
+    }
+  }
 });
 
 groupsListEl.addEventListener('click', (event) => {
@@ -532,10 +565,8 @@ groupsListEl.addEventListener('click', (event) => {
   if (!row) return;
   const index = Number.parseInt(row.dataset.groupIndex, 10);
   if (!Number.isInteger(index) || index < 0) return;
-  const groups = getCatalogGroups();
-  groups.splice(index, 1);
-  renderGroupsEditor();
-  renderList();
+  state.groupDraftRows.splice(index, 1);
+  renderGroupsModalList();
 });
 
 searchInput.addEventListener('input', () => {
@@ -543,9 +574,17 @@ searchInput.addEventListener('input', () => {
   updateVisibleIds();
   renderList();
 });
+
 addButton.addEventListener('click', addParameter);
+editGroupsButton.addEventListener('click', openGroupsModal);
+groupsAddButton.addEventListener('click', addGroupDraftRow);
+groupsCancelButton.addEventListener('click', closeGroupsModal);
+groupsApplyButton.addEventListener('click', applyGroupsModal);
+groupsModal.addEventListener('click', (event) => {
+  if (event.target === groupsModal) closeGroupsModal();
+});
+
 saveButton.addEventListener('click', saveCatalog);
 reloadButton.addEventListener('click', loadCatalog);
-addGroupButton.addEventListener('click', addGroup);
 
 loadCatalog();

@@ -363,14 +363,11 @@
             </div>
             <div id="single-params-list" class="list-editor" style="max-height: 70vh; overflow-y: auto; flex: 1 1 auto; min-height: 0;"></div>
           </div>
-          <div style="display: flex; flex-direction: column; min-height: 0; gap: 8px;">
-            <div style="display: flex; flex-direction: column; min-height: 0;">
-              <label>Ausgewählt</label>
-              <div id="selected-params-list" class="list-editor" style="max-height: 45vh; overflow-y: auto; min-height: 0;"></div>
-            </div>
-            <div style="flex: 1 1 auto; min-height: 220px; display: flex; flex-direction: column;">
+          <div style="display: flex; flex-direction: column; min-height: 0; gap: 10px;">
+            <div id="selected-params-list" class="list-editor" style="flex: 1 1 auto; max-height: 58vh; overflow-y: auto; min-height: 0;"></div>
+            <div style="flex: 0 0 auto; display: flex; flex-direction: column;">
               <label for="single-params-preview">Vorschau</label>
-              <textarea id="single-params-preview" rows="10" readonly style="flex: 1 1 auto; min-height: 0;"></textarea>
+              <div id="single-params-preview" style="height: 180px; min-height: 180px; max-height: 200px; overflow-y: auto; resize: vertical; border: 1px solid var(--line); border-radius: 8px; padding: 0.55rem 0.6rem; background: var(--surface-2); white-space: pre-wrap;"></div>
             </div>
           </div>
         </div>
@@ -2102,7 +2099,6 @@
 
       function buildPreviewTextFromToggles(catalog, toggles) {
         const mediaOrder = ['FS', 'H2O', '2e', '10e'];
-        const siteOrder = { E: 0, B: 1 };
         const ratioOrder = { '2e': 0, '10e': 1 };
         const params = Array.isArray(catalog?.parameters) ? catalog.parameters : [];
         const byKey = new Map(params.map((p) => [String(p?.key || '').trim(), p]));
@@ -2119,8 +2115,7 @@
         }
         const labs = { EMD: createLabBucket(), HB: createLabBucket() };
         const externLabs = new Map();
-        const pvSeen = new Set();
-        const pvEntries = [];
+        const pvBySite = { E: { tokens: new Set(), ratios: new Set() }, B: { tokens: new Set(), ratios: new Set() } };
         const vorOrtTokens = [];
 
         Object.entries(toggles || {}).forEach(([key, toggle]) => {
@@ -2168,13 +2163,13 @@
             } else {
               bucket.plain.push(wantsE ? `e${keyToken}` : keyToken);
             }
+            if (param.pvFlag === true && (lab === 'EMD' || lab === 'HB')) {
+              const pvSite = lab === 'EMD' ? 'E' : 'B';
+              pvBySite[pvSite].tokens.add(keyToken);
+            }
             if (isEluateMedium && (lab === 'EMD' || lab === 'HB')) {
               const site = lab === 'EMD' ? 'E' : 'B';
-              const pvKey = `${site}:${medium}`;
-              if (!pvSeen.has(pvKey)) {
-                pvSeen.add(pvKey);
-                pvEntries.push({ site, ratio: medium });
-              }
+              pvBySite[site].ratios.add(medium);
             }
           });
           if (lab !== 'EMD' && lab !== 'HB') {
@@ -2204,10 +2199,14 @@
           return `${labName}: ${blocks.join('; ')}`;
         }
 
-        pvEntries.sort((a, b) => {
-          const ratioCmp = (ratioOrder[a.ratio] ?? 99) - (ratioOrder[b.ratio] ?? 99);
-          if (ratioCmp !== 0) return ratioCmp;
-          return (siteOrder[a.site] ?? 99) - (siteOrder[b.site] ?? 99);
+        const pvSiteTokens = [];
+        ['E', 'B'].forEach((site) => {
+          const tokens = Array.from(pvBySite[site].tokens).sort((a, b) => a.localeCompare(b, 'de', { sensitivity: 'base' }));
+          const ratios = Array.from(pvBySite[site].ratios).sort((a, b) => (ratioOrder[a] ?? 99) - (ratioOrder[b] ?? 99));
+          const members = [...tokens, ...ratios];
+          if (members.length > 0) {
+            pvSiteTokens.push(`${site}(${members.join(', ')})`);
+          }
         });
 
         const lines = [];
@@ -2215,8 +2214,8 @@
         if (vorOrt.length > 0) {
           lines.push(`vor Ort: ${vorOrt.join(', ')}`);
         }
-        if (pvEntries.length > 0) {
-          lines.push(`PV: ${pvEntries.map((x) => `${x.site}(${x.ratio})`).join(', ')}`);
+        if (pvSiteTokens.length > 0) {
+          lines.push(`PV: ${pvSiteTokens.join(', ')}`);
         }
         const emdLine = renderLabLine('EMD', labs.EMD);
         if (emdLine) lines.push(emdLine);
@@ -2233,7 +2232,23 @@
 
       function updateSingleParamsModalPreview() {
         const preview = buildPreviewTextFromToggles(singleParamsCatalog, singleParamsModalState.toggles);
-        singleParamsPreviewInput.value = preview;
+        const escapeHtml = (value) => String(value || '')
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;')
+          .replace(/'/g, '&#39;');
+        const html = String(preview || '')
+          .split('\n')
+          .map((line) => {
+            const match = line.match(/^([^:]+:)(.*)$/);
+            if (!match) return `<div>${escapeHtml(line)}</div>`;
+            const head = escapeHtml(match[1]);
+            const tail = escapeHtml(match[2] || '');
+            return `<div><strong>${head}</strong>${tail}</div>`;
+          })
+          .join('');
+        singleParamsPreviewInput.innerHTML = html;
         return preview;
       }
 
@@ -2396,64 +2411,72 @@
 
           const row = document.createElement('div');
           row.style.display = 'grid';
-          row.style.gridTemplateColumns = '220px auto 1fr';
-          row.style.gap = '10px';
+          row.style.gridTemplateColumns = '1fr 44px 360px 84px';
+          row.style.gap = '6px';
           row.style.alignItems = 'center';
-          row.style.padding = '6px 0';
+          row.style.padding = '4px 0';
+          row.style.fontSize = '13px';
+          row.style.lineHeight = '1.2';
           row.style.borderBottom = '1px solid rgba(255,255,255,0.06)';
 
           const nameCell = document.createElement('div');
-          nameCell.style.display = 'flex';
-          nameCell.style.alignItems = 'center';
-          nameCell.style.gap = '8px';
+          nameCell.style.display = 'block';
+          nameCell.style.fontSize = '13px';
           const label = document.createElement('span');
+          label.style.display = 'block';
+          label.style.maxWidth = '100%';
+          label.style.overflow = 'hidden';
+          label.style.textOverflow = 'ellipsis';
+          label.style.whiteSpace = 'nowrap';
           const display = getParameterDisplay(param, key);
-          label.textContent = display.short ? `${display.name} (${display.short})` : display.name;
+          const labelText = display.short ? `${display.name} (${display.short})` : display.name;
+          label.textContent = labelText;
+          label.title = labelText;
           nameCell.appendChild(label);
-          if (param.allowVorOrt === true) {
-            const vorOrtBtn = document.createElement('button');
-            vorOrtBtn.type = 'button';
-            vorOrtBtn.className = isVorOrt ? 'primary' : 'secondary';
-            vorOrtBtn.textContent = 'vor Ort';
-            vorOrtBtn.title = 'Als Vor-Ort-Parameter markieren';
-            vorOrtBtn.addEventListener('click', (event) => {
-              event.stopPropagation();
-              toggleSingleParamVorOrt(key);
-            });
-            nameCell.appendChild(vorOrtBtn);
-          }
+          row.appendChild(nameCell);
+
+          const removeCell = document.createElement('div');
+          removeCell.style.display = 'flex';
+          removeCell.style.justifyContent = 'flex-end';
           const removeBtn = document.createElement('button');
           removeBtn.type = 'button';
           removeBtn.textContent = 'x';
           removeBtn.title = 'Entfernen';
+          removeBtn.style.padding = '4px 8px';
+          removeBtn.style.fontSize = '12px';
           removeBtn.addEventListener('click', (event) => {
             event.stopPropagation();
             toggleSingleParamSelection(key);
           });
-          nameCell.appendChild(removeBtn);
-          row.appendChild(nameCell);
+          removeCell.appendChild(removeBtn);
+          row.appendChild(removeCell);
 
-          const labsCell = document.createElement('div');
-          labsCell.style.display = 'flex';
-          labsCell.style.gap = '6px';
-          labsCell.style.flexWrap = 'wrap';
+          const actionsCell = document.createElement('div');
+          actionsCell.style.justifySelf = 'end';
+          actionsCell.style.display = 'flex';
+          actionsCell.style.justifyContent = 'flex-end';
+          actionsCell.style.gap = '6px';
+          actionsCell.style.flexWrap = 'wrap';
           if (allowedLabs.length > 1) {
+            const orderedLabs = [];
+            ['EMD', 'HB'].forEach((lab) => {
+              if (allowedLabs.includes(lab)) orderedLabs.push(lab);
+            });
             allowedLabs.forEach((lab) => {
+              if (!orderedLabs.includes(lab)) orderedLabs.push(lab);
+            });
+            orderedLabs.forEach((lab) => {
               const btn = document.createElement('button');
               btn.type = 'button';
               btn.className = toggle.lab === lab ? 'primary' : 'secondary';
               btn.textContent = lab;
               btn.disabled = isVorOrt;
+              btn.style.padding = '4px 8px';
+              btn.style.fontSize = '12px';
               btn.addEventListener('click', () => setSingleParamLab(key, lab));
-              labsCell.appendChild(btn);
+              actionsCell.appendChild(btn);
             });
           }
-          row.appendChild(labsCell);
-
-          const mediaCell = document.createElement('div');
-          mediaCell.style.display = 'flex';
-          mediaCell.style.gap = '6px';
-          mediaCell.style.flexWrap = 'wrap';
           const otherMediumName = String(param.otherMediumName || '').trim();
           const orderedAllowedMedia = [];
           mediaOrder.forEach((medium) => {
@@ -2469,10 +2492,34 @@
             btn.className = active ? 'primary' : 'secondary';
             btn.textContent = medium;
             btn.disabled = isVorOrt;
+            btn.style.padding = '4px 8px';
+            btn.style.fontSize = '12px';
             btn.addEventListener('click', () => toggleSingleParamMedium(key, medium));
-            mediaCell.appendChild(btn);
+            actionsCell.appendChild(btn);
           });
-          row.appendChild(mediaCell);
+          row.appendChild(actionsCell);
+
+          const vorOrtCell = document.createElement('div');
+          vorOrtCell.style.display = 'flex';
+          vorOrtCell.style.justifyContent = 'flex-end';
+          vorOrtCell.style.justifySelf = 'end';
+          if (param.allowVorOrt === true) {
+            const vorOrtBtn = document.createElement('button');
+            vorOrtBtn.type = 'button';
+            vorOrtBtn.className = isVorOrt ? 'primary' : 'secondary';
+            vorOrtBtn.textContent = 'vor Ort';
+            vorOrtBtn.title = 'Als Vor-Ort-Parameter markieren';
+            vorOrtBtn.style.whiteSpace = 'nowrap';
+            vorOrtBtn.style.minWidth = '72px';
+            vorOrtBtn.style.padding = '4px 8px';
+            vorOrtBtn.style.fontSize = '12px';
+            vorOrtBtn.addEventListener('click', (event) => {
+              event.stopPropagation();
+              toggleSingleParamVorOrt(key);
+            });
+            vorOrtCell.appendChild(vorOrtBtn);
+          }
+          row.appendChild(vorOrtCell);
 
           selectedParamsList.appendChild(row);
         });

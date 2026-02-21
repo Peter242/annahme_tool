@@ -79,6 +79,7 @@ function mapTogglesToSelection({ catalog, toggles }) {
   };
   const pvSeen = new Set();
   const pvEluate = [];
+  const pvItemsBySite = { E: [], B: [] };
   const vorOrtTokens = [];
 
   Object.entries(sourceToggles).forEach(([key, toggle]) => {
@@ -104,6 +105,10 @@ function mapTogglesToSelection({ catalog, toggles }) {
       lab = allowedLabs[0];
     }
     if (!LAB_ORDER.includes(lab)) return;
+    const site = lab === 'EMD' ? 'E' : (lab === 'HB' ? 'B' : null);
+    if (catalogParam.pvFlag === true && site) {
+      pvItemsBySite[site].push(tokenBase);
+    }
 
     const selectedMediaMap = toggle.media && typeof toggle.media === 'object' ? toggle.media : {};
     const requiresPv = new Set(normalizeArrayStrings(catalogParam.requiresPv));
@@ -164,7 +169,14 @@ function mapTogglesToSelection({ catalog, toggles }) {
 
   return {
     vorOrt: dedupeSorted(vorOrtTokens),
-    pv: { ts: false, eluate: pvEluate },
+    pv: {
+      ts: false,
+      eluate: pvEluate,
+      itemsBySite: {
+        E: dedupeSorted(pvItemsBySite.E),
+        B: dedupeSorted(pvItemsBySite.B),
+      },
+    },
     labs,
     extern: [],
   };

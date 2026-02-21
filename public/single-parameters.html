@@ -1,4 +1,4 @@
-<!doctype html>
+﻿<!doctype html>
 <html lang="de">
   <head>
     <meta charset="utf-8" />
@@ -26,20 +26,13 @@
         <div class="action-row" style="align-items:center; gap:0.5rem; flex-wrap: wrap;">
           <input id="sp-search" type="text" placeholder="Suche nach Name oder Kürzel..." style="min-width:260px; max-width:420px;" />
           <button type="button" id="sp-add" class="secondary">+ Parameter</button>
+          <button type="button" id="edit-groups-btn" class="secondary">Gruppenfunktionen...</button>
           <button type="button" id="sp-save" class="primary">Speichern</button>
           <button type="button" id="sp-reload" class="secondary">Neu laden</button>
         </div>
 
         <div id="sp-warning" class="inline-error hidden" style="margin-top:0.5rem;"></div>
         <div id="sp-status" class="inline-ok hidden" style="margin-top:0.5rem;"></div>
-
-        <section style="margin-top:0.75rem; border:1px solid rgba(255,255,255,0.08); border-radius:8px; padding:10px;">
-          <div class="action-row" style="justify-content:space-between; margin-top:0;">
-            <strong>Gruppenfunktionen</strong>
-            <button type="button" id="sp-group-add" class="secondary">+ Gruppe</button>
-          </div>
-          <div id="sp-groups-list" style="margin-top:0.5rem; max-height:180px; overflow:auto;"></div>
-        </section>
 
         <div id="sp-grid-wrap" style="margin-top:0.75rem; max-height:75vh; overflow-y:auto; overflow-x:auto; border:1px solid rgba(255,255,255,0.08); border-radius:8px;">
           <div id="sp-grid-header" style="position:sticky; top:0; z-index:2; background:#1b1f24; display:grid; grid-template-columns:2.0fr 0.8fr 0.9fr 0.8fr 0.7fr 1.3fr 2.0fr 0.4fr 0.7fr; gap:10px; align-items:center; padding:8px 10px; border-bottom:1px solid rgba(255,255,255,0.12); font-size:12px; font-weight:600;">
@@ -59,6 +52,20 @@
     </div>
 
     <div id="toast-container" class="toast-wrap"></div>
+
+    <div id="groups-modal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="groups-modal-title">
+      <div class="modal-card" style="width:min(700px, 92vw); max-height:70vh; display:flex; flex-direction:column;">
+        <h3 id="groups-modal-title">Gruppenfunktionen</h3>
+        <div class="action-row" style="margin-top:0; justify-content:flex-end;">
+          <button type="button" id="groups-add-btn" class="secondary">+ Gruppe</button>
+        </div>
+        <div id="groups-list" style="margin-top:0.5rem; flex:1 1 auto; min-height:0; overflow-y:auto;"></div>
+        <div class="modal-actions">
+          <button type="button" id="groups-cancel" class="secondary">Abbrechen</button>
+          <button type="button" id="groups-apply" class="primary">Übernehmen</button>
+        </div>
+      </div>
+    </div>
 
     <script src="/settings/common.js"></script>
     <script src="/single-parameters.js"></script>

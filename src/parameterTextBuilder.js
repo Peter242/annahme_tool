@@ -12,9 +12,15 @@ function normalizeToken(value) {
 
 function renderPvLine(pv) {
   if (!isPlainObject(pv)) return '';
-  const parts = [];
-  if (pv.ts === true) {
-    parts.push('TS');
+  const bySite = { E: { tokens: [], ratios: [] }, B: { tokens: [], ratios: [] } };
+  if (isPlainObject(pv.itemsBySite)) {
+    ['E', 'B'].forEach((site) => {
+      const rawItems = Array.isArray(pv.itemsBySite[site]) ? pv.itemsBySite[site] : [];
+      rawItems.forEach((raw) => {
+        const token = normalizeToken(raw);
+        if (token) bySite[site].tokens.push(token);
+      });
+    });
   }
   if (Array.isArray(pv.eluate)) {
     pv.eluate.forEach((entry) => {
@@ -22,11 +28,26 @@ function renderPvLine(pv) {
       const site = entry.site === 'E' || entry.site === 'B' ? entry.site : null;
       const ratio = entry.ratio === '2e' || entry.ratio === '10e' ? entry.ratio : null;
       if (!site || !ratio) return;
-      parts.push(`${site}(${ratio})`);
+      bySite[site].ratios.push(ratio);
     });
   }
-  if (parts.length === 0) return '';
-  return `PV: ${parts.join(', ')}`;
+  const ratioOrder = { '2e': 0, '10e': 1 };
+  const siteParts = [];
+  ['E', 'B'].forEach((site) => {
+    const tokens = Array.from(new Set(bySite[site].tokens)).sort((a, b) => a.localeCompare(b, 'de'));
+    const ratios = Array.from(new Set(bySite[site].ratios)).sort((a, b) => (ratioOrder[a] ?? 99) - (ratioOrder[b] ?? 99));
+    const members = [...tokens, ...ratios];
+    if (members.length > 0) {
+      siteParts.push(`${site}(${members.join(', ')})`);
+    }
+  });
+  if (siteParts.length > 0) {
+    return `PV: ${siteParts.join(', ')}`;
+  }
+  if (pv.ts === true) {
+    return 'PV: TS';
+  }
+  return '';
 }
 
 function renderVorOrtLine(vorOrt) {

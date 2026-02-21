@@ -3,18 +3,15 @@
   "groups": [
     {
       "key": "AN",
-      "label": "AN",
-      "supportsEluateE": true
+      "label": "AN"
     },
     {
       "key": "SM",
-      "label": "SM",
-      "supportsEluateE": true
+      "label": "SM"
     },
     {
       "key": "Organik",
-      "label": "Organik",
-      "supportsEluateE": true
+      "label": "Organik"
     }
   ],
   "parameters": [
@@ -33,6 +30,7 @@
         "10e"
       ],
       "eluatePrefixE": false,
+      "allowVorOrt": false,
       "pvFlag": false,
       "requiresPv": [
         "2e",
@@ -55,6 +53,7 @@
         "10e"
       ],
       "eluatePrefixE": true,
+      "allowVorOrt": false,
       "pvFlag": false,
       "requiresPv": [
         "2e",
@@ -77,6 +76,7 @@
         "10e"
       ],
       "eluatePrefixE": false,
+      "allowVorOrt": false,
       "pvFlag": false,
       "requiresPv": [
         "2e",
@@ -99,6 +99,7 @@
         "10e"
       ],
       "eluatePrefixE": true,
+      "allowVorOrt": false,
       "pvFlag": false,
       "requiresPv": [
         "2e",
@@ -122,6 +123,7 @@
         "10e"
       ],
       "eluatePrefixE": false,
+      "allowVorOrt": false,
       "pvFlag": false,
       "requiresPv": [
         "2e",
@@ -144,6 +146,7 @@
         "10e"
       ],
       "eluatePrefixE": true,
+      "allowVorOrt": false,
       "pvFlag": false,
       "requiresPv": [
         "2e",
@@ -166,6 +169,7 @@
         "10e"
       ],
       "eluatePrefixE": true,
+      "allowVorOrt": false,
       "pvFlag": false,
       "requiresPv": [
         "2e",
@@ -188,6 +192,7 @@
         "10e"
       ],
       "eluatePrefixE": true,
+      "allowVorOrt": false,
       "pvFlag": false,
       "requiresPv": [
         "2e",
@@ -210,6 +215,7 @@
         "10e"
       ],
       "eluatePrefixE": false,
+      "allowVorOrt": false,
       "pvFlag": false,
       "requiresPv": [
         "2e",
@@ -232,6 +238,7 @@
         "10e"
       ],
       "eluatePrefixE": true,
+      "allowVorOrt": false,
       "pvFlag": false,
       "requiresPv": [
         "2e",
@@ -254,6 +261,7 @@
         "10e"
       ],
       "eluatePrefixE": false,
+      "allowVorOrt": false,
       "pvFlag": false,
       "requiresPv": [
         "2e",
@@ -276,6 +284,7 @@
         "10e"
       ],
       "eluatePrefixE": false,
+      "allowVorOrt": false,
       "pvFlag": false,
       "requiresPv": [
         "2e",
@@ -298,6 +307,7 @@
         "10e"
       ],
       "eluatePrefixE": false,
+      "allowVorOrt": false,
       "pvFlag": false,
       "requiresPv": [
         "2e",
@@ -320,6 +330,7 @@
         "10e"
       ],
       "eluatePrefixE": true,
+      "allowVorOrt": false,
       "pvFlag": false,
       "requiresPv": [
         "2e",
@@ -342,6 +353,7 @@
         "10e"
       ],
       "eluatePrefixE": true,
+      "allowVorOrt": false,
       "pvFlag": false,
       "requiresPv": [
         "2e",
@@ -364,6 +376,7 @@
         "10e"
       ],
       "eluatePrefixE": true,
+      "allowVorOrt": false,
       "pvFlag": false,
       "requiresPv": [
         "2e",
@@ -386,6 +399,7 @@
         "10e"
       ],
       "eluatePrefixE": false,
+      "allowVorOrt": false,
       "pvFlag": false,
       "requiresPv": [
         "2e",
@@ -408,6 +422,7 @@
         "10e"
       ],
       "eluatePrefixE": false,
+      "allowVorOrt": false,
       "pvFlag": false,
       "requiresPv": [
         "2e",
@@ -430,6 +445,7 @@
         "10e"
       ],
       "eluatePrefixE": true,
+      "allowVorOrt": false,
       "pvFlag": false,
       "requiresPv": [
         "2e",
@@ -452,6 +468,7 @@
         "10e"
       ],
       "eluatePrefixE": true,
+      "allowVorOrt": false,
       "pvFlag": false,
       "requiresPv": [
         "2e",
@@ -474,6 +491,7 @@
         "10e"
       ],
       "eluatePrefixE": false,
+      "allowVorOrt": false,
       "pvFlag": false,
       "requiresPv": [
         "2e",
@@ -496,6 +514,7 @@
         "10e"
       ],
       "eluatePrefixE": false,
+      "allowVorOrt": false,
       "pvFlag": false,
       "requiresPv": [
         "2e",
@@ -518,6 +537,7 @@
         "10e"
       ],
       "eluatePrefixE": true,
+      "allowVorOrt": false,
       "pvFlag": false,
       "requiresPv": [
         "2e",
@@ -540,6 +560,7 @@
         "10e"
       ],
       "eluatePrefixE": false,
+      "allowVorOrt": false,
       "pvFlag": false,
       "requiresPv": [
         "2e",
@@ -562,6 +583,7 @@
         "10e"
       ],
       "eluatePrefixE": false,
+      "allowVorOrt": true,
       "pvFlag": false,
       "requiresPv": [
         "2e",
@@ -584,6 +606,7 @@
         "10e"
       ],
       "eluatePrefixE": false,
+      "allowVorOrt": false,
       "pvFlag": false,
       "requiresPv": [
         "2e",
@@ -605,6 +628,7 @@
         "10e"
       ],
       "eluatePrefixE": true,
+      "allowVorOrt": false,
       "pvFlag": false,
       "requiresPv": [
         "2e",
@@ -627,6 +651,7 @@
         "10e"
       ],
       "eluatePrefixE": false,
+      "allowVorOrt": false,
       "pvFlag": false,
       "requiresPv": [
         "2e",
@@ -649,6 +674,7 @@
         "10e"
       ],
       "eluatePrefixE": true,
+      "allowVorOrt": false,
       "pvFlag": false,
       "requiresPv": [
         "2e",
@@ -671,6 +697,7 @@
         "10e"
       ],
       "eluatePrefixE": true,
+      "allowVorOrt": false,
       "pvFlag": false,
       "requiresPv": [
         "2e",
@@ -693,6 +720,7 @@
         "10e"
       ],
       "eluatePrefixE": false,
+      "allowVorOrt": false,
       "pvFlag": false,
       "requiresPv": [
         "2e",
@@ -715,6 +743,7 @@
         "10e"
       ],
       "eluatePrefixE": false,
+      "allowVorOrt": false,
       "pvFlag": true,
       "requiresPv": [
         "2e",
@@ -737,6 +766,7 @@
         "10e"
       ],
       "eluatePrefixE": false,
+      "allowVorOrt": false,
       "pvFlag": false,
       "requiresPv": [
         "2e",
@@ -759,6 +789,7 @@
         "10e"
       ],
       "eluatePrefixE": false,
+      "allowVorOrt": false,
       "pvFlag": false,
       "requiresPv": [
         "2e",
@@ -781,6 +812,7 @@
         "10e"
       ],
       "eluatePrefixE": true,
+      "allowVorOrt": false,
       "pvFlag": false,
       "requiresPv": [
         "2e",
@@ -803,6 +835,7 @@
         "10e"
       ],
       "eluatePrefixE": false,
+      "allowVorOrt": false,
       "pvFlag": false,
       "requiresPv": [
         "2e",
@@ -825,6 +858,7 @@
         "10e"
       ],
       "eluatePrefixE": true,
+      "allowVorOrt": false,
       "pvFlag": false,
       "requiresPv": [
         "2e",
@@ -847,6 +881,7 @@
         "10e"
       ],
       "eluatePrefixE": false,
+      "allowVorOrt": false,
       "pvFlag": false,
       "requiresPv": [
         "2e",
@@ -869,6 +904,7 @@
         "10e"
       ],
       "eluatePrefixE": false,
+      "allowVorOrt": false,
       "pvFlag": false,
       "requiresPv": [
         "2e",
@@ -891,6 +927,7 @@
         "10e"
       ],
       "eluatePrefixE": false,
+      "allowVorOrt": false,
       "pvFlag": false,
       "requiresPv": [
         "2e",
@@ -913,6 +950,7 @@
         "10e"
       ],
       "eluatePrefixE": true,
+      "allowVorOrt": false,
       "pvFlag": false,
       "requiresPv": [
         "2e",
@@ -935,6 +973,7 @@
         "10e"
       ],
       "eluatePrefixE": true,
+      "allowVorOrt": false,
       "pvFlag": false,
       "requiresPv": [
         "2e",
@@ -957,6 +996,7 @@
         "10e"
       ],
       "eluatePrefixE": true,
+      "allowVorOrt": false,
       "pvFlag": false,
       "requiresPv": [
         "2e",
@@ -979,6 +1019,7 @@
         "10e"
       ],
       "eluatePrefixE": true,
+      "allowVorOrt": false,
       "pvFlag": false,
       "requiresPv": [
         "2e",
@@ -1001,6 +1042,7 @@
         "10e"
       ],
       "eluatePrefixE": false,
+      "allowVorOrt": false,
       "pvFlag": false,
       "requiresPv": [
         "2e",
@@ -1023,6 +1065,7 @@
         "10e"
       ],
       "eluatePrefixE": false,
+      "allowVorOrt": false,
       "pvFlag": false,
       "requiresPv": [
         "2e",
@@ -1045,6 +1088,7 @@
         "10e"
       ],
       "eluatePrefixE": true,
+      "allowVorOrt": false,
       "pvFlag": false,
       "requiresPv": [
         "2e",
@@ -1067,6 +1111,7 @@
         "10e"
       ],
       "eluatePrefixE": false,
+      "allowVorOrt": false,
       "pvFlag": false,
       "requiresPv": [
         "2e",
@@ -1089,6 +1134,7 @@
         "10e"
       ],
       "eluatePrefixE": false,
+      "allowVorOrt": false,
       "pvFlag": false,
       "requiresPv": [
         "2e",
@@ -1111,6 +1157,7 @@
         "10e"
       ],
       "eluatePrefixE": true,
+      "allowVorOrt": false,
       "pvFlag": false,
       "requiresPv": [
         "2e",
@@ -1133,6 +1180,7 @@
         "10e"
       ],
       "eluatePrefixE": true,
+      "allowVorOrt": false,
       "pvFlag": false,
       "requiresPv": [
         "2e",
@@ -1155,6 +1203,7 @@
         "10e"
       ],
       "eluatePrefixE": false,
+      "allowVorOrt": false,
       "pvFlag": false,
       "requiresPv": [
         "2e",
@@ -1177,6 +1226,7 @@
         "10e"
       ],
       "eluatePrefixE": true,
+      "allowVorOrt": false,
       "pvFlag": false,
       "requiresPv": [
         "2e",
@@ -1199,6 +1249,7 @@
         "10e"
       ],
       "eluatePrefixE": true,
+      "allowVorOrt": false,
       "pvFlag": false,
       "requiresPv": [
         "2e",
@@ -1221,6 +1272,7 @@
         "10e"
       ],
       "eluatePrefixE": false,
+      "allowVorOrt": true,
       "pvFlag": false,
       "requiresPv": [
         "2e",
@@ -1243,6 +1295,7 @@
         "10e"
       ],
       "eluatePrefixE": false,
+      "allowVorOrt": false,
       "pvFlag": false,
       "requiresPv": [
         "2e",
@@ -1265,6 +1318,7 @@
         "10e"
       ],
       "eluatePrefixE": false,
+      "allowVorOrt": false,
       "pvFlag": false,
       "requiresPv": [
         "2e",
@@ -1287,6 +1341,7 @@
         "10e"
       ],
       "eluatePrefixE": false,
+      "allowVorOrt": false,
       "pvFlag": false,
       "requiresPv": [
         "2e",
@@ -1309,6 +1364,7 @@
         "10e"
       ],
       "eluatePrefixE": false,
+      "allowVorOrt": false,
       "pvFlag": false,
       "requiresPv": [
         "2e",
@@ -1331,6 +1387,7 @@
         "10e"
       ],
       "eluatePrefixE": false,
+      "allowVorOrt": false,
       "pvFlag": false,
       "requiresPv": [
         "2e",
@@ -1353,6 +1410,7 @@
         "10e"
       ],
       "eluatePrefixE": false,
+      "allowVorOrt": false,
       "pvFlag": false,
       "requiresPv": [
         "2e",
@@ -1375,6 +1433,7 @@
         "10e"
       ],
       "eluatePrefixE": true,
+      "allowVorOrt": false,
       "pvFlag": false,
       "requiresPv": [
         "2e",
@@ -1397,6 +1456,7 @@
         "10e"
       ],
       "eluatePrefixE": false,
+      "allowVorOrt": false,
       "pvFlag": false,
       "requiresPv": [
         "2e",
@@ -1419,6 +1479,7 @@
         "10e"
       ],
       "eluatePrefixE": true,
+      "allowVorOrt": false,
       "pvFlag": false,
       "requiresPv": [
         "2e",
@@ -1442,6 +1503,7 @@
         "10e"
       ],
       "eluatePrefixE": false,
+      "allowVorOrt": false,
       "pvFlag": false,
       "requiresPv": [
         "2e",
@@ -1464,6 +1526,7 @@
         "10e"
       ],
       "eluatePrefixE": true,
+      "allowVorOrt": false,
       "pvFlag": false,
       "requiresPv": [
         "2e",
@@ -1486,6 +1549,7 @@
         "10e"
       ],
       "eluatePrefixE": false,
+      "allowVorOrt": false,
       "pvFlag": false,
       "requiresPv": [
         "2e",
@@ -1508,6 +1572,7 @@
         "10e"
       ],
       "eluatePrefixE": true,
+      "allowVorOrt": false,
       "pvFlag": true,
       "requiresPv": [
         "2e",
@@ -1530,6 +1595,7 @@
         "10e"
       ],
       "eluatePrefixE": false,
+      "allowVorOrt": false,
       "pvFlag": false,
       "requiresPv": [
         "2e",
@@ -1552,6 +1618,7 @@
         "10e"
       ],
       "eluatePrefixE": true,
+      "allowVorOrt": false,
       "pvFlag": false,
       "requiresPv": [
         "2e",
@@ -1574,6 +1641,7 @@
         "10e"
       ],
       "eluatePrefixE": true,
+      "allowVorOrt": false,
       "pvFlag": false,
       "requiresPv": [
         "2e",
@@ -1582,5 +1650,5 @@
       "functionGroup": "SM"
     }
   ],
-  "updatedAt": "2026-02-21T16:33:53.110Z"
+  "updatedAt": "2026-02-21T19:40:54.239Z"
 }
