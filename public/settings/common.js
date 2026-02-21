@@ -110,6 +110,37 @@ async function createManualBackup(force = false) {
   return data;
 }
 
+async function pickBackupDirNative() {
+  const { response, data } = await fetchJson('/api/system/pick-backup-dir');
+  if (!response.ok || data.ok !== true) {
+    throw new Error(flattenErrorMessage(data, 'Ordnerauswahl fehlgeschlagen'));
+  }
+  if (data.canceled === true) {
+    return { canceled: true, selectedPath: null };
+  }
+  return { canceled: false, selectedPath: data.selectedPath };
+}
+
+async function fetchSingleParamCatalog() {
+  const { response, data } = await fetchJson('/api/single-parameter-catalog');
+  if (!response.ok || data.ok !== true || !data.catalog) {
+    throw new Error(flattenErrorMessage(data, 'Einzelparameter-Katalog konnte nicht geladen werden'));
+  }
+  return data.catalog;
+}
+
+async function saveSingleParamCatalog(catalog) {
+  const { response, data } = await fetchJson('/api/single-parameter-catalog', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ catalog }),
+  });
+  if (!response.ok || data.ok !== true || !data.catalog) {
+    throw new Error(flattenErrorMessage(data, 'Einzelparameter-Katalog konnte nicht gespeichert werden'));
+  }
+  return data.catalog;
+}
+
 async function resetCache() {
   const { response, data } = await fetchJson('/api/state/reset', { method: 'POST' });
   if (!response.ok || data.ok !== true) {

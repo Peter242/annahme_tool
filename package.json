@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "nodemon server.js",
     "start": "node server.js",
-    "test": "node --test"
+    "test": "node --test",
+    "build:single-params": "node scripts/build_single_parameter_catalog.js"
   },
   "keywords": [],
   "author": "",

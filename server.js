@@ -1,6 +1,7 @@
 ﻿const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
+const { spawnSync } = require('child_process');
 const express = require('express');
 const ExcelJS = require('exceljs');
 const { z } = require('zod');
@@ -14,6 +15,8 @@ const { writeOrderBlock } = require('./src/orderWriter');
 const { writeComTestCell } = require('./src/writers/comTestWriter');
 const { getComWorkerClient } = require('./src/writers/comWorkerClient');
 const { calculateTermin } = require('./src/termin');
+const { buildParameterTextFromSelection } = require('./src/parameterTextBuilder');
+const { mapTogglesToSelection } = require('./src/singleParamsMapper');
 const {
   QUICK_CONTAINER_DEFAULTS,
   normalizeQuickContainerConfig,
@@ -98,6 +101,18 @@ const defaultConfig = {
 };
 
 const configPath = path.join(__dirname, 'config.json');
+const singleParameterCatalogPath = path.join(__dirname, 'data', 'single_parameter_catalog.json');
+let singleParameterCatalogCache = null;
+let singleParameterCatalogUpdatedAt = null;
+
+function loadSingleParameterCatalog() {
+  if (!singleParameterCatalogCache) {
+    const raw = fs.readFileSync(singleParameterCatalogPath, 'utf-8');
+    singleParameterCatalogCache = JSON.parse(raw);
+    singleParameterCatalogUpdatedAt = String(singleParameterCatalogCache?.updatedAt || '').trim() || null;
+  }
+  return singleParameterCatalogCache;
+}
 
 function loadConfig() {
   let rawConfig = { ...defaultConfig };
@@ -924,6 +939,7 @@ const sampleSchema = z
     packageId: z.string().trim().optional(),
     paketKey: z.string().trim().optional(),
     parameterTextPreview: z.string().optional(),
+    singleParams: z.any().optional(),
     tiefeVolumen: z.union([z.string(), z.number()]).optional(),
     tiefeOderVolumen: z.string().trim().optional(),
     geruch: z.string().trim().optional(),
@@ -1094,6 +1110,44 @@ async function buildCommitPreviewState(order, config, now = new Date()) {
   const absoluteExcelPath = resolveExcelPath(config.excelPath);
   const enrichedOrderResult = await applyPaketKeyTextsToOrder(order, absoluteExcelPath);
   const orderForWrite = enrichedOrderResult.order;
+  let singleParamCatalog = null;
+  try {
+    singleParamCatalog = loadSingleParameterCatalog();
+  } catch (_error) {
+    singleParamCatalog = null;
+  }
+  const normalizedOrderForWrite = {
+    ...orderForWrite,
+    proben: (Array.isArray(orderForWrite.proben) ? orderForWrite.proben : []).map((probe) => {
+      if (!probe || typeof probe !== 'object') {
+        return probe;
+      }
+      const hasPackage = String(probe.packageId || '').trim() || String(probe.paketKey || '').trim();
+      if (hasPackage) {
+        return { ...probe };
+      }
+      if (!probe.singleParams) {
+        return { ...probe };
+      }
+      let built = '';
+      if (singleParamCatalog && probe.singleParams && typeof probe.singleParams === 'object' && probe.singleParams.toggles) {
+        const selection = mapTogglesToSelection({
+          catalog: singleParamCatalog,
+          toggles: probe.singleParams.toggles,
+        });
+        built = buildParameterTextFromSelection(selection);
+      } else {
+        built = buildParameterTextFromSelection(probe.singleParams);
+      }
+      if (!built) {
+        return { ...probe };
+      }
+      return {
+        ...probe,
+        parameterTextPreview: built,
+      };
+    }),
+  };
   commitWarnings.push(...enrichedOrderResult.warnings);
 
   let cache = null;
@@ -1104,7 +1158,7 @@ async function buildCommitPreviewState(order, config, now = new Date()) {
     cache = null;
   }
 
-  const preview = buildOrderPreview(orderForWrite, {
+  const preview = buildOrderPreview(normalizedOrderForWrite, {
     now,
     lastLabNo: cache ? Number.parseInt(String(cache.lastLabNo || 0), 10) : undefined,
   });
@@ -1134,7 +1188,7 @@ async function buildCommitPreviewState(order, config, now = new Date()) {
 
   return {
     absoluteExcelPath,
-    orderForWrite,
+    orderForWrite: normalizedOrderForWrite,
     commitWarnings,
     cache,
     preview,
@@ -1257,6 +1311,15 @@ app.use(express.static(path.join(__dirname, 'public'), {
 }));
 app.get('/packages', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'packages.html'));
+});
+app.get('/settings', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'settings.html'));
+});
+app.get('/settings/', (req, res) => {
+  res.redirect(302, '/settings');
+});
+app.get('/single-parameters', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'single-parameters.html'));
 });
 app.get('/settings/packages', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'packages.html'));
@@ -1592,6 +1655,133 @@ app.post('/api/backups/create', (req, res) => {
     absoluteBackupPath: backup.absoluteBackupPath,
     cleanupDeleted: Array.isArray(backup.cleanupDeleted) ? backup.cleanupDeleted : [],
   });
+});
+
+app.get('/api/system/pick-backup-dir', (_req, res) => {
+  if (process.platform !== 'win32') {
+    return res.status(400).json({
+      ok: false,
+      message: 'Nur unter Windows verfuegbar.',
+    });
+  }
+
+  const scriptPath = path.join(__dirname, 'scripts', 'pick_folder.ps1');
+  const result = spawnSync('powershell.exe', [
+    '-NoLogo',
+    '-NoProfile',
+    '-NonInteractive',
+    '-ExecutionPolicy',
+    'Bypass',
+    '-STA',
+    '-File',
+    scriptPath,
+  ], {
+    windowsHide: true,
+    encoding: 'utf8',
+  });
+
+  if (result.error || result.status !== 0) {
+    const detail = result.error
+      ? result.error.message
+      : (String(result.stderr || '').trim() || `exit status ${result.status}`);
+    return res.status(500).json({
+      ok: false,
+      message: `Ordnerauswahl fehlgeschlagen: ${detail}`,
+    });
+  }
+
+  const selectedPath = String(result.stdout || '').trim();
+  if (!selectedPath) {
+    return res.status(200).json({
+      ok: true,
+      canceled: true,
+      selectedPath: null,
+    });
+  }
+
+  return res.status(200).json({
+    ok: true,
+    canceled: false,
+    selectedPath,
+  });
+});
+
+app.get('/api/single-parameter-catalog', (_req, res) => {
+  try {
+    const catalog = loadSingleParameterCatalog();
+    const updatedAt = String(catalog?.updatedAt || '').trim() || singleParameterCatalogUpdatedAt || null;
+    return res.status(200).json({
+      ok: true,
+      catalog,
+      updatedAt,
+    });
+  } catch (_error) {
+    return res.status(500).json({
+      ok: false,
+      message: 'Single Parameter Katalog konnte nicht geladen werden.',
+    });
+  }
+});
+
+app.post('/api/single-parameter-catalog', (req, res) => {
+  try {
+    const payload = req.body && typeof req.body === 'object' ? req.body : {};
+    const catalog = payload.catalog && typeof payload.catalog === 'object' ? payload.catalog : null;
+    if (!catalog) {
+      return res.status(400).json({
+        ok: false,
+        message: 'catalog fehlt.',
+      });
+    }
+    if (typeof catalog.version !== 'number' || Number.isNaN(catalog.version)) {
+      return res.status(400).json({
+        ok: false,
+        message: 'catalog.version muss eine Zahl sein.',
+      });
+    }
+    if (!Array.isArray(catalog.parameters)) {
+      return res.status(400).json({
+        ok: false,
+        message: 'catalog.parameters muss ein Array sein.',
+      });
+    }
+    for (const param of catalog.parameters) {
+      const key = String(param?.key || '').trim();
+      const label = String(param?.label || '').trim();
+      if (!key || !label) {
+        return res.status(400).json({
+          ok: false,
+          message: 'Jeder Parameter braucht mindestens key und label.',
+        });
+      }
+      if (param.functionGroup !== undefined && param.functionGroup !== null) {
+        const value = String(param.functionGroup || '').trim();
+        if (value && value !== 'AN' && value !== 'SM' && value !== 'Organik') {
+          return res.status(400).json({
+            ok: false,
+            message: `Ungültige functionGroup für ${key}. Erlaubt: AN, SM, Organik.`,
+          });
+        }
+      }
+    }
+
+    const nowIso = new Date().toISOString();
+    catalog.updatedAt = nowIso;
+    fs.writeFileSync(singleParameterCatalogPath, `${JSON.stringify(catalog, null, 2)}\n`, 'utf-8');
+    singleParameterCatalogCache = catalog;
+    singleParameterCatalogUpdatedAt = nowIso;
+
+    return res.status(200).json({
+      ok: true,
+      catalog,
+      updatedAt: nowIso,
+    });
+  } catch (_error) {
+    return res.status(500).json({
+      ok: false,
+      message: 'Single Parameter Katalog konnte nicht gespeichert werden.',
+    });
+  }
 });
 
 app.get('/api/packages', (req, res) => {

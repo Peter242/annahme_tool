@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="de">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Einzelparameter verwalten</title>
+    <link rel="stylesheet" href="/styles.css" />
+    <link rel="stylesheet" href="/settings/common.css" />
+  </head>
+  <body>
+    <div class="settings-shell">
+      <header class="topbar">
+        <a class="brand" href="/">
+          <img src="/assets/cua-logo.png" alt="CUA Logo" />
+        </a>
+        <h1 class="app-brand-title">Einzelparameter verwalten</h1>
+        <div class="topbar-actions">
+          <button type="button" id="theme-toggle" class="theme-toggle">Light</button>
+          <a class="btn-link" href="/settings">Zurück</a>
+        </div>
+      </header>
+
+      <main class="settings-content" style="padding-top: 1rem;">
+        <p class="settings-note">Hier pflegst du den Katalog für die Einzelparameter Auswahl.</p>
+
+        <div class="action-row" style="align-items:center; gap:0.5rem; flex-wrap: wrap;">
+          <input id="sp-search" type="text" placeholder="Suche nach Name oder Kürzel..." style="min-width:260px; max-width:420px;" />
+          <button type="button" id="sp-add" class="secondary">+ Parameter</button>
+          <button type="button" id="sp-save" class="primary">Speichern</button>
+          <button type="button" id="sp-reload" class="secondary">Neu laden</button>
+        </div>
+
+        <div id="sp-warning" class="inline-error hidden" style="margin-top:0.5rem;"></div>
+        <div id="sp-status" class="inline-ok hidden" style="margin-top:0.5rem;"></div>
+
+        <section style="margin-top:0.75rem; border:1px solid rgba(255,255,255,0.08); border-radius:8px; padding:10px;">
+          <div class="action-row" style="justify-content:space-between; margin-top:0;">
+            <strong>Gruppenfunktionen</strong>
+            <button type="button" id="sp-group-add" class="secondary">+ Gruppe</button>
+          </div>
+          <div id="sp-groups-list" style="margin-top:0.5rem; max-height:180px; overflow:auto;"></div>
+        </section>
+
+        <div id="sp-grid-wrap" style="margin-top:0.75rem; max-height:75vh; overflow-y:auto; overflow-x:auto; border:1px solid rgba(255,255,255,0.08); border-radius:8px;">
+          <div id="sp-grid-header" style="position:sticky; top:0; z-index:2; background:#1b1f24; display:grid; grid-template-columns:2.0fr 0.8fr 0.9fr 0.8fr 0.7fr 1.3fr 2.0fr 0.4fr 0.7fr; gap:10px; align-items:center; padding:8px 10px; border-bottom:1px solid rgba(255,255,255,0.12); font-size:12px; font-weight:600;">
+            <div>Name lang</div>
+            <div>Kürzel</div>
+            <div>Funktion</div>
+            <div>e bei Eluat</div>
+            <div>vor Ort</div>
+            <div>Labore</div>
+            <div>Medien</div>
+            <div>PV</div>
+            <div>Aktion</div>
+          </div>
+          <div id="sp-list"></div>
+        </div>
+      </main>
+    </div>
+
+    <div id="toast-container" class="toast-wrap"></div>
+
+    <script src="/settings/common.js"></script>
+    <script src="/single-parameters.js"></script>
+  </body>
+</html>

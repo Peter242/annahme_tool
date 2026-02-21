@@ -146,7 +146,9 @@
           <select name="packageId">
             <option value="">Bitte wählen</option>
           </select>
+          <button type="button" data-action="single-params" class="secondary icon-btn" title="Einzelparameter" aria-label="Einzelparameter">Einzel...</button>
           <input name="parameterTextPreview" type="hidden" />
+          <input name="singleParamsJson" type="hidden" />
         </td>
         <td>
           <button type="button" data-action="gebinde" class="secondary icon-btn" title="Gebinde auswählen" aria-label="Gebinde auswählen">◐</button>
@@ -349,8 +351,38 @@
         </div>
       </div>
     </div>
+    <div id="single-params-modal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="single-params-modal-title" style="overflow: hidden;">
+      <div class="modal-card" style="width: min(1200px, 95vw); max-height: 92vh; display: flex; flex-direction: column; overflow: hidden;">
+        <h3 id="single-params-modal-title">Einzelparameter</h3>
+        <p id="single-params-package-warning" class="meta hidden">Paket ist gesetzt, Einzelparameter werden beim Commit ignoriert.</p>
+        <div id="single-params-body" style="display: grid; grid-template-columns: 1fr 1.2fr; gap: 16px; flex: 1 1 auto; min-height: 0;">
+          <div style="display: flex; flex-direction: column; min-height: 0;">
+            <div id="single-params-search-wrap" style="position: sticky; top: 0; background: inherit; z-index: 2; padding-bottom: 8px; flex: 0 0 auto;">
+              <label for="single-params-search">Suche</label>
+              <input id="single-params-search" type="text" placeholder="Parameter suchen..." />
+            </div>
+            <div id="single-params-list" class="list-editor" style="max-height: 70vh; overflow-y: auto; flex: 1 1 auto; min-height: 0;"></div>
+          </div>
+          <div style="display: flex; flex-direction: column; min-height: 0; gap: 8px;">
+            <div style="display: flex; flex-direction: column; min-height: 0;">
+              <label>Ausgewählt</label>
+              <div id="selected-params-list" class="list-editor" style="max-height: 45vh; overflow-y: auto; min-height: 0;"></div>
+            </div>
+            <div style="flex: 1 1 auto; min-height: 220px; display: flex; flex-direction: column;">
+              <label for="single-params-preview">Vorschau</label>
+              <textarea id="single-params-preview" rows="10" readonly style="flex: 1 1 auto; min-height: 0;"></textarea>
+            </div>
+          </div>
+        </div>
+        <div class="modal-actions" style="flex: 0 0 auto;">
+          <button type="button" id="single-params-cancel" class="secondary">Abbrechen</button>
+          <button type="button" id="single-params-apply" class="primary">Übernehmen</button>
+        </div>
+      </div>
+    </div>
     <div id="toast-container" class="toast-wrap"></div>
 
+    <script src="/shared/parameterTextBuilder.js"></script>
     <script>
       const THEME_KEY = 'cua-theme';
       const themeToggle = document.getElementById('theme-toggle');
@@ -493,6 +525,14 @@
       const addressPreviewBlock = document.getElementById('address-preview-block');
       const addressModalCancel = document.getElementById('address-modal-cancel');
       const addressModalApply = document.getElementById('address-modal-apply');
+      const singleParamsModal = document.getElementById('single-params-modal');
+      const singleParamsPackageWarning = document.getElementById('single-params-package-warning');
+      const singleParamsSearchInput = document.getElementById('single-params-search');
+      const singleParamsList = document.getElementById('single-params-list');
+      const selectedParamsList = document.getElementById('selected-params-list');
+      const singleParamsPreviewInput = document.getElementById('single-params-preview');
+      const singleParamsCancel = document.getElementById('single-params-cancel');
+      const singleParamsApply = document.getElementById('single-params-apply');
       const sidebarActionButtons = [
         addProbeButton,
         openBulkProbeModalButton,
@@ -517,6 +557,16 @@
       let pendingImportantFieldsResolver = null;
       let pendingCustomerDeleteResolver = null;
       let pendingCustomerDeleteEntry = null;
+      let activeProbeForSingleParamsModal = null;
+      let singleParamsCatalog = { version: 1, parameters: [] };
+      let singleParamsModalState = { toggles: {}, search: '' };
+      const SINGLE_PARAM_USAGE_KEY = 'singleParamUsageCountsV1';
+      const SINGLE_PARAM_CATALOG_UPDATED_AT_KEY = 'singleParamCatalogUpdatedAtV1';
+      const DEFAULT_SINGLE_PARAM_GROUPS = [
+        { key: 'AN', label: 'AN', supportsEluateE: true },
+        { key: 'SM', label: 'SM', supportsEluateE: true },
+        { key: 'Organik', label: 'Organik', supportsEluateE: true },
+      ];
       let pendingKuerzelSelection = '';
       let hasLoggedPackageFieldFallback = false;
       const DEFAULT_QUICK_BUTTONS = {
@@ -588,6 +638,76 @@
           throw new Error(data.message || 'Pakete konnten nicht geladen werden');
         }
         packages = data;
+      }
+
+      async function loadSingleParameterCatalog() {
+        function normalizeCatalogGroups(rawGroups) {
+          const source = Array.isArray(rawGroups) ? rawGroups : [];
+          const groups = source
+            .map((group) => ({
+              key: String(group?.key || '').trim(),
+              label: String(group?.label || '').trim(),
+              supportsEluateE: group?.supportsEluateE === true,
+            }))
+            .filter((group) => group.key)
+            .map((group) => ({ ...group, label: group.label || group.key }));
+          if (groups.length > 0) return groups;
+          return DEFAULT_SINGLE_PARAM_GROUPS.map((group) => ({ ...group }));
+        }
+        function normalizeCatalogForRuntime(catalog) {
+          const src = catalog && typeof catalog === 'object' ? catalog : { version: 1, parameters: [] };
+          const parameters = Array.isArray(src.parameters) ? src.parameters : [];
+          return {
+            ...src,
+            groups: normalizeCatalogGroups(src.groups),
+            parameters: parameters.map((p) => {
+              const key = String(p?.key || '').trim();
+              const label = String(p?.label || '').trim();
+              const labelLongRaw = String(p?.labelLong || '').trim();
+              const labelLong = labelLongRaw || ((label && label !== key) ? label : '');
+              return {
+                ...p,
+                key,
+                label: label || key,
+                labelLong,
+              };
+            }),
+          };
+        }
+        try {
+          const response = await fetch('/api/single-parameter-catalog', { cache: 'no-store' });
+          const data = await response.json();
+          if (!response.ok || data.ok !== true || !data.catalog || !Array.isArray(data.catalog.parameters)) {
+            throw new Error(data?.message || 'Katalog konnte nicht geladen werden');
+          }
+          const serverUpdatedAt = String(data.updatedAt || data.catalog.updatedAt || '').trim();
+          const storedUpdatedAt = String(localStorage.getItem(SINGLE_PARAM_CATALOG_UPDATED_AT_KEY) || '').trim();
+          const hasWindowCatalog = window.__singleParamCatalog && Array.isArray(window.__singleParamCatalog.parameters);
+          if (hasWindowCatalog && serverUpdatedAt && storedUpdatedAt && serverUpdatedAt === storedUpdatedAt) {
+            singleParamsCatalog = normalizeCatalogForRuntime(window.__singleParamCatalog);
+            window.__singleParamCatalog = singleParamsCatalog;
+            return { changed: false, updatedAt: serverUpdatedAt };
+          }
+          singleParamsCatalog = normalizeCatalogForRuntime(data.catalog);
+          window.__singleParamCatalog = singleParamsCatalog;
+          if (serverUpdatedAt) {
+            localStorage.setItem(SINGLE_PARAM_CATALOG_UPDATED_AT_KEY, serverUpdatedAt);
+          } else {
+            localStorage.removeItem(SINGLE_PARAM_CATALOG_UPDATED_AT_KEY);
+          }
+          return { changed: true, updatedAt: serverUpdatedAt || null };
+        } catch (error) {
+          const hasWindowCatalog = window.__singleParamCatalog && Array.isArray(window.__singleParamCatalog.parameters);
+          if (hasWindowCatalog) {
+            singleParamsCatalog = normalizeCatalogForRuntime(window.__singleParamCatalog);
+            window.__singleParamCatalog = singleParamsCatalog;
+          } else {
+            singleParamsCatalog = { version: 1, parameters: [] };
+            window.__singleParamCatalog = singleParamsCatalog;
+          }
+          showToast('error', `Einzelparameter-Katalog: ${error.message}`);
+          return { changed: false, updatedAt: null };
+        }
       }
 
       function normalizeCustomerName(value) {
@@ -1524,6 +1644,8 @@
         const firstRowSeed = firstRow ? {
           material: firstRow.querySelector('[name="material"]').value,
           packageId: firstRow.querySelector('[name="packageId"]').value,
+          singleParamsJson: firstRow.querySelector('[name="singleParamsJson"]').value,
+          parameterTextPreview: firstRow.querySelector('[name="parameterTextPreview"]').value,
           tiefeVolumen: firstRow.querySelector('[name="tiefeVolumen"]').value,
           gewicht: firstRow.querySelector('[name="gewicht"]').value,
           geruch: getProbeGeruchData(firstRow),
@@ -1543,6 +1665,8 @@
             probenbezeichnung: name,
             material: base.material ?? defaultMaterial ?? 'Boden',
             packageId: base.packageId ?? defaultPackageId ?? '',
+            singleParamsJson: base.singleParamsJson ?? '',
+            parameterTextPreview: base.parameterTextPreview ?? '',
             tiefeVolumen: base.tiefeVolumen ?? '',
             gewicht: base.gewicht ?? '',
             geruch: base.geruch ?? null,
@@ -1730,7 +1854,682 @@
         const packageSelect = probeElement.querySelector('[name="packageId"]');
         const parameterTextInput = probeElement.querySelector('[name="parameterTextPreview"]');
         const selected = packages.find((pkg) => pkg.id === packageSelect.value);
-        parameterTextInput.value = selected ? selected.text : '';
+        if (selected) {
+          parameterTextInput.value = selected.text;
+          return;
+        }
+        const singleParamsInput = probeElement.querySelector('[name="singleParamsJson"]');
+        let preview = '';
+        if (singleParamsInput && singleParamsInput.value && typeof window.buildParameterTextFromSelection === 'function') {
+          try {
+            const parsed = JSON.parse(singleParamsInput.value);
+            if (parsed && typeof parsed === 'object' && parsed.toggles) {
+              const selection = buildSelectionFromCatalogToggles(singleParamsCatalog, parsed.toggles);
+              preview = window.buildParameterTextFromSelection(selection);
+            } else {
+              preview = window.buildParameterTextFromSelection(parsed);
+            }
+          } catch (_error) {
+            preview = '';
+          }
+        }
+        parameterTextInput.value = preview || '';
+      }
+
+      function getCatalogParameters() {
+        return Array.isArray(singleParamsCatalog?.parameters) ? singleParamsCatalog.parameters : [];
+      }
+
+      function findCatalogParameter(key) {
+        return getCatalogParameters().find((p) => String(p?.key || '') === String(key || '')) || null;
+      }
+
+      function getParameterDisplay(param, fallbackKey = '') {
+        const key = String(param?.key || fallbackKey || '').trim();
+        const label = String(param?.label || '').trim();
+        const labelLong = String(param?.labelLong || '').trim();
+        const name = labelLong || label || key;
+        const short = key || label || fallbackKey;
+        return { name, short };
+      }
+
+      function findCatalogGroup(groupKey) {
+        const target = String(groupKey || '').trim();
+        if (!target) return null;
+        const groups = normalizeCatalogGroupsRuntime(singleParamsCatalog);
+        return groups.find((group) => String(group.key || '').trim() === target) || null;
+      }
+
+      function loadUsageCounts() {
+        try {
+          const raw = localStorage.getItem(SINGLE_PARAM_USAGE_KEY);
+          if (!raw) return {};
+          const parsed = JSON.parse(raw);
+          if (!parsed || typeof parsed !== 'object') return {};
+          return parsed;
+        } catch (_error) {
+          return {};
+        }
+      }
+
+      function saveUsageCounts(obj) {
+        try {
+          localStorage.setItem(SINGLE_PARAM_USAGE_KEY, JSON.stringify(obj || {}));
+        } catch (_error) {
+          // ignore storage errors
+        }
+      }
+
+      function incrementUsageCountsForSelected(toggles) {
+        const usage = loadUsageCounts();
+        const source = toggles && typeof toggles === 'object' ? toggles : {};
+        Object.entries(source).forEach(([key, value]) => {
+          if (value && value.selected === true) {
+            usage[key] = Number(usage[key] || 0) + 1;
+          }
+        });
+        saveUsageCounts(usage);
+      }
+
+      function normalizeSingleParamsToggles(raw) {
+        const source = raw && typeof raw === 'object' ? raw : {};
+        const out = {};
+        Object.entries(source).forEach(([key, value]) => {
+          if (!value || value.selected !== true) return;
+          const param = findCatalogParameter(key);
+          if (!param) return;
+          const allowedLabs = Array.isArray(param.allowedLabs) ? param.allowedLabs : [];
+          const allowedMedia = Array.isArray(param.allowedMedia) ? param.allowedMedia : [];
+          if (allowedLabs.length === 0 || allowedMedia.length === 0) return;
+          const lab = allowedLabs.includes(String(value.lab || '').trim())
+            ? String(value.lab || '').trim()
+            : (allowedLabs.includes(String(param.defaultLab || '').trim())
+              ? String(param.defaultLab || '').trim()
+              : allowedLabs[0]);
+          const mediaSource = value.media && typeof value.media === 'object' ? value.media : {};
+          const media = {};
+          allowedMedia.forEach((medium) => {
+            if (allowedMedia.includes(medium) && mediaSource[medium] === true) {
+              media[medium] = true;
+            }
+          });
+          out[key] = {
+            selected: true,
+            lab,
+            media,
+            vorOrt: param.allowVorOrt === true && value.vorOrt === true,
+          };
+        });
+        return out;
+      }
+
+      function createGroupedMediumBucket() {
+        return {
+          plain: [],
+          groups: {},
+          groupEFlags: {},
+        };
+      }
+
+      function normalizeCatalogGroupsRuntime(catalog) {
+        const source = Array.isArray(catalog?.groups) ? catalog.groups : [];
+        const groups = source
+          .map((group) => ({
+            key: String(group?.key || '').trim(),
+            label: String(group?.label || '').trim(),
+            supportsEluateE: group?.supportsEluateE === true,
+          }))
+          .filter((group) => group.key)
+          .map((group) => ({ ...group, label: group.label || group.key }));
+        if (groups.length > 0) return groups;
+        return DEFAULT_SINGLE_PARAM_GROUPS.map((group) => ({ ...group }));
+      }
+
+      function ensureBucketGroup(bucket, groupKey) {
+        if (!bucket.groups[groupKey]) bucket.groups[groupKey] = [];
+        if (bucket.groupEFlags[groupKey] !== true) bucket.groupEFlags[groupKey] = false;
+      }
+
+      function dedupeSortedTokens(values) {
+        return Array.from(new Set((Array.isArray(values) ? values : []).map((v) => String(v || '').trim()).filter(Boolean)))
+          .sort((a, b) => a.localeCompare(b, 'de', { sensitivity: 'base' }));
+      }
+
+      function buildGroupedMediumItems(bucket, medium, groupDefs) {
+        const isEluateMedium = medium === '2e' || medium === '10e';
+        const parts = [];
+        groupDefs.forEach((groupDef) => {
+          const groupKey = String(groupDef?.key || '').trim();
+          if (!groupKey) return;
+          const members = dedupeSortedTokens(bucket.groups[groupKey]);
+          if (members.length === 0) return;
+          let functionName = String(groupDef?.label || groupKey).trim() || groupKey;
+          if (isEluateMedium && groupDef.supportsEluateE === true && bucket.groupEFlags[groupKey] === true) {
+            functionName = `e${functionName}`;
+          }
+          parts.push(`${functionName}(${members.join(', ')})`);
+        });
+        parts.push(...dedupeSortedTokens(bucket.plain));
+        return parts;
+      }
+
+      function formatMediumLabel(lab, mediumKey) {
+        if (lab === 'HB') {
+          if (mediumKey === '2e') return '2:1-Eluat';
+          if (mediumKey === '10e') return '10:1-Eluat';
+        }
+        return mediumKey;
+      }
+
+      function buildSelectionFromCatalogToggles(catalog, togglesState) {
+        const params = Array.isArray(catalog?.parameters) ? catalog.parameters : [];
+        const byKey = new Map(params.map((p) => [String(p?.key || ''), p]));
+        const groupDefs = normalizeCatalogGroupsRuntime(catalog);
+        const groupByKey = new Map(groupDefs.map((group) => [group.key, group]));
+        const labBuckets = {
+          EMD: { FS: createGroupedMediumBucket(), H2O: createGroupedMediumBucket(), '2e': createGroupedMediumBucket(), '10e': createGroupedMediumBucket() },
+          HB: { FS: createGroupedMediumBucket(), H2O: createGroupedMediumBucket(), '2e': createGroupedMediumBucket(), '10e': createGroupedMediumBucket() },
+        };
+        const pvSeen = new Set();
+        const pvEluate = [];
+        const vorOrtTokens = [];
+
+        Object.entries(togglesState || {}).forEach(([key, toggle]) => {
+          if (!toggle || toggle.selected !== true) return;
+          const param = byKey.get(key);
+          if (!param) return;
+          const keyToken = String(param.key || key).trim() || String(key || '').trim();
+          if (toggle.vorOrt === true) {
+            vorOrtTokens.push(keyToken);
+            return;
+          }
+          const allowedLabs = Array.isArray(param.allowedLabs) ? param.allowedLabs : [];
+          const allowedMedia = Array.isArray(param.allowedMedia) ? param.allowedMedia : [];
+          if (allowedLabs.length === 0 || allowedMedia.length === 0) return;
+          const lab = allowedLabs.includes(String(toggle.lab || '').trim())
+            ? String(toggle.lab || '').trim()
+            : (allowedLabs.includes(String(param.defaultLab || '').trim())
+              ? String(param.defaultLab || '').trim()
+              : allowedLabs[0]);
+          if (lab !== 'EMD' && lab !== 'HB') return;
+          const fg = String(param.functionGroup || '').trim();
+          ['FS', 'H2O', '2e', '10e'].forEach((medium) => {
+            if (!allowedMedia.includes(medium)) return;
+            if (!(toggle.media && toggle.media[medium] === true)) return;
+            const isEluateMedium = medium === '2e' || medium === '10e';
+            const wantsE = isEluateMedium && param.eluatePrefixE === true;
+            const bucket = labBuckets[lab][medium];
+            let groupDef = fg ? (groupByKey.get(fg) || null) : null;
+            if (!groupDef && fg) {
+              groupDef = { key: fg, label: fg, supportsEluateE: true };
+              groupDefs.push(groupDef);
+              groupByKey.set(fg, groupDef);
+            }
+            if (groupDef) {
+              ensureBucketGroup(bucket, groupDef.key);
+              bucket.groups[groupDef.key].push(keyToken);
+              if (wantsE) bucket.groupEFlags[groupDef.key] = true;
+            } else {
+              bucket.plain.push(wantsE ? `e${keyToken}` : keyToken);
+            }
+            const requiresPv = Array.isArray(param.requiresPv) ? param.requiresPv : [];
+            if (isEluateMedium && requiresPv.includes(medium)) {
+              const site = lab === 'EMD' ? 'E' : 'B';
+              const pvKey = `${site}:${medium}`;
+              if (!pvSeen.has(pvKey)) {
+                pvSeen.add(pvKey);
+                pvEluate.push({ site, ratio: medium });
+              }
+            }
+          });
+        });
+
+        const labs = [];
+        ['EMD', 'HB'].forEach((lab) => {
+          const media = [];
+          ['FS', 'H2O', '2e', '10e'].forEach((medium) => {
+            const items = buildGroupedMediumItems(labBuckets[lab][medium], medium, groupDefs);
+            if (items.length > 0) media.push({ medium, items });
+          });
+          if (media.length > 0) labs.push({ lab, media });
+        });
+        const selection = { labs, extern: [] };
+        const dedupedVorOrt = dedupeSortedTokens(vorOrtTokens);
+        if (dedupedVorOrt.length > 0) selection.vorOrt = dedupedVorOrt;
+        if (pvEluate.length > 0) selection.pv = { ts: false, eluate: pvEluate };
+        return selection;
+      }
+
+      function buildPreviewTextFromToggles(catalog, toggles) {
+        const mediaOrder = ['FS', 'H2O', '2e', '10e'];
+        const siteOrder = { E: 0, B: 1 };
+        const ratioOrder = { '2e': 0, '10e': 1 };
+        const params = Array.isArray(catalog?.parameters) ? catalog.parameters : [];
+        const byKey = new Map(params.map((p) => [String(p?.key || '').trim(), p]));
+        const groupDefs = normalizeCatalogGroupsRuntime(catalog);
+        const groupByKey = new Map(groupDefs.map((group) => [group.key, group]));
+        function createLabBucket() {
+          return {
+            FS: createGroupedMediumBucket(),
+            H2O: createGroupedMediumBucket(),
+            '2e': createGroupedMediumBucket(),
+            '10e': createGroupedMediumBucket(),
+            other: {},
+          };
+        }
+        const labs = { EMD: createLabBucket(), HB: createLabBucket() };
+        const externLabs = new Map();
+        const pvSeen = new Set();
+        const pvEntries = [];
+        const vorOrtTokens = [];
+
+        Object.entries(toggles || {}).forEach(([key, toggle]) => {
+          if (!toggle || toggle.selected !== true) return;
+          const param = byKey.get(String(key || '').trim());
+          if (!param) return;
+          const keyToken = String(param.key || key).trim() || String(key || '').trim();
+          if (toggle.vorOrt === true) {
+            vorOrtTokens.push(keyToken);
+            return;
+          }
+          const allowedLabs = Array.isArray(param.allowedLabs) ? param.allowedLabs : [];
+          const allowedMedia = Array.isArray(param.allowedMedia) ? param.allowedMedia : [];
+          if (allowedLabs.length === 0 || allowedMedia.length === 0) return;
+          const lab = allowedLabs.includes(String(toggle.lab || '').trim())
+            ? String(toggle.lab || '').trim()
+            : (allowedLabs.includes(String(param.defaultLab || '').trim())
+              ? String(param.defaultLab || '').trim()
+              : String(allowedLabs[0] || '').trim());
+          if (!lab) return;
+          const labBucket = lab === 'EMD' || lab === 'HB'
+            ? labs[lab]
+            : (externLabs.get(lab) || createLabBucket());
+          const fg = String(param.functionGroup || '').trim();
+          const mediaSource = toggle.media && typeof toggle.media === 'object' ? toggle.media : {};
+          Object.entries(mediaSource).forEach(([mediumRaw, enabled]) => {
+            if (enabled !== true) return;
+            const medium = String(mediumRaw || '').trim();
+            if (!medium || !allowedMedia.includes(medium)) return;
+            const isEluateMedium = medium === '2e' || medium === '10e';
+            const wantsE = isEluateMedium && param.eluatePrefixE === true;
+            const bucket = mediaOrder.includes(medium)
+              ? labBucket[medium]
+              : (labBucket.other[medium] || (labBucket.other[medium] = createGroupedMediumBucket()));
+            let groupDef = fg ? (groupByKey.get(fg) || null) : null;
+            if (!groupDef && fg) {
+              groupDef = { key: fg, label: fg, supportsEluateE: true };
+              groupDefs.push(groupDef);
+              groupByKey.set(fg, groupDef);
+            }
+            if (groupDef) {
+              ensureBucketGroup(bucket, groupDef.key);
+              bucket.groups[groupDef.key].push(keyToken);
+              if (wantsE) bucket.groupEFlags[groupDef.key] = true;
+            } else {
+              bucket.plain.push(wantsE ? `e${keyToken}` : keyToken);
+            }
+            if (isEluateMedium && (lab === 'EMD' || lab === 'HB')) {
+              const site = lab === 'EMD' ? 'E' : 'B';
+              const pvKey = `${site}:${medium}`;
+              if (!pvSeen.has(pvKey)) {
+                pvSeen.add(pvKey);
+                pvEntries.push({ site, ratio: medium });
+              }
+            }
+          });
+          if (lab !== 'EMD' && lab !== 'HB') {
+            externLabs.set(lab, labBucket);
+          }
+        });
+
+        function renderLabLine(labName, bucket) {
+          const blocks = [];
+          mediaOrder.forEach((medium) => {
+            const parts = buildGroupedMediumItems(bucket[medium], medium, groupDefs);
+            if (parts.length > 0) {
+              const mediumLabel = formatMediumLabel(labName, medium);
+              blocks.push(`${mediumLabel}: ${parts.join(', ')}`);
+            }
+          });
+          Object.keys(bucket.other || {})
+            .sort((a, b) => a.localeCompare(b, 'de', { sensitivity: 'base' }))
+            .forEach((medium) => {
+              const parts = buildGroupedMediumItems(bucket.other[medium], medium, groupDefs);
+              if (parts.length > 0) {
+                const mediumLabel = formatMediumLabel(labName, medium);
+                blocks.push(`${mediumLabel}: ${parts.join(', ')}`);
+              }
+            });
+          if (blocks.length === 0) return '';
+          return `${labName}: ${blocks.join('; ')}`;
+        }
+
+        pvEntries.sort((a, b) => {
+          const ratioCmp = (ratioOrder[a.ratio] ?? 99) - (ratioOrder[b.ratio] ?? 99);
+          if (ratioCmp !== 0) return ratioCmp;
+          return (siteOrder[a.site] ?? 99) - (siteOrder[b.site] ?? 99);
+        });
+
+        const lines = [];
+        const vorOrt = dedupeSortedTokens(vorOrtTokens);
+        if (vorOrt.length > 0) {
+          lines.push(`vor Ort: ${vorOrt.join(', ')}`);
+        }
+        if (pvEntries.length > 0) {
+          lines.push(`PV: ${pvEntries.map((x) => `${x.site}(${x.ratio})`).join(', ')}`);
+        }
+        const emdLine = renderLabLine('EMD', labs.EMD);
+        if (emdLine) lines.push(emdLine);
+        const hbLine = renderLabLine('HB', labs.HB);
+        if (hbLine) lines.push(hbLine);
+        Array.from(externLabs.keys())
+          .sort((a, b) => a.localeCompare(b, 'de', { sensitivity: 'base' }))
+          .forEach((labName) => {
+            const line = renderLabLine(labName, externLabs.get(labName));
+            if (line) lines.push(line);
+          });
+        return lines.join('\n');
+      }
+
+      function updateSingleParamsModalPreview() {
+        const preview = buildPreviewTextFromToggles(singleParamsCatalog, singleParamsModalState.toggles);
+        singleParamsPreviewInput.value = preview;
+        return preview;
+      }
+
+      function getSelectedParamKeys() {
+        return Object.keys(singleParamsModalState.toggles || {}).filter((key) => singleParamsModalState.toggles[key]?.selected === true);
+      }
+
+      function toggleSingleParamSelection(key) {
+        const param = findCatalogParameter(key);
+        if (!param) return;
+        if (singleParamsModalState.toggles[key]?.selected === true) {
+          delete singleParamsModalState.toggles[key];
+        } else {
+          const allowedLabs = Array.isArray(param.allowedLabs) ? param.allowedLabs : [];
+          const lab = allowedLabs.includes(String(param.defaultLab || '').trim())
+            ? String(param.defaultLab || '').trim()
+            : (allowedLabs[0] || '');
+          singleParamsModalState.toggles[key] = {
+            selected: true,
+            lab,
+            media: {},
+            vorOrt: false,
+          };
+        }
+        renderSingleParamsModal();
+      }
+
+      function toggleSingleParamVorOrt(key) {
+        const param = findCatalogParameter(key);
+        if (!param || param.allowVorOrt !== true) return;
+        if (!singleParamsModalState.toggles[key]?.selected) return;
+        singleParamsModalState.toggles[key].vorOrt = singleParamsModalState.toggles[key].vorOrt !== true;
+        renderSingleParamsModal();
+      }
+
+      function setSingleParamLab(key, lab) {
+        const param = findCatalogParameter(key);
+        if (!param) return;
+        const allowedLabs = Array.isArray(param.allowedLabs) ? param.allowedLabs : [];
+        if (!allowedLabs.includes(lab)) return;
+        if (!singleParamsModalState.toggles[key]?.selected) return;
+        if (singleParamsModalState.toggles[key].vorOrt === true) return;
+        singleParamsModalState.toggles[key].lab = lab;
+        renderSingleParamsModal();
+      }
+
+      function toggleSingleParamMedium(key, medium) {
+        const param = findCatalogParameter(key);
+        if (!param) return;
+        const allowedMedia = Array.isArray(param.allowedMedia) ? param.allowedMedia : [];
+        if (!allowedMedia.includes(medium)) return;
+        if (!singleParamsModalState.toggles[key]?.selected) return;
+        if (singleParamsModalState.toggles[key].vorOrt === true) return;
+        const media = singleParamsModalState.toggles[key].media || {};
+        if (media[medium] === true) {
+          delete media[medium];
+        } else {
+          media[medium] = true;
+        }
+        singleParamsModalState.toggles[key].media = media;
+        renderSingleParamsModal();
+      }
+
+      function renderSingleParamsList() {
+        const filter = String(singleParamsModalState.search || '').trim().toLowerCase();
+        const usageCounts = loadUsageCounts();
+        const params = getCatalogParameters().filter((p) => {
+          const key = String(p?.key || '').toLowerCase();
+          const label = String(p?.label || '').toLowerCase();
+          const labelLong = String(p?.labelLong || '').toLowerCase();
+          return !filter || key.includes(filter) || label.includes(filter) || labelLong.includes(filter);
+        }).sort((a, b) => {
+          const keyA = String(a?.key || '').trim();
+          const keyB = String(b?.key || '').trim();
+          const labelA = getParameterDisplay(a, keyA).name;
+          const labelB = getParameterDisplay(b, keyB).name;
+          const usageA = Number(usageCounts[keyA] || 0);
+          const usageB = Number(usageCounts[keyB] || 0);
+          if (usageA !== usageB) return usageB - usageA;
+          return labelA.localeCompare(labelB, 'de', { sensitivity: 'base' });
+        });
+        singleParamsList.innerHTML = '';
+        if (params.length === 0) {
+          const empty = document.createElement('div');
+          empty.className = 'meta';
+          empty.textContent = 'Keine Parameter gefunden.';
+          singleParamsList.appendChild(empty);
+          return;
+        }
+        params.forEach((param) => {
+          const key = String(param.key || '').trim();
+          const selected = singleParamsModalState.toggles[key]?.selected === true;
+          const row = document.createElement('div');
+          row.className = 'list-item';
+          row.style.cursor = 'pointer';
+          row.style.display = 'grid';
+          row.style.gridTemplateColumns = '1fr';
+          row.style.gap = '4px';
+          row.style.alignItems = 'center';
+          row.setAttribute('role', 'button');
+          row.tabIndex = 0;
+          row.addEventListener('click', () => toggleSingleParamSelection(key));
+          row.addEventListener('keydown', (event) => {
+            if (event.key === 'Enter' || event.key === ' ') {
+              event.preventDefault();
+              toggleSingleParamSelection(key);
+            }
+          });
+          const left = document.createElement('div');
+          const display = getParameterDisplay(param, key);
+          left.textContent = display.short ? `${display.name} (${display.short})` : display.name;
+          const group = findCatalogGroup(param.functionGroup);
+          if (group) {
+            const badge = document.createElement('small');
+            badge.className = 'meta';
+            badge.style.marginLeft = '0.5rem';
+            badge.textContent = String(group.label || group.key || '').trim();
+            left.appendChild(badge);
+          }
+          left.style.fontWeight = selected ? '600' : '400';
+          if (selected) {
+            row.style.background = 'color-mix(in srgb, var(--primary) 18%, transparent)';
+            row.style.borderColor = 'var(--primary-strong)';
+          } else {
+            row.style.background = '';
+            row.style.borderColor = '';
+          }
+          row.appendChild(left);
+          singleParamsList.appendChild(row);
+        });
+      }
+
+      function renderSelectedParamsList() {
+        selectedParamsList.innerHTML = '';
+        const selectedKeys = getSelectedParamKeys();
+        if (selectedKeys.length === 0) {
+          const empty = document.createElement('small');
+          empty.className = 'meta';
+          empty.textContent = 'Keine Parameter ausgewählt';
+          selectedParamsList.appendChild(empty);
+          return;
+        }
+        const mediaOrder = ['FS', 'H2O', '2e', '10e'];
+        selectedKeys.forEach((key) => {
+          const param = findCatalogParameter(key);
+          if (!param) return;
+          const toggle = singleParamsModalState.toggles[key];
+          if (!toggle || toggle.selected !== true) return;
+          const isVorOrt = toggle.vorOrt === true;
+          const allowedLabs = Array.isArray(param.allowedLabs) ? param.allowedLabs : [];
+          const allowedMedia = Array.isArray(param.allowedMedia) ? param.allowedMedia : [];
+          if (toggle.media && typeof toggle.media === 'object') {
+            Object.keys(toggle.media).forEach((medium) => {
+              if (!allowedMedia.includes(medium)) delete toggle.media[medium];
+            });
+          }
+          if (allowedLabs.length === 1) {
+            toggle.lab = allowedLabs[0];
+          }
+
+          const row = document.createElement('div');
+          row.style.display = 'grid';
+          row.style.gridTemplateColumns = '220px auto 1fr';
+          row.style.gap = '10px';
+          row.style.alignItems = 'center';
+          row.style.padding = '6px 0';
+          row.style.borderBottom = '1px solid rgba(255,255,255,0.06)';
+
+          const nameCell = document.createElement('div');
+          nameCell.style.display = 'flex';
+          nameCell.style.alignItems = 'center';
+          nameCell.style.gap = '8px';
+          const label = document.createElement('span');
+          const display = getParameterDisplay(param, key);
+          label.textContent = display.short ? `${display.name} (${display.short})` : display.name;
+          nameCell.appendChild(label);
+          if (param.allowVorOrt === true) {
+            const vorOrtBtn = document.createElement('button');
+            vorOrtBtn.type = 'button';
+            vorOrtBtn.className = isVorOrt ? 'primary' : 'secondary';
+            vorOrtBtn.textContent = 'vor Ort';
+            vorOrtBtn.title = 'Als Vor-Ort-Parameter markieren';
+            vorOrtBtn.addEventListener('click', (event) => {
+              event.stopPropagation();
+              toggleSingleParamVorOrt(key);
+            });
+            nameCell.appendChild(vorOrtBtn);
+          }
+          const removeBtn = document.createElement('button');
+          removeBtn.type = 'button';
+          removeBtn.textContent = 'x';
+          removeBtn.title = 'Entfernen';
+          removeBtn.addEventListener('click', (event) => {
+            event.stopPropagation();
+            toggleSingleParamSelection(key);
+          });
+          nameCell.appendChild(removeBtn);
+          row.appendChild(nameCell);
+
+          const labsCell = document.createElement('div');
+          labsCell.style.display = 'flex';
+          labsCell.style.gap = '6px';
+          labsCell.style.flexWrap = 'wrap';
+          if (allowedLabs.length > 1) {
+            allowedLabs.forEach((lab) => {
+              const btn = document.createElement('button');
+              btn.type = 'button';
+              btn.className = toggle.lab === lab ? 'primary' : 'secondary';
+              btn.textContent = lab;
+              btn.disabled = isVorOrt;
+              btn.addEventListener('click', () => setSingleParamLab(key, lab));
+              labsCell.appendChild(btn);
+            });
+          }
+          row.appendChild(labsCell);
+
+          const mediaCell = document.createElement('div');
+          mediaCell.style.display = 'flex';
+          mediaCell.style.gap = '6px';
+          mediaCell.style.flexWrap = 'wrap';
+          const otherMediumName = String(param.otherMediumName || '').trim();
+          const orderedAllowedMedia = [];
+          mediaOrder.forEach((medium) => {
+            if (allowedMedia.includes(medium)) orderedAllowedMedia.push(medium);
+          });
+          if (otherMediumName && (allowedMedia.includes(otherMediumName) || !orderedAllowedMedia.includes(otherMediumName))) {
+            orderedAllowedMedia.push(otherMediumName);
+          }
+          orderedAllowedMedia.forEach((medium) => {
+            const active = toggle.media && toggle.media[medium] === true;
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = active ? 'primary' : 'secondary';
+            btn.textContent = medium;
+            btn.disabled = isVorOrt;
+            btn.addEventListener('click', () => toggleSingleParamMedium(key, medium));
+            mediaCell.appendChild(btn);
+          });
+          row.appendChild(mediaCell);
+
+          selectedParamsList.appendChild(row);
+        });
+      }
+
+      function renderSingleParamsModal() {
+        renderSingleParamsList();
+        renderSelectedParamsList();
+        updateSingleParamsModalPreview();
+      }
+
+      async function openSingleParamsModalForProbe(probeElement) {
+        await loadSingleParameterCatalog();
+        activeProbeForSingleParamsModal = probeElement;
+        const packageValue = String(probeElement.querySelector('[name="packageId"]').value || '').trim();
+        singleParamsPackageWarning.classList.toggle('hidden', !packageValue);
+        const singleParamsInput = probeElement.querySelector('[name="singleParamsJson"]');
+        const raw = String(singleParamsInput?.value || '').trim();
+        let parsed = {};
+        if (raw) {
+          try {
+            parsed = JSON.parse(raw);
+          } catch (_error) {
+            parsed = {};
+          }
+        }
+        singleParamsModalState = {
+          toggles: normalizeSingleParamsToggles(parsed?.toggles),
+          search: '',
+        };
+        singleParamsSearchInput.value = '';
+        renderSingleParamsModal();
+        singleParamsModal.classList.remove('hidden');
+      }
+
+      function closeSingleParamsModal() {
+        activeProbeForSingleParamsModal = null;
+        singleParamsModal.classList.add('hidden');
+      }
+
+      function applySingleParamsModal() {
+        if (!activeProbeForSingleParamsModal) {
+          closeSingleParamsModal();
+          return;
+        }
+        const toggles = normalizeSingleParamsToggles(singleParamsModalState.toggles);
+        incrementUsageCountsForSelected(toggles);
+        const preview = updateSingleParamsModalPreview();
+        const singleParamsInput = activeProbeForSingleParamsModal.querySelector('[name="singleParamsJson"]');
+        const parameterTextInput = activeProbeForSingleParamsModal.querySelector('[name="parameterTextPreview"]');
+        if (Object.keys(toggles).length === 0) {
+          singleParamsInput.value = '';
+        } else {
+          singleParamsInput.value = JSON.stringify({ toggles });
+        }
+        parameterTextInput.value = preview || '';
+        closeSingleParamsModal();
       }
 
       function populatePackageSelect(probeElement) {
@@ -1756,6 +2555,7 @@
         const deleteButton = probeElement.querySelector('[data-action="delete"]');
         const gebindeButton = probeElement.querySelector('[data-action="gebinde"]');
         const geruchButton = probeElement.querySelector('[data-action="geruch"]');
+        const singleParamsButton = probeElement.querySelector('[data-action="single-params"]');
         const nameInput = probeElement.querySelector('[name="probenbezeichnung"]');
 
         if (gebindeButton) gebindeButton.textContent = '◐';
@@ -1767,6 +2567,9 @@
         deleteButton.addEventListener('click', () => deleteProbe(probeElement));
         gebindeButton.addEventListener('click', () => openGebindeModalForProbe(probeElement));
         geruchButton.addEventListener('click', () => openGeruchModalForProbe(probeElement));
+        if (singleParamsButton) {
+          singleParamsButton.addEventListener('click', () => openSingleParamsModalForProbe(probeElement));
+        }
         nameInput.addEventListener('input', () => {
           nameInput.title = nameInput.value;
           const hiddenInput = probeElement.querySelector('[name="probenbezeichnungFull"]');
@@ -1790,6 +2593,8 @@
           setProbeGeruchData(probeElement, initialData.geruch || null);
           probeElement.querySelector('[name="bemerkung"]').value = initialData.bemerkung ?? '';
           probeElement.querySelector('[name="packageId"]').value = initialData.packageId || '';
+          probeElement.querySelector('[name="singleParamsJson"]').value = initialData.singleParamsJson || '';
+          probeElement.querySelector('[name="parameterTextPreview"]').value = initialData.parameterTextPreview || '';
           setProbeContainersData(probeElement, initialData.containers || null);
         } else {
           setProbeNameValue(probeElement, '');
@@ -1809,6 +2614,8 @@
           probenbezeichnung: getProbeFullName(probeElement),
           material: probeElement.querySelector('[name="material"]').value,
           packageId: probeElement.querySelector('[name="packageId"]').value,
+          singleParamsJson: probeElement.querySelector('[name="singleParamsJson"]').value,
+          parameterTextPreview: probeElement.querySelector('[name="parameterTextPreview"]').value,
           tiefeVolumen: probeElement.querySelector('[name="tiefeVolumen"]').value,
           gewicht: probeElement.querySelector('[name="gewicht"]').value,
           geruch: getProbeGeruchData(probeElement),
@@ -1851,11 +2658,24 @@
             const material = probe.querySelector('[name="material"]').value.trim();
             const geruchData = getProbeGeruchData(probe);
             const geruchValue = buildGeruchPayloadValue(geruchData.option, geruchData.sonstiges);
+            let singleParams = undefined;
+            const singleParamsRaw = String(probe.querySelector('[name="singleParamsJson"]').value || '').trim();
+            if (singleParamsRaw) {
+              try {
+                const parsed = JSON.parse(singleParamsRaw);
+                if (parsed && typeof parsed === 'object') {
+                  singleParams = parsed;
+                }
+              } catch (_error) {
+                singleParams = undefined;
+              }
+            }
             return {
               probenbezeichnung: getProbeFullName(probe),
               material: material || undefined,
               packageId: probe.querySelector('[name="packageId"]').value || undefined,
               parameterTextPreview: probe.querySelector('[name="parameterTextPreview"]').value.trim() || undefined,
+              singleParams,
               tiefeVolumen: tiefeVolumenRaw || undefined,
               tiefeOderVolumen: tiefeVolumenRaw || undefined,
               volumen: tiefeVolumenNum,
@@ -2025,6 +2845,15 @@
       addressModal.addEventListener('click', (event) => {
         if (event.target === addressModal) closeAddressModal();
       });
+      singleParamsSearchInput.addEventListener('input', () => {
+        singleParamsModalState.search = singleParamsSearchInput.value;
+        renderSingleParamsModal();
+      });
+      singleParamsCancel.addEventListener('click', closeSingleParamsModal);
+      singleParamsApply.addEventListener('click', applySingleParamsModal);
+      singleParamsModal.addEventListener('click', (event) => {
+        if (event.target === singleParamsModal) closeSingleParamsModal();
+      });
 
       bulkProbeModalCancel.addEventListener('click', closeBulkProbeModal);
       bulkProbeModalApply.addEventListener('click', applyBulkProbeInsert);
@@ -2095,6 +2924,10 @@
         }
         if (event.key === 'Escape' && !addressModal.classList.contains('hidden')) {
           closeAddressModal();
+          return;
+        }
+        if (event.key === 'Escape' && !singleParamsModal.classList.contains('hidden')) {
+          closeSingleParamsModal();
         }
       });
       probenContainer.addEventListener('keydown', (event) => {
@@ -2107,7 +2940,7 @@
 
         const row = target.closest('.probe-row');
         const focusablesInRow = Array.from(
-          row.querySelectorAll('input:not([type="hidden"]), select, button[data-action="gebinde"], button[data-action="geruch"]'),
+          row.querySelectorAll('input:not([type="hidden"]), select, button[data-action="single-params"], button[data-action="gebinde"], button[data-action="geruch"]'),
         ).filter((el) => !el.disabled);
         const currentIndex = focusablesInRow.indexOf(target);
         if (currentIndex >= 0 && currentIndex < focusablesInRow.length - 1) {
@@ -2187,6 +3020,7 @@
 
       async function bootstrap() {
         await loadConfig();
+        await loadSingleParameterCatalog();
         await loadPackages();
         await loadCustomers().catch(() => {});
         addProbe();

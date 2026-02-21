@@ -237,6 +237,10 @@
             <h2>Listen & Vorlagen</h2>
             <p class="settings-note">Diese Bereiche werden in separaten Seiten gepflegt, damit die Hauptseite übersichtlich bleibt.</p>
             <div class="list-links">
+              <a class="link-card" href="/single-parameters">
+                <strong>Einzelparameter verwalten</strong>
+                <span>Katalogpflege für Einzelparameter (Name, Kürzel, Labore, Medien, Funktion, PV-Flag).</span>
+              </a>
               <a class="link-card" href="/settings/kuerzel">
                 <strong>Kürzel Presets verwalten</strong>
                 <span>Chips hinzufügen, löschen und speichern</span>
@@ -393,19 +397,36 @@
         backupIntervalWrap.classList.toggle('hidden', backupPolicyInput.value !== 'interval');
       });
 
-      const canPickBackupDir = typeof window.showDirectoryPicker === 'function';
-      if (!canPickBackupDir) {
-        pickBackupDirButton.disabled = true;
-        pickBackupDirButton.title = 'Ordnerauswahl wird von diesem Browser nicht unterstützt.';
-      }
-
       pickBackupDirButton.addEventListener('click', async () => {
-        if (!canPickBackupDir) return;
+        const originalText = pickBackupDirButton.textContent;
+        pickBackupDirButton.disabled = true;
+        pickBackupDirButton.textContent = 'Wähle Ordner...';
+        backupDirMsg.classList.add('hidden');
+        manualBackupMsg.classList.add('hidden');
         try {
-          await window.showDirectoryPicker();
-          showToast('info', 'Bitte den gewünschten Ordnerpfad manuell ins Feld eintragen.');
-        } catch (_error) {
-          // user canceled; no action
+          const result = await pickBackupDirNative();
+          if (result.canceled) {
+            return;
+          }
+          if (!result.selectedPath) {
+            throw new Error('Es wurde kein Ordnerpfad zurückgegeben.');
+          }
+          backupDirInput.value = result.selectedPath;
+          state.backupDir = result.selectedPath;
+          const config = await saveConfig({ backupDir: result.selectedPath });
+          mergeAndRender(config);
+          backupDirMsg.textContent = `Pfad gesetzt: ${result.selectedPath}`;
+          backupDirMsg.classList.remove('hidden', 'inline-error');
+          backupDirMsg.classList.add('inline-ok');
+          showToast('success', 'Backup-Ordner übernommen und gespeichert');
+        } catch (error) {
+          backupDirMsg.textContent = error.message;
+          backupDirMsg.classList.remove('hidden', 'inline-ok');
+          backupDirMsg.classList.add('inline-error');
+          showToast('error', error.message);
+        } finally {
+          pickBackupDirButton.disabled = false;
+          pickBackupDirButton.textContent = originalText;
         }
       });
 
@@ -528,6 +549,7 @@
           createBackupNowButton.textContent = originalText;
         }
       });
+
 
       validatePathButton.addEventListener('click', async () => {
         clearMessages();

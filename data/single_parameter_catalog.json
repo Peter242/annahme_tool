@@ -1,0 +1,1586 @@
+{
+  "version": 1,
+  "groups": [
+    {
+      "key": "AN",
+      "label": "AN",
+      "supportsEluateE": true
+    },
+    {
+      "key": "SM",
+      "label": "SM",
+      "supportsEluateE": true
+    },
+    {
+      "key": "Organik",
+      "label": "Organik",
+      "supportsEluateE": true
+    }
+  ],
+  "parameters": [
+    {
+      "key": "Ag",
+      "label": "Silber",
+      "labelLong": "Silber",
+      "allowedLabs": [
+        "HB"
+      ],
+      "defaultLab": "HB",
+      "allowedMedia": [
+        "FS",
+        "H2O",
+        "2e",
+        "10e"
+      ],
+      "eluatePrefixE": false,
+      "pvFlag": false,
+      "requiresPv": [
+        "2e",
+        "10e"
+      ],
+      "functionGroup": null
+    },
+    {
+      "key": "Al",
+      "label": "Aluminium",
+      "labelLong": "Aluminium",
+      "allowedLabs": [
+        "HB"
+      ],
+      "defaultLab": "HB",
+      "allowedMedia": [
+        "FS",
+        "H2O",
+        "2e",
+        "10e"
+      ],
+      "eluatePrefixE": true,
+      "pvFlag": false,
+      "requiresPv": [
+        "2e",
+        "10e"
+      ],
+      "functionGroup": "SM"
+    },
+    {
+      "key": "AOX",
+      "label": "Adsorbierbare organisch gebundene Halogene",
+      "labelLong": "Adsorbierbare organisch gebundene Halogene",
+      "allowedLabs": [
+        "HB"
+      ],
+      "defaultLab": "HB",
+      "allowedMedia": [
+        "FS",
+        "H2O",
+        "2e",
+        "10e"
+      ],
+      "eluatePrefixE": false,
+      "pvFlag": false,
+      "requiresPv": [
+        "2e",
+        "10e"
+      ],
+      "functionGroup": null
+    },
+    {
+      "key": "As",
+      "label": "Arsen",
+      "labelLong": "Arsen",
+      "allowedLabs": [
+        "HB"
+      ],
+      "defaultLab": "HB",
+      "allowedMedia": [
+        "FS",
+        "H2O",
+        "2e",
+        "10e"
+      ],
+      "eluatePrefixE": true,
+      "pvFlag": false,
+      "requiresPv": [
+        "2e",
+        "10e"
+      ],
+      "functionGroup": "SM"
+    },
+    {
+      "key": "AT4",
+      "label": "Atmungsaktivität",
+      "labelLong": "Atmungsaktivität",
+      "allowedLabs": [
+        "EMD",
+        "HB"
+      ],
+      "defaultLab": "EMD",
+      "allowedMedia": [
+        "FS",
+        "H2O",
+        "2e",
+        "10e"
+      ],
+      "eluatePrefixE": false,
+      "pvFlag": false,
+      "requiresPv": [
+        "2e",
+        "10e"
+      ],
+      "functionGroup": null
+    },
+    {
+      "key": "Au",
+      "label": "Gold",
+      "labelLong": "Gold",
+      "allowedLabs": [
+        "HB"
+      ],
+      "defaultLab": "HB",
+      "allowedMedia": [
+        "FS",
+        "H2O",
+        "2e",
+        "10e"
+      ],
+      "eluatePrefixE": true,
+      "pvFlag": false,
+      "requiresPv": [
+        "2e",
+        "10e"
+      ],
+      "functionGroup": "SM"
+    },
+    {
+      "key": "Bor",
+      "label": "Bor",
+      "labelLong": "Bor",
+      "allowedLabs": [
+        "HB"
+      ],
+      "defaultLab": "HB",
+      "allowedMedia": [
+        "FS",
+        "H2O",
+        "2e",
+        "10e"
+      ],
+      "eluatePrefixE": true,
+      "pvFlag": false,
+      "requiresPv": [
+        "2e",
+        "10e"
+      ],
+      "functionGroup": "SM"
+    },
+    {
+      "key": "Ba",
+      "label": "Barium",
+      "labelLong": "Barium",
+      "allowedLabs": [
+        "HB"
+      ],
+      "defaultLab": "HB",
+      "allowedMedia": [
+        "FS",
+        "H2O",
+        "2e",
+        "10e"
+      ],
+      "eluatePrefixE": true,
+      "pvFlag": false,
+      "requiresPv": [
+        "2e",
+        "10e"
+      ],
+      "functionGroup": "SM"
+    },
+    {
+      "key": "BK 8,2",
+      "label": "Basenkapazität",
+      "labelLong": "Basenkapazität",
+      "allowedLabs": [
+        "EMD"
+      ],
+      "defaultLab": "EMD",
+      "allowedMedia": [
+        "FS",
+        "H2O",
+        "2e",
+        "10e"
+      ],
+      "eluatePrefixE": false,
+      "pvFlag": false,
+      "requiresPv": [
+        "2e",
+        "10e"
+      ],
+      "functionGroup": null
+    },
+    {
+      "key": "Br",
+      "label": "Brom",
+      "labelLong": "Brom",
+      "allowedLabs": [
+        "EMD",
+        "HB"
+      ],
+      "defaultLab": "EMD",
+      "allowedMedia": [
+        "H2O",
+        "2e",
+        "10e"
+      ],
+      "eluatePrefixE": true,
+      "pvFlag": false,
+      "requiresPv": [
+        "2e",
+        "10e"
+      ],
+      "functionGroup": "AN"
+    },
+    {
+      "key": "Brennwert",
+      "label": "Brennwert",
+      "labelLong": "Brennwert",
+      "allowedLabs": [
+        "EMD"
+      ],
+      "defaultLab": "EMD",
+      "allowedMedia": [
+        "FS",
+        "H2O",
+        "2e",
+        "10e"
+      ],
+      "eluatePrefixE": false,
+      "pvFlag": false,
+      "requiresPv": [
+        "2e",
+        "10e"
+      ],
+      "functionGroup": null
+    },
+    {
+      "key": "BSB",
+      "label": "Biochemischer Sauerstoffbedarf",
+      "labelLong": "Biochemischer Sauerstoffbedarf",
+      "allowedLabs": [
+        "EMD"
+      ],
+      "defaultLab": "EMD",
+      "allowedMedia": [
+        "FS",
+        "H2O",
+        "2e",
+        "10e"
+      ],
+      "eluatePrefixE": false,
+      "pvFlag": false,
+      "requiresPv": [
+        "2e",
+        "10e"
+      ],
+      "functionGroup": null
+    },
+    {
+      "key": "BTEX",
+      "label": "leichtflüchtige aromatische Kohlenwasserstoffe",
+      "labelLong": "leichtflüchtige aromatische Kohlenwasserstoffe",
+      "allowedLabs": [
+        "HB"
+      ],
+      "defaultLab": "HB",
+      "allowedMedia": [
+        "FS",
+        "H2O",
+        "2e",
+        "10e"
+      ],
+      "eluatePrefixE": false,
+      "pvFlag": false,
+      "requiresPv": [
+        "2e",
+        "10e"
+      ],
+      "functionGroup": null
+    },
+    {
+      "key": "Ca",
+      "label": "Kalzium",
+      "labelLong": "Kalzium",
+      "allowedLabs": [
+        "HB"
+      ],
+      "defaultLab": "HB",
+      "allowedMedia": [
+        "FS",
+        "H2O",
+        "2e",
+        "10e"
+      ],
+      "eluatePrefixE": true,
+      "pvFlag": false,
+      "requiresPv": [
+        "2e",
+        "10e"
+      ],
+      "functionGroup": "SM"
+    },
+    {
+      "key": "Cd",
+      "label": "Cadmium",
+      "labelLong": "Cadmium",
+      "allowedLabs": [
+        "HB"
+      ],
+      "defaultLab": "HB",
+      "allowedMedia": [
+        "FS",
+        "H2O",
+        "2e",
+        "10e"
+      ],
+      "eluatePrefixE": true,
+      "pvFlag": false,
+      "requiresPv": [
+        "2e",
+        "10e"
+      ],
+      "functionGroup": "SM"
+    },
+    {
+      "key": "Cl",
+      "label": "Chlor",
+      "labelLong": "Chlor",
+      "allowedLabs": [
+        "EMD",
+        "HB"
+      ],
+      "defaultLab": "EMD",
+      "allowedMedia": [
+        "H2O",
+        "2e",
+        "10e"
+      ],
+      "eluatePrefixE": true,
+      "pvFlag": false,
+      "requiresPv": [
+        "2e",
+        "10e"
+      ],
+      "functionGroup": "AN"
+    },
+    {
+      "key": "CN ges",
+      "label": "Cyanide gesamt",
+      "labelLong": "Cyanide gesamt",
+      "allowedLabs": [
+        "EMD"
+      ],
+      "defaultLab": "EMD",
+      "allowedMedia": [
+        "FS",
+        "H2O",
+        "2e",
+        "10e"
+      ],
+      "eluatePrefixE": false,
+      "pvFlag": false,
+      "requiresPv": [
+        "2e",
+        "10e"
+      ],
+      "functionGroup": null
+    },
+    {
+      "key": "CN lf",
+      "label": "Cyanide leichtflüchtig",
+      "labelLong": "Cyanide leichtflüchtig",
+      "allowedLabs": [
+        "EMD"
+      ],
+      "defaultLab": "EMD",
+      "allowedMedia": [
+        "FS",
+        "H2O",
+        "2e",
+        "10e"
+      ],
+      "eluatePrefixE": false,
+      "pvFlag": false,
+      "requiresPv": [
+        "2e",
+        "10e"
+      ],
+      "functionGroup": null
+    },
+    {
+      "key": "Co",
+      "label": "Cobalt",
+      "labelLong": "Cobalt",
+      "allowedLabs": [
+        "HB"
+      ],
+      "defaultLab": "HB",
+      "allowedMedia": [
+        "FS",
+        "H2O",
+        "2e",
+        "10e"
+      ],
+      "eluatePrefixE": true,
+      "pvFlag": false,
+      "requiresPv": [
+        "2e",
+        "10e"
+      ],
+      "functionGroup": "SM"
+    },
+    {
+      "key": "Cr",
+      "label": "Chrom",
+      "labelLong": "Chrom",
+      "allowedLabs": [
+        "HB"
+      ],
+      "defaultLab": "HB",
+      "allowedMedia": [
+        "FS",
+        "H2O",
+        "2e",
+        "10e"
+      ],
+      "eluatePrefixE": true,
+      "pvFlag": false,
+      "requiresPv": [
+        "2e",
+        "10e"
+      ],
+      "functionGroup": "SM"
+    },
+    {
+      "key": "Cr(VI)",
+      "label": "Chrom (VI)",
+      "labelLong": "Chrom (VI)",
+      "allowedLabs": [
+        "EMD"
+      ],
+      "defaultLab": "EMD",
+      "allowedMedia": [
+        "FS",
+        "H2O",
+        "2e",
+        "10e"
+      ],
+      "eluatePrefixE": false,
+      "pvFlag": false,
+      "requiresPv": [
+        "2e",
+        "10e"
+      ],
+      "functionGroup": null
+    },
+    {
+      "key": "CSB",
+      "label": "Chemischer Sauerstoffbedarf",
+      "labelLong": "Chemischer Sauerstoffbedarf",
+      "allowedLabs": [
+        "EMD"
+      ],
+      "defaultLab": "EMD",
+      "allowedMedia": [
+        "FS",
+        "H2O",
+        "2e",
+        "10e"
+      ],
+      "eluatePrefixE": false,
+      "pvFlag": false,
+      "requiresPv": [
+        "2e",
+        "10e"
+      ],
+      "functionGroup": null
+    },
+    {
+      "key": "Cu",
+      "label": "Kupfer",
+      "labelLong": "Kupfer",
+      "allowedLabs": [
+        "HB"
+      ],
+      "defaultLab": "HB",
+      "allowedMedia": [
+        "FS",
+        "H2O",
+        "2e",
+        "10e"
+      ],
+      "eluatePrefixE": true,
+      "pvFlag": false,
+      "requiresPv": [
+        "2e",
+        "10e"
+      ],
+      "functionGroup": "SM"
+    },
+    {
+      "key": "DOC",
+      "label": "gelöster organischer Kohlenstoff",
+      "labelLong": "gelöster organischer Kohlenstoff",
+      "allowedLabs": [
+        "HB"
+      ],
+      "defaultLab": "HB",
+      "allowedMedia": [
+        "FS",
+        "H2O",
+        "2e",
+        "10e"
+      ],
+      "eluatePrefixE": false,
+      "pvFlag": false,
+      "requiresPv": [
+        "2e",
+        "10e"
+      ],
+      "functionGroup": null
+    },
+    {
+      "key": "el.Lf.",
+      "label": "elektrische Leitfähigkeit",
+      "labelLong": "elektrische Leitfähigkeit",
+      "allowedLabs": [
+        "EMD"
+      ],
+      "defaultLab": "EMD",
+      "allowedMedia": [
+        "FS",
+        "H2O",
+        "2e",
+        "10e"
+      ],
+      "eluatePrefixE": false,
+      "pvFlag": false,
+      "requiresPv": [
+        "2e",
+        "10e"
+      ],
+      "functionGroup": null
+    },
+    {
+      "key": "EOX",
+      "label": "Extrahierbare organisch gebundene Halogene",
+      "labelLong": "Extrahierbare organisch gebundene Halogene",
+      "allowedLabs": [
+        "HB"
+      ],
+      "defaultLab": "HB",
+      "allowedMedia": [
+        "FS",
+        "H2O",
+        "2e",
+        "10e"
+      ],
+      "eluatePrefixE": false,
+      "pvFlag": false,
+      "requiresPv": [
+        "2e",
+        "10e"
+      ],
+      "functionGroup": null
+    },
+    {
+      "key": "PAK",
+      "label": "polyzyklischen aromatischen Kohlenwasserstoffe",
+      "labelLong": "polyzyklischen aromatischen Kohlenwasserstoffe",
+      "allowedLabs": [
+        "HB"
+      ],
+      "defaultLab": "HB",
+      "allowedMedia": [
+        "H2O",
+        "2e",
+        "10e"
+      ],
+      "eluatePrefixE": true,
+      "pvFlag": false,
+      "requiresPv": [
+        "2e",
+        "10e"
+      ],
+      "functionGroup": null
+    },
+    {
+      "key": "PCB",
+      "label": "ePCB",
+      "labelLong": "ePCB",
+      "allowedLabs": [
+        "HB"
+      ],
+      "defaultLab": "HB",
+      "allowedMedia": [
+        "FS",
+        "H2O",
+        "2e",
+        "10e"
+      ],
+      "eluatePrefixE": false,
+      "pvFlag": false,
+      "requiresPv": [
+        "2e",
+        "10e"
+      ],
+      "functionGroup": null
+    },
+    {
+      "key": "F",
+      "label": "F",
+      "labelLong": "F",
+      "allowedLabs": [
+        "EMD",
+        "HB"
+      ],
+      "defaultLab": "EMD",
+      "allowedMedia": [
+        "H2O",
+        "2e",
+        "10e"
+      ],
+      "eluatePrefixE": true,
+      "pvFlag": false,
+      "requiresPv": [
+        "2e",
+        "10e"
+      ],
+      "functionGroup": "AN"
+    },
+    {
+      "key": "Fe",
+      "label": "Fe",
+      "labelLong": "Fe",
+      "allowedLabs": [
+        "HB"
+      ],
+      "defaultLab": "HB",
+      "allowedMedia": [
+        "FS",
+        "H2O",
+        "2e",
+        "10e"
+      ],
+      "eluatePrefixE": true,
+      "pvFlag": false,
+      "requiresPv": [
+        "2e",
+        "10e"
+      ],
+      "functionGroup": "SM"
+    },
+    {
+      "key": "Fe(II)",
+      "label": "Fe(II)",
+      "labelLong": "Fe(II)",
+      "allowedLabs": [
+        "EMD"
+      ],
+      "defaultLab": "EMD",
+      "allowedMedia": [
+        "FS",
+        "H2O",
+        "2e",
+        "10e"
+      ],
+      "eluatePrefixE": false,
+      "pvFlag": false,
+      "requiresPv": [
+        "2e",
+        "10e"
+      ],
+      "functionGroup": null
+    },
+    {
+      "key": "GV",
+      "label": "Glühverlust",
+      "labelLong": "Glühverlust",
+      "allowedLabs": [
+        "EMD"
+      ],
+      "defaultLab": "EMD",
+      "allowedMedia": [
+        "FS",
+        "H2O",
+        "2e",
+        "10e"
+      ],
+      "eluatePrefixE": false,
+      "pvFlag": true,
+      "requiresPv": [
+        "2e",
+        "10e"
+      ],
+      "functionGroup": null
+    },
+    {
+      "key": "HCO3",
+      "label": "HCO3",
+      "labelLong": "HCO3",
+      "allowedLabs": [
+        "EMD"
+      ],
+      "defaultLab": "EMD",
+      "allowedMedia": [
+        "FS",
+        "H2O",
+        "2e",
+        "10e"
+      ],
+      "eluatePrefixE": false,
+      "pvFlag": false,
+      "requiresPv": [
+        "2e",
+        "10e"
+      ],
+      "functionGroup": null
+    },
+    {
+      "key": "Heizwert",
+      "label": "Heizwert",
+      "labelLong": "Heizwert",
+      "allowedLabs": [
+        "EMD"
+      ],
+      "defaultLab": "EMD",
+      "allowedMedia": [
+        "FS",
+        "H2O",
+        "2e",
+        "10e"
+      ],
+      "eluatePrefixE": false,
+      "pvFlag": false,
+      "requiresPv": [
+        "2e",
+        "10e"
+      ],
+      "functionGroup": null
+    },
+    {
+      "key": "Hg",
+      "label": "Hg",
+      "labelLong": "Hg",
+      "allowedLabs": [
+        "HB"
+      ],
+      "defaultLab": "HB",
+      "allowedMedia": [
+        "FS",
+        "H2O",
+        "2e",
+        "10e"
+      ],
+      "eluatePrefixE": true,
+      "pvFlag": false,
+      "requiresPv": [
+        "2e",
+        "10e"
+      ],
+      "functionGroup": "SM"
+    },
+    {
+      "key": "Huminstoffe",
+      "label": "Huminstoffe",
+      "labelLong": "Huminstoffe",
+      "allowedLabs": [
+        "EMD"
+      ],
+      "defaultLab": "EMD",
+      "allowedMedia": [
+        "FS",
+        "H2O",
+        "2e",
+        "10e"
+      ],
+      "eluatePrefixE": false,
+      "pvFlag": false,
+      "requiresPv": [
+        "2e",
+        "10e"
+      ],
+      "functionGroup": null
+    },
+    {
+      "key": "K",
+      "label": "K",
+      "labelLong": "K",
+      "allowedLabs": [
+        "HB"
+      ],
+      "defaultLab": "HB",
+      "allowedMedia": [
+        "FS",
+        "H2O",
+        "2e",
+        "10e"
+      ],
+      "eluatePrefixE": true,
+      "pvFlag": false,
+      "requiresPv": [
+        "2e",
+        "10e"
+      ],
+      "functionGroup": "SM"
+    },
+    {
+      "key": "Kjeldahl",
+      "label": "Kjeldahl",
+      "labelLong": "Kjeldahl",
+      "allowedLabs": [
+        "EMD"
+      ],
+      "defaultLab": "EMD",
+      "allowedMedia": [
+        "FS",
+        "H2O",
+        "2e",
+        "10e"
+      ],
+      "eluatePrefixE": false,
+      "pvFlag": false,
+      "requiresPv": [
+        "2e",
+        "10e"
+      ],
+      "functionGroup": null
+    },
+    {
+      "key": "LCKW",
+      "label": "LCKW",
+      "labelLong": "LCKW",
+      "allowedLabs": [
+        "HB"
+      ],
+      "defaultLab": "HB",
+      "allowedMedia": [
+        "FS",
+        "H2O",
+        "2e",
+        "10e"
+      ],
+      "eluatePrefixE": false,
+      "pvFlag": false,
+      "requiresPv": [
+        "2e",
+        "10e"
+      ],
+      "functionGroup": null
+    },
+    {
+      "key": "LHKW",
+      "label": "LHKW",
+      "labelLong": "LHKW",
+      "allowedLabs": [
+        "HB"
+      ],
+      "defaultLab": "HB",
+      "allowedMedia": [
+        "FS",
+        "H2O",
+        "2e",
+        "10e"
+      ],
+      "eluatePrefixE": false,
+      "pvFlag": false,
+      "requiresPv": [
+        "2e",
+        "10e"
+      ],
+      "functionGroup": null
+    },
+    {
+      "key": "Mg",
+      "label": "Mg",
+      "labelLong": "Mg",
+      "allowedLabs": [
+        "HB"
+      ],
+      "defaultLab": "HB",
+      "allowedMedia": [
+        "FS",
+        "H2O",
+        "2e",
+        "10e"
+      ],
+      "eluatePrefixE": true,
+      "pvFlag": false,
+      "requiresPv": [
+        "2e",
+        "10e"
+      ],
+      "functionGroup": "SM"
+    },
+    {
+      "key": "Mn",
+      "label": "Mn",
+      "labelLong": "Mn",
+      "allowedLabs": [
+        "HB"
+      ],
+      "defaultLab": "HB",
+      "allowedMedia": [
+        "FS",
+        "H2O",
+        "2e",
+        "10e"
+      ],
+      "eluatePrefixE": true,
+      "pvFlag": false,
+      "requiresPv": [
+        "2e",
+        "10e"
+      ],
+      "functionGroup": "SM"
+    },
+    {
+      "key": "Mo",
+      "label": "Mo",
+      "labelLong": "Mo",
+      "allowedLabs": [
+        "HB"
+      ],
+      "defaultLab": "HB",
+      "allowedMedia": [
+        "FS",
+        "H2O",
+        "2e",
+        "10e"
+      ],
+      "eluatePrefixE": true,
+      "pvFlag": false,
+      "requiresPv": [
+        "2e",
+        "10e"
+      ],
+      "functionGroup": "SM"
+    },
+    {
+      "key": "Na",
+      "label": "Na",
+      "labelLong": "Na",
+      "allowedLabs": [
+        "HB"
+      ],
+      "defaultLab": "HB",
+      "allowedMedia": [
+        "FS",
+        "H2O",
+        "2e",
+        "10e"
+      ],
+      "eluatePrefixE": true,
+      "pvFlag": false,
+      "requiresPv": [
+        "2e",
+        "10e"
+      ],
+      "functionGroup": "SM"
+    },
+    {
+      "key": "NH4",
+      "label": "NH4",
+      "labelLong": "NH4",
+      "allowedLabs": [
+        "EMD"
+      ],
+      "defaultLab": "EMD",
+      "allowedMedia": [
+        "FS",
+        "H2O",
+        "2e",
+        "10e"
+      ],
+      "eluatePrefixE": false,
+      "pvFlag": false,
+      "requiresPv": [
+        "2e",
+        "10e"
+      ],
+      "functionGroup": null
+    },
+    {
+      "key": "NH4-N",
+      "label": "NH4-N",
+      "labelLong": "NH4-N",
+      "allowedLabs": [
+        "EMD"
+      ],
+      "defaultLab": "EMD",
+      "allowedMedia": [
+        "FS",
+        "H2O",
+        "2e",
+        "10e"
+      ],
+      "eluatePrefixE": false,
+      "pvFlag": false,
+      "requiresPv": [
+        "2e",
+        "10e"
+      ],
+      "functionGroup": null
+    },
+    {
+      "key": "Ni",
+      "label": "Ni",
+      "labelLong": "Ni",
+      "allowedLabs": [
+        "HB"
+      ],
+      "defaultLab": "HB",
+      "allowedMedia": [
+        "FS",
+        "H2O",
+        "2e",
+        "10e"
+      ],
+      "eluatePrefixE": true,
+      "pvFlag": false,
+      "requiresPv": [
+        "2e",
+        "10e"
+      ],
+      "functionGroup": "SM"
+    },
+    {
+      "key": "NO2",
+      "label": "NO2",
+      "labelLong": "NO2",
+      "allowedLabs": [
+        "EMD"
+      ],
+      "defaultLab": "EMD",
+      "allowedMedia": [
+        "FS",
+        "H2O",
+        "2e",
+        "10e"
+      ],
+      "eluatePrefixE": false,
+      "pvFlag": false,
+      "requiresPv": [
+        "2e",
+        "10e"
+      ],
+      "functionGroup": null
+    },
+    {
+      "key": "NO2-N",
+      "label": "NO2-N",
+      "labelLong": "NO2-N",
+      "allowedLabs": [
+        "EMD"
+      ],
+      "defaultLab": "EMD",
+      "allowedMedia": [
+        "FS",
+        "H2O",
+        "2e",
+        "10e"
+      ],
+      "eluatePrefixE": false,
+      "pvFlag": false,
+      "requiresPv": [
+        "2e",
+        "10e"
+      ],
+      "functionGroup": null
+    },
+    {
+      "key": "NO3",
+      "label": "NO3",
+      "labelLong": "NO3",
+      "allowedLabs": [
+        "EMD",
+        "HB"
+      ],
+      "defaultLab": "EMD",
+      "allowedMedia": [
+        "H2O",
+        "2e",
+        "10e"
+      ],
+      "eluatePrefixE": true,
+      "pvFlag": false,
+      "requiresPv": [
+        "2e",
+        "10e"
+      ],
+      "functionGroup": "AN"
+    },
+    {
+      "key": "NO3-N",
+      "label": "NO3-N",
+      "labelLong": "NO3-N",
+      "allowedLabs": [
+        "EMD",
+        "HB"
+      ],
+      "defaultLab": "EMD",
+      "allowedMedia": [
+        "H2O",
+        "2e",
+        "10e"
+      ],
+      "eluatePrefixE": true,
+      "pvFlag": false,
+      "requiresPv": [
+        "2e",
+        "10e"
+      ],
+      "functionGroup": "AN"
+    },
+    {
+      "key": "ortho-P",
+      "label": "ortho-P",
+      "labelLong": "ortho-P",
+      "allowedLabs": [
+        "EMD"
+      ],
+      "defaultLab": "EMD",
+      "allowedMedia": [
+        "FS",
+        "H2O",
+        "2e",
+        "10e"
+      ],
+      "eluatePrefixE": false,
+      "pvFlag": false,
+      "requiresPv": [
+        "2e",
+        "10e"
+      ],
+      "functionGroup": null
+    },
+    {
+      "key": "Pb",
+      "label": "Pb",
+      "labelLong": "Pb",
+      "allowedLabs": [
+        "HB"
+      ],
+      "defaultLab": "HB",
+      "allowedMedia": [
+        "FS",
+        "H2O",
+        "2e",
+        "10e"
+      ],
+      "eluatePrefixE": true,
+      "pvFlag": false,
+      "requiresPv": [
+        "2e",
+        "10e"
+      ],
+      "functionGroup": "SM"
+    },
+    {
+      "key": "Pges",
+      "label": "Pges",
+      "labelLong": "Pges",
+      "allowedLabs": [
+        "HB"
+      ],
+      "defaultLab": "HB",
+      "allowedMedia": [
+        "FS",
+        "H2O",
+        "2e",
+        "10e"
+      ],
+      "eluatePrefixE": true,
+      "pvFlag": false,
+      "requiresPv": [
+        "2e",
+        "10e"
+      ],
+      "functionGroup": "SM"
+    },
+    {
+      "key": "pH",
+      "label": "pH",
+      "labelLong": "pH",
+      "allowedLabs": [
+        "EMD"
+      ],
+      "defaultLab": "EMD",
+      "allowedMedia": [
+        "FS",
+        "H2O",
+        "2e",
+        "10e"
+      ],
+      "eluatePrefixE": false,
+      "pvFlag": false,
+      "requiresPv": [
+        "2e",
+        "10e"
+      ],
+      "functionGroup": null
+    },
+    {
+      "key": "Phenole ges",
+      "label": "Phenole ges",
+      "labelLong": "Phenole ges",
+      "allowedLabs": [
+        "EMD"
+      ],
+      "defaultLab": "EMD",
+      "allowedMedia": [
+        "FS",
+        "H2O",
+        "2e",
+        "10e"
+      ],
+      "eluatePrefixE": false,
+      "pvFlag": false,
+      "requiresPv": [
+        "2e",
+        "10e"
+      ],
+      "functionGroup": null
+    },
+    {
+      "key": "Phenole wdf",
+      "label": "Phenole wdf",
+      "labelLong": "Phenole wdf",
+      "allowedLabs": [
+        "EMD"
+      ],
+      "defaultLab": "EMD",
+      "allowedMedia": [
+        "FS",
+        "H2O",
+        "2e",
+        "10e"
+      ],
+      "eluatePrefixE": false,
+      "pvFlag": false,
+      "requiresPv": [
+        "2e",
+        "10e"
+      ],
+      "functionGroup": null
+    },
+    {
+      "key": "SAK 254",
+      "label": "SAK 254",
+      "labelLong": "SAK 254",
+      "allowedLabs": [
+        "EMD"
+      ],
+      "defaultLab": "EMD",
+      "allowedMedia": [
+        "FS",
+        "H2O",
+        "2e",
+        "10e"
+      ],
+      "eluatePrefixE": false,
+      "pvFlag": false,
+      "requiresPv": [
+        "2e",
+        "10e"
+      ],
+      "functionGroup": null
+    },
+    {
+      "key": "SAK 436",
+      "label": "SAK 436",
+      "labelLong": "SAK 436",
+      "allowedLabs": [
+        "EMD"
+      ],
+      "defaultLab": "EMD",
+      "allowedMedia": [
+        "FS",
+        "H2O",
+        "2e",
+        "10e"
+      ],
+      "eluatePrefixE": false,
+      "pvFlag": false,
+      "requiresPv": [
+        "2e",
+        "10e"
+      ],
+      "functionGroup": null
+    },
+    {
+      "key": "SBP",
+      "label": "SBP",
+      "labelLong": "SBP",
+      "allowedLabs": [
+        "EMD"
+      ],
+      "defaultLab": "EMD",
+      "allowedMedia": [
+        "FS",
+        "H2O",
+        "2e",
+        "10e"
+      ],
+      "eluatePrefixE": false,
+      "pvFlag": false,
+      "requiresPv": [
+        "2e",
+        "10e"
+      ],
+      "functionGroup": null
+    },
+    {
+      "key": "SK 4,3",
+      "label": "SK 4,3",
+      "labelLong": "SK 4,3",
+      "allowedLabs": [
+        "EMD"
+      ],
+      "defaultLab": "EMD",
+      "allowedMedia": [
+        "FS",
+        "H2O",
+        "2e",
+        "10e"
+      ],
+      "eluatePrefixE": false,
+      "pvFlag": false,
+      "requiresPv": [
+        "2e",
+        "10e"
+      ],
+      "functionGroup": null
+    },
+    {
+      "key": "Sn",
+      "label": "Sn",
+      "labelLong": "Sn",
+      "allowedLabs": [
+        "HB"
+      ],
+      "defaultLab": "HB",
+      "allowedMedia": [
+        "FS",
+        "H2O",
+        "2e",
+        "10e"
+      ],
+      "eluatePrefixE": true,
+      "pvFlag": false,
+      "requiresPv": [
+        "2e",
+        "10e"
+      ],
+      "functionGroup": "SM"
+    },
+    {
+      "key": "SNK",
+      "label": "SNK",
+      "labelLong": "SNK",
+      "allowedLabs": [
+        "EMD"
+      ],
+      "defaultLab": "EMD",
+      "allowedMedia": [
+        "FS",
+        "H2O",
+        "2e",
+        "10e"
+      ],
+      "eluatePrefixE": false,
+      "pvFlag": false,
+      "requiresPv": [
+        "2e",
+        "10e"
+      ],
+      "functionGroup": null
+    },
+    {
+      "key": "SO4",
+      "label": "SO4",
+      "labelLong": "SO4",
+      "allowedLabs": [
+        "EMD",
+        "HB"
+      ],
+      "defaultLab": "EMD",
+      "allowedMedia": [
+        "H2O",
+        "2e",
+        "10e"
+      ],
+      "eluatePrefixE": true,
+      "pvFlag": false,
+      "requiresPv": [
+        "2e",
+        "10e"
+      ],
+      "functionGroup": "AN"
+    },
+    {
+      "key": "Temp",
+      "label": "Temparatur",
+      "labelLong": "Temparatur",
+      "allowedLabs": [
+        "EMD",
+        "HB"
+      ],
+      "defaultLab": "EMD",
+      "allowedMedia": [
+        "FS",
+        "H2O",
+        "2e",
+        "10e"
+      ],
+      "eluatePrefixE": false,
+      "pvFlag": false,
+      "requiresPv": [
+        "2e",
+        "10e"
+      ],
+      "functionGroup": null
+    },
+    {
+      "key": "Tl",
+      "label": "Tl",
+      "labelLong": "Tl",
+      "allowedLabs": [
+        "HB"
+      ],
+      "defaultLab": "HB",
+      "allowedMedia": [
+        "FS",
+        "H2O",
+        "2e",
+        "10e"
+      ],
+      "eluatePrefixE": true,
+      "pvFlag": false,
+      "requiresPv": [
+        "2e",
+        "10e"
+      ],
+      "functionGroup": "SM"
+    },
+    {
+      "key": "TNb",
+      "label": "TNb",
+      "labelLong": "TNb",
+      "allowedLabs": [
+        "HB"
+      ],
+      "defaultLab": "HB",
+      "allowedMedia": [
+        "FS",
+        "H2O",
+        "2e",
+        "10e"
+      ],
+      "eluatePrefixE": false,
+      "pvFlag": false,
+      "requiresPv": [
+        "2e",
+        "10e"
+      ],
+      "functionGroup": null
+    },
+    {
+      "key": "TOC",
+      "label": "TOC",
+      "labelLong": "TOC",
+      "allowedLabs": [
+        "HB"
+      ],
+      "defaultLab": "HB",
+      "allowedMedia": [
+        "FS",
+        "H2O",
+        "2e",
+        "10e"
+      ],
+      "eluatePrefixE": true,
+      "pvFlag": true,
+      "requiresPv": [
+        "2e",
+        "10e"
+      ],
+      "functionGroup": null
+    },
+    {
+      "key": "Trübung",
+      "label": "Trübung",
+      "labelLong": "Trübung",
+      "allowedLabs": [
+        "EMD"
+      ],
+      "defaultLab": "EMD",
+      "allowedMedia": [
+        "FS",
+        "H2O",
+        "2e",
+        "10e"
+      ],
+      "eluatePrefixE": false,
+      "pvFlag": false,
+      "requiresPv": [
+        "2e",
+        "10e"
+      ],
+      "functionGroup": null
+    },
+    {
+      "key": "V",
+      "label": "V",
+      "labelLong": "V",
+      "allowedLabs": [
+        "HB"
+      ],
+      "defaultLab": "HB",
+      "allowedMedia": [
+        "FS",
+        "H2O",
+        "2e",
+        "10e"
+      ],
+      "eluatePrefixE": true,
+      "pvFlag": false,
+      "requiresPv": [
+        "2e",
+        "10e"
+      ],
+      "functionGroup": "SM"
+    },
+    {
+      "key": "Zn",
+      "label": "Zn",
+      "labelLong": "Zn",
+      "allowedLabs": [
+        "HB"
+      ],
+      "defaultLab": "HB",
+      "allowedMedia": [
+        "FS",
+        "H2O",
+        "2e",
+        "10e"
+      ],
+      "eluatePrefixE": true,
+      "pvFlag": false,
+      "requiresPv": [
+        "2e",
+        "10e"
+      ],
+      "functionGroup": "SM"
+    }
+  ],
+  "updatedAt": "2026-02-21T16:33:53.110Z"
+}

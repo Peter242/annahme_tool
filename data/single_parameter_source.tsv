@@ -1,0 +1,74 @@
+Zielzeile	Zielparameter	Funktion
+EMD	F	AN
+EMD	Cl	AN
+EMD	Br	AN
+EMD	NO3	AN
+EMD	NO3-N	AN
+EMD	SO4	AN
+EMD	NH4	
+EMD	NH4-N	
+EMD	NO2	
+EMD	NO2-N	
+EMD	ortho-P	
+EMD	Fe(II)	
+EMD	Cr(VI)	
+EMD	Phenole ges	
+EMD	Phenole wdf	
+EMD	SAK 254	
+EMD	SAK 436	
+EMD	CN lf	
+EMD	CN ges	
+EMD	Huminstoffe	
+EMD	Trübung	
+EMD	CSB	
+EMD	BSB	
+EMD	SNK	
+EMD	SBP	
+EMD	SK 4,3	
+EMD	BK 8,2	
+EMD	HCO3	
+EMD	pH	
+EMD	el.Lf.	
+EMD	T	
+EMD	GV	
+EMD	Kjeldahl	
+EMD	AT4	
+EMD	Brennwert	
+EMD	Heizwert	
+HB	As	SM
+HB	Pb	SM
+HB	Cd	SM
+HB	Cr	SM
+HB	Cu	SM
+HB	Ni	SM
+HB	Zn	SM
+HB	Hg	SM
+HB	Al	SM
+HB	Fe	SM
+HB	Mn	SM
+HB	Na	SM
+HB	K	SM
+HB	Ca	SM
+HB	Mg	SM
+HB	B	SM
+HB	Pges	SM
+HB	Co	SM
+HB	Sn	SM
+HB	Ag	SM
+HB	Au	SM
+HB	V	SM
+HB	Ba	SM
+HB	Mo	SM
+HB	Tl	SM
+HB	PAK	
+HB	ePAK	
+HB	PCB	
+HB	ePCB	
+HB	LHKW	
+HB	BTEX	
+HB	LCKW	
+HB	AOX	
+HB	TOC	
+HB	DOC	
+HB	TNb	
+HB	EOX	
