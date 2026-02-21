@@ -13,6 +13,7 @@
   "backupIntervalMinutes": 60,
   "backupRetentionDays": 14,
   "backupZip": false,
+  "backupDir": "./backups",
   "uiShowPackagePreview": true,
   "uiKuerzelPreset": [
     "AD",

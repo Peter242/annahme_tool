@@ -36,6 +36,7 @@ Beispiel:
   "backupIntervalMinutes": 60,
   "backupRetentionDays": 14,
   "backupZip": false,
+  "backupDir": "./backups",
   "uiShowPackagePreview": true,
   "uiDefaultEilig": "ja"
 }
@@ -48,6 +49,7 @@ Backup-Optionen:
 - `backupIntervalMinutes`: Intervall in Minuten (nur bei `interval`)
 - `backupRetentionDays`: Loeschung alter Backups
 - `backupZip`: Dateiendung `.zip` statt `.xlsx`
+- `backupDir`: Zielordner fuer Backups (relativ zum Projekt oder absolut)
 
 ## Start
 
@@ -91,6 +93,13 @@ Server laeuft auf `http://localhost:3000`.
 - `GET /api/config/validate?excelPath=...`
   - prueft Excel-Pfad, Sheet `Vorlagen` mit mind. 1 Paket, Jahresblatt `yearSheetName` (oder aktuelles Jahr falls leer)
   - Antwort: `warnings`, `errors`
+- `GET /api/backups/validate?dir=...`
+  - prueft Backup-Zielordner, liefert absoluten Pfad und Schreibbarkeit
+  - Antwort: `ok`, `writable`, `absolutePath`, `message`
+- `POST /api/backups/create`
+  - erstellt manuell sofort ein Backup im konfigurierten `backupDir` (auch bei `backupEnabled: false`)
+  - optional Body: `{ "force": true }`
+  - Antwort bei Erfolg: `ok`, `created`, `fileName`, `absoluteBackupPath`, `cleanupDeleted`
 - `POST /api/writer/login`
   - Body: `{ "token": "..." }`
   - validiert gegen `writerToken` aus Config

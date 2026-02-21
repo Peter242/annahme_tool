@@ -5,7 +5,7 @@ const express = require('express');
 const ExcelJS = require('exceljs');
 const { z } = require('zod');
 const { makeOrderNumber, nextLabNumbers } = require('./src/numbering');
-const { ensureBackupBeforeCommit } = require('./src/backup');
+const { ensureBackupBeforeCommit, createManualBackup, resolveBackupDir, ensureBackupDirWritable } = require('./src/backup');
 const { importPackagesFromExcel } = require('./src/packages/importFromExcel');
 const { readPackages, writePackages, invalidatePackagesCache } = require('./src/packages/store');
 const { createImportPackagesHandler } = require('./src/packages/importRoute');
@@ -40,6 +40,7 @@ const configSchema = z
     backupIntervalMinutes: z.number().int().positive(),
     backupRetentionDays: z.number().int().nonnegative(),
     backupZip: z.boolean(),
+    backupDir: z.string().trim().min(1),
     uiShowPackagePreview: z.boolean(),
     uiKuerzelPreset: z.array(z.string()),
     uiRequiredFields: z.array(z.string()),
@@ -75,6 +76,7 @@ const defaultConfig = {
   backupIntervalMinutes: 60,
   backupRetentionDays: 14,
   backupZip: false,
+  backupDir: './backups',
   uiShowPackagePreview: true,
   uiKuerzelPreset: ['AD', 'DV', 'LB', 'DH', 'SE', 'JO', 'RS', 'KH'],
   uiRequiredFields: [
@@ -865,6 +867,7 @@ const level1Fields = [
   'backupIntervalMinutes',
   'backupRetentionDays',
   'backupZip',
+  'backupDir',
   'uiShowPackagePreview',
   'uiKuerzelPreset',
   'uiRequiredFields',
@@ -888,6 +891,7 @@ const configUpdateSchema = z.object({
   backupIntervalMinutes: z.number().int().positive().optional(),
   backupRetentionDays: z.number().int().nonnegative().optional(),
   backupZip: z.boolean().optional(),
+  backupDir: z.string().trim().min(1).optional(),
   uiShowPackagePreview: z.boolean().optional(),
   uiKuerzelPreset: z.array(z.string()).optional(),
   uiRequiredFields: z.array(z.string()).optional(),
@@ -1508,6 +1512,85 @@ app.get('/api/config/validate', async (req, res) => {
     absoluteExcelPath,
     warnings,
     errors,
+  });
+});
+
+app.get('/api/backups/validate', (req, res) => {
+  const querySchema = z.object({
+    dir: z.string().optional(),
+  });
+  const parsedQuery = querySchema.safeParse(req.query);
+  if (!parsedQuery.success) {
+    return res.status(400).json({
+      ok: false,
+      writable: false,
+      absolutePath: null,
+      message: 'Ungueltige Query Parameter',
+      errors: parsedQuery.error.flatten(),
+    });
+  }
+
+  const config = getConfig();
+  const dirInput = typeof parsedQuery.data.dir === 'string' ? parsedQuery.data.dir : config.backupDir;
+  const rawDir = String(dirInput || '').trim();
+  if (!rawDir) {
+    return res.status(200).json({
+      ok: false,
+      writable: false,
+      absolutePath: null,
+      message: 'Bitte einen Backup-Ordner angeben.',
+    });
+  }
+
+  const absolutePath = resolveBackupDir(__dirname, rawDir);
+  const writableCheck = ensureBackupDirWritable(absolutePath);
+  return res.status(200).json({
+    ok: writableCheck.ok,
+    writable: writableCheck.ok,
+    absolutePath,
+    message: writableCheck.ok ? 'Backup-Ordner ist vorhanden und beschreibbar.' : `Backup-Ordner ist nicht beschreibbar: ${writableCheck.message}`,
+  });
+});
+
+app.post('/api/backups/create', (req, res) => {
+  const schema = z.object({
+    force: z.boolean().optional(),
+  }).strict();
+  const parsedBody = schema.safeParse(req.body || {});
+  if (!parsedBody.success) {
+    return res.status(400).json({
+      ok: false,
+      reason: 'invalid_payload',
+      message: 'Ungueltiges Payload',
+      errors: parsedBody.error.flatten(),
+    });
+  }
+
+  const config = getConfig();
+  const backup = createManualBackup({
+    config,
+    excelPath: config.excelPath,
+    rootDir: __dirname,
+  }, {
+    force: parsedBody.data.force === true,
+  });
+
+  if (!backup.created) {
+    return res.status(400).json({
+      ok: false,
+      reason: backup.reason || 'backup_failed',
+      message: backup.message || 'Backup konnte nicht erstellt werden.',
+      cleanupDeleted: Array.isArray(backup.cleanupDeleted) ? backup.cleanupDeleted : [],
+    });
+  }
+
+  return res.json({
+    ok: true,
+    created: true,
+    reason: backup.reason,
+    fileName: backup.fileName,
+    absoluteBackupPath: backup.absoluteBackupPath,
+    cleanupDeleted: Array.isArray(backup.cleanupDeleted) ? backup.cleanupDeleted : [],
   });
 });
 

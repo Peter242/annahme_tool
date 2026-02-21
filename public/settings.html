@@ -214,11 +214,23 @@
                   </div>
                 </div>
               </div>
+
+              <div class="settings-row-full">
+                <label for="backup-dir">Backup-Ordner</label>
+                <input id="backup-dir" type="text" placeholder="./backups oder C:\Annahme\Backups" />
+                <div class="field-help">Relative Pfade sind relativ zum Projektordner, absolute Pfade werden direkt genutzt.</div>
+              </div>
             </div>
 
             <div class="action-row">
-              <button type="button" id="save-backups" class="primary">Änderungen speichern</button>
+              <button type="button" id="create-backup-now" class="primary">Backup jetzt erstellen</button>
+              <button type="button" id="pick-backup-dir">Ordner wählen...</button>
+              <button type="button" id="validate-backup-dir">Pfad prüfen</button>
+              <button type="button" id="save-backups">Änderungen speichern</button>
             </div>
+            <div class="field-help">Manuelle Backups sind auch möglich, wenn automatische Backups deaktiviert sind.</div>
+            <div id="backup-dir-msg" class="inline-error hidden"></div>
+            <div id="manual-backup-msg" class="inline-ok hidden"></div>
           </section>
 
           <section id="listen" class="settings-section">
@@ -286,6 +298,12 @@
       const backupIntervalInput = document.getElementById('backup-interval');
       const backupRetentionInput = document.getElementById('backup-retention');
       const backupZipInput = document.getElementById('backup-zip');
+      const backupDirInput = document.getElementById('backup-dir');
+      const pickBackupDirButton = document.getElementById('pick-backup-dir');
+      const validateBackupDirButton = document.getElementById('validate-backup-dir');
+      const createBackupNowButton = document.getElementById('create-backup-now');
+      const backupDirMsg = document.getElementById('backup-dir-msg');
+      const manualBackupMsg = document.getElementById('manual-backup-msg');
 
       function showSection(target) {
         navButtons.forEach((button) => {
@@ -317,11 +335,12 @@
         backupIntervalInput.value = Number(state.backupIntervalMinutes || 60);
         backupRetentionInput.value = Number(state.backupRetentionDays || 14);
         backupZipInput.checked = Boolean(state.backupZip);
+        backupDirInput.value = state.backupDir || './backups';
         backupIntervalWrap.classList.toggle('hidden', backupPolicyInput.value !== 'interval');
       }
 
       function clearMessages() {
-        [validateMsg, excelPathMsg, cacheMsg].forEach((el) => {
+        [validateMsg, excelPathMsg, cacheMsg, backupDirMsg, manualBackupMsg].forEach((el) => {
           el.classList.add('hidden');
           el.textContent = '';
           el.classList.remove('inline-error', 'inline-ok');
@@ -348,6 +367,7 @@
         state.backupIntervalMinutes = Number(backupIntervalInput.value);
         state.backupRetentionDays = Number(backupRetentionInput.value);
         state.backupZip = backupZipInput.checked;
+        state.backupDir = String(backupDirInput.value || '').trim();
       }
 
       function mergeAndRender(config) {
@@ -371,6 +391,22 @@
 
       backupPolicyInput.addEventListener('change', () => {
         backupIntervalWrap.classList.toggle('hidden', backupPolicyInput.value !== 'interval');
+      });
+
+      const canPickBackupDir = typeof window.showDirectoryPicker === 'function';
+      if (!canPickBackupDir) {
+        pickBackupDirButton.disabled = true;
+        pickBackupDirButton.title = 'Ordnerauswahl wird von diesem Browser nicht unterstützt.';
+      }
+
+      pickBackupDirButton.addEventListener('click', async () => {
+        if (!canPickBackupDir) return;
+        try {
+          await window.showDirectoryPicker();
+          showToast('info', 'Bitte den gewünschten Ordnerpfad manuell ins Feld eintragen.');
+        } catch (_error) {
+          // user canceled; no action
+        }
       });
 
       document.getElementById('save-allgemein').addEventListener('click', async () => {
@@ -423,6 +459,12 @@
           showToast('error', 'Aufbewahrungstage müssen 0 oder größer sein.');
           return;
         }
+        if (!state.backupDir) {
+          backupDirMsg.textContent = 'Bitte einen Backup-Ordner eintragen.';
+          backupDirMsg.classList.remove('hidden');
+          showToast('error', backupDirMsg.textContent);
+          return;
+        }
         try {
           const config = await saveConfig({
             backupEnabled: state.backupEnabled,
@@ -430,11 +472,60 @@
             backupIntervalMinutes: state.backupIntervalMinutes,
             backupRetentionDays: state.backupRetentionDays,
             backupZip: state.backupZip,
+            backupDir: state.backupDir,
           });
           mergeAndRender(config);
           showToast('success', 'Gespeichert');
         } catch (error) {
           showToast('error', error.message);
+        }
+      });
+
+      validateBackupDirButton.addEventListener('click', async () => {
+        clearMessages();
+        updateStateFromBackups();
+        if (!state.backupDir) {
+          backupDirMsg.textContent = 'Bitte zuerst einen Backup-Ordner eintragen.';
+          backupDirMsg.classList.remove('hidden');
+          backupDirMsg.classList.add('inline-error');
+          return;
+        }
+        try {
+          const result = await validateBackupDir(state.backupDir);
+          backupDirMsg.textContent = result.message || `Pfad OK: ${result.absolutePath}`;
+          backupDirMsg.classList.remove('hidden');
+          backupDirMsg.classList.add(result.ok ? 'inline-ok' : 'inline-error');
+          showToast(result.ok ? 'success' : 'error', backupDirMsg.textContent);
+        } catch (error) {
+          backupDirMsg.textContent = error.message;
+          backupDirMsg.classList.remove('hidden');
+          backupDirMsg.classList.add('inline-error');
+          showToast('error', error.message);
+        }
+      });
+
+      createBackupNowButton.addEventListener('click', async () => {
+        const originalText = createBackupNowButton.textContent;
+        createBackupNowButton.disabled = true;
+        createBackupNowButton.textContent = 'Erstelle Backup...';
+        backupDirMsg.classList.add('hidden');
+        manualBackupMsg.classList.add('hidden');
+        manualBackupMsg.classList.remove('inline-error');
+        manualBackupMsg.classList.add('inline-ok');
+        try {
+          const result = await createManualBackup(true);
+          manualBackupMsg.textContent = `Backup erstellt: ${result.fileName} (${result.absoluteBackupPath})`;
+          manualBackupMsg.classList.remove('hidden');
+          showToast('success', `Backup erstellt: ${result.fileName}`);
+        } catch (error) {
+          manualBackupMsg.textContent = error.message;
+          manualBackupMsg.classList.remove('hidden');
+          manualBackupMsg.classList.remove('inline-ok');
+          manualBackupMsg.classList.add('inline-error');
+          showToast('error', error.message);
+        } finally {
+          createBackupNowButton.disabled = false;
+          createBackupNowButton.textContent = originalText;
         }
       });
 

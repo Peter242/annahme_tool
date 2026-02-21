@@ -89,6 +89,27 @@ async function validateExcelPath(excelPath) {
   return data;
 }
 
+async function validateBackupDir(backupDir) {
+  const query = new URLSearchParams({ dir: backupDir }).toString();
+  const { response, data } = await fetchJson(`/api/backups/validate?${query}`);
+  if (!response.ok) {
+    throw new Error(flattenErrorMessage(data, 'Backup-Pfadpruefung fehlgeschlagen'));
+  }
+  return data;
+}
+
+async function createManualBackup(force = false) {
+  const { response, data } = await fetchJson('/api/backups/create', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ force: force === true }),
+  });
+  if (!response.ok || data.ok !== true || data.created !== true) {
+    throw new Error(flattenErrorMessage(data, 'Manuelles Backup fehlgeschlagen'));
+  }
+  return data;
+}
+
 async function resetCache() {
   const { response, data } = await fetchJson('/api/state/reset', { method: 'POST' });
   if (!response.ok || data.ok !== true) {
