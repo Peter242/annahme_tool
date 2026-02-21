@@ -17,6 +17,7 @@ const { getComWorkerClient } = require('./src/writers/comWorkerClient');
 const { calculateTermin } = require('./src/termin');
 const { buildParameterTextFromSelection } = require('./src/parameterTextBuilder');
 const { mapTogglesToSelection } = require('./src/singleParamsMapper');
+const { tryMergeLegacyPackage } = require('./src/legacyPackageMerger');
 const {
   QUICK_CONTAINER_DEFAULTS,
   normalizeQuickContainerConfig,
@@ -102,8 +103,10 @@ const defaultConfig = {
 
 const configPath = path.join(__dirname, 'config.json');
 const singleParameterCatalogPath = path.join(__dirname, 'data', 'single_parameter_catalog.json');
+const builderPackagesPath = path.join(__dirname, 'data', 'builder_packages.json');
 let singleParameterCatalogCache = null;
 let singleParameterCatalogUpdatedAt = null;
+let builderPackagesCache = null;
 
 function loadSingleParameterCatalog() {
   if (!singleParameterCatalogCache) {
@@ -112,6 +115,69 @@ function loadSingleParameterCatalog() {
     singleParameterCatalogUpdatedAt = String(singleParameterCatalogCache?.updatedAt || '').trim() || null;
   }
   return singleParameterCatalogCache;
+}
+
+function defaultBuilderPackagesStore() {
+  return {
+    version: 1,
+    updatedAt: '',
+    packages: [],
+  };
+}
+
+function normalizeBuilderPackage(entry) {
+  if (!entry || typeof entry !== 'object') return null;
+  const id = String(entry.id || '').trim();
+  const name = String(entry.name || '').trim();
+  if (!id || !name) return null;
+  const createdAt = String(entry.createdAt || '').trim();
+  const updatedAt = String(entry.updatedAt || '').trim();
+  const definition = entry.definition && typeof entry.definition === 'object'
+    ? entry.definition
+    : { toggles: {} };
+  return {
+    id,
+    type: 'builder',
+    name,
+    createdAt: createdAt || updatedAt || new Date().toISOString(),
+    updatedAt: updatedAt || createdAt || new Date().toISOString(),
+    definition,
+  };
+}
+
+function loadBuilderPackagesStore() {
+  if (builderPackagesCache) return builderPackagesCache;
+  if (!fs.existsSync(builderPackagesPath)) {
+    const initial = defaultBuilderPackagesStore();
+    fs.writeFileSync(builderPackagesPath, `${JSON.stringify(initial, null, 2)}\n`, 'utf-8');
+    builderPackagesCache = initial;
+    return builderPackagesCache;
+  }
+  const raw = fs.readFileSync(builderPackagesPath, 'utf-8');
+  const parsed = JSON.parse(raw);
+  const source = parsed && typeof parsed === 'object' ? parsed : defaultBuilderPackagesStore();
+  builderPackagesCache = {
+    version: Number(source.version || 1),
+    updatedAt: String(source.updatedAt || '').trim(),
+    packages: (Array.isArray(source.packages) ? source.packages : [])
+      .map(normalizeBuilderPackage)
+      .filter(Boolean),
+  };
+  return builderPackagesCache;
+}
+
+function saveBuilderPackagesStore(store) {
+  const source = store && typeof store === 'object' ? store : defaultBuilderPackagesStore();
+  const normalized = {
+    version: Number(source.version || 1),
+    updatedAt: String(source.updatedAt || '').trim() || new Date().toISOString(),
+    packages: (Array.isArray(source.packages) ? source.packages : [])
+      .map(normalizeBuilderPackage)
+      .filter(Boolean),
+  };
+  fs.writeFileSync(builderPackagesPath, `${JSON.stringify(normalized, null, 2)}\n`, 'utf-8');
+  builderPackagesCache = normalized;
+  return normalized;
 }
 
 function loadConfig() {
@@ -940,6 +1006,7 @@ const sampleSchema = z
     paketKey: z.string().trim().optional(),
     parameterTextPreview: z.string().optional(),
     singleParams: z.any().optional(),
+    packageAddons: z.array(z.string().trim().min(1)).optional(),
     tiefeVolumen: z.union([z.string(), z.number()]).optional(),
     tiefeOderVolumen: z.string().trim().optional(),
     geruch: z.string().trim().optional(),
@@ -1062,22 +1129,233 @@ function buildHeaderILinesPreview(order, now = new Date()) {
   return lines;
 }
 
+function normalizeSingleParamsTogglesForMerge(value) {
+  const source = value && typeof value === 'object' ? value : {};
+  const out = {};
+  Object.entries(source).forEach(([rawKey, toggle]) => {
+    const key = String(rawKey || '').trim();
+    if (!key || !toggle || typeof toggle !== 'object' || toggle.selected !== true) return;
+    const media = {};
+    const sourceMedia = toggle.media && typeof toggle.media === 'object' ? toggle.media : {};
+    Object.entries(sourceMedia).forEach(([medium, enabled]) => {
+      const mediumKey = String(medium || '').trim();
+      if (mediumKey && enabled === true) media[mediumKey] = true;
+    });
+    out[key] = {
+      selected: true,
+      lab: String(toggle.lab || '').trim(),
+      media,
+      vorOrt: toggle.vorOrt === true,
+    };
+  });
+  return out;
+}
+
+function stripExistingPktLines(text) {
+  if (!text) return '';
+  const lines = String(text).split(/\r?\n/);
+  const out = lines.filter((line) => !String(line).trimStart().toUpperCase().startsWith('PKT:'));
+  return out.join('\n').trim();
+}
+
+function buildPktAddonSuffixFromToggles(catalog, toggles) {
+  if (!toggles || typeof toggles !== 'object') return '';
+  const params = Array.isArray(catalog?.parameters) ? catalog.parameters : [];
+  const byKey = new Map(params.map((p) => [String(p?.key || '').trim(), p]));
+  const labels = [];
+  Object.entries(toggles).forEach(([rawKey, toggle]) => {
+    const key = String(rawKey || '').trim();
+    if (!key || !toggle || toggle.selected !== true) return;
+    const param = byKey.get(key);
+    const labelLong = String(param?.labelLong || '').trim();
+    labels.push(labelLong || key);
+  });
+  const unique = Array.from(new Set(labels));
+  unique.sort((a, b) => a.localeCompare(b, 'de', { sensitivity: 'base' }));
+  if (unique.length < 1) return '';
+  return `+${unique.join(', +')}`;
+}
+
+function getProbeSingleParamToggles(probe) {
+  const singleParams = probe?.singleParams;
+  if (!singleParams || typeof singleParams !== 'object') return {};
+  const toggles = singleParams.toggles && typeof singleParams.toggles === 'object'
+    ? singleParams.toggles
+    : {};
+  return normalizeSingleParamsTogglesForMerge(toggles);
+}
+
+function isBuilderPackageId(value) {
+  return String(value || '').trim().toLowerCase().startsWith('builder:');
+}
+
+function normalizeBuilderPackageId(value) {
+  const raw = String(value || '').trim();
+  if (!raw) return '';
+  return raw.replace(/^builder:/i, '').trim();
+}
+
+function mergeBuilderPackageAddonToggles(baseToggles, addonToggles) {
+  const base = normalizeSingleParamsTogglesForMerge(baseToggles);
+  const addons = normalizeSingleParamsTogglesForMerge(addonToggles);
+  const merged = {};
+  const keys = new Set([...Object.keys(base), ...Object.keys(addons)]);
+  keys.forEach((key) => {
+    const baseToggle = base[key];
+    const addonToggle = addons[key];
+    if (baseToggle && !addonToggle) {
+      merged[key] = baseToggle;
+      return;
+    }
+    if (!baseToggle && addonToggle) {
+      merged[key] = addonToggle;
+      return;
+    }
+    if (!baseToggle || !addonToggle) return;
+    const media = {};
+    const baseMedia = baseToggle.media && typeof baseToggle.media === 'object' ? baseToggle.media : {};
+    const addonMedia = addonToggle.media && typeof addonToggle.media === 'object' ? addonToggle.media : {};
+    Object.entries(baseMedia).forEach(([medium, enabled]) => {
+      if (enabled === true) media[medium] = true;
+    });
+    Object.entries(addonMedia).forEach(([medium, enabled]) => {
+      if (enabled === true) media[medium] = true;
+    });
+    const vorOrt = baseToggle.vorOrt === true || addonToggle.vorOrt === true;
+    merged[key] = {
+      selected: true,
+      lab: String(baseToggle.lab || '').trim() || String(addonToggle.lab || '').trim(),
+      media: vorOrt ? {} : media,
+      vorOrt,
+    };
+  });
+  return merged;
+}
+
+function resolvePackageTextForProbe({ probe, packageById, builderPackageById, catalog }) {
+  const packageId = String(probe?.packageId || '').trim();
+  if (!packageId) {
+    return {
+      text: String(probe?.parameterTextPreview || '').trim(),
+      legacyMergeStatus: null,
+      legacyMergeReason: null,
+    };
+  }
+
+  if (isBuilderPackageId(packageId)) {
+    const builderId = normalizeBuilderPackageId(packageId);
+    const builderPackage = builderPackageById.get(builderId) || null;
+    if (!builderPackage || !catalog) {
+      return {
+        text: String(probe?.parameterTextPreview || '').trim(),
+        legacyMergeStatus: null,
+        legacyMergeReason: null,
+      };
+    }
+    const definition = builderPackage.definition && typeof builderPackage.definition === 'object'
+      ? builderPackage.definition
+      : {};
+    const baseToggles = definition && typeof definition.toggles === 'object' ? definition.toggles : {};
+    const addonToggles = getProbeSingleParamToggles(probe);
+    const mergedToggles = mergeBuilderPackageAddonToggles(baseToggles, addonToggles);
+    const addonSuffix = buildPktAddonSuffixFromToggles(catalog, addonToggles);
+    const selection = mapTogglesToSelection({
+      catalog,
+      toggles: mergedToggles,
+    });
+    const builtText = buildParameterTextFromSelection(selection);
+    const packageName = String(builderPackage.name || builderId || packageId).trim();
+    const pktHeader = packageName ? `PKT: ${packageName}${addonSuffix}` : '';
+    if (!pktHeader) {
+      return { text: builtText, legacyMergeStatus: null, legacyMergeReason: null };
+    }
+    if (!builtText) {
+      return { text: pktHeader, legacyMergeStatus: null, legacyMergeReason: null };
+    }
+    return { text: `${pktHeader}\n${builtText}`, legacyMergeStatus: null, legacyMergeReason: null };
+  }
+
+  const packageTemplate = packageById.get(packageId) || null;
+  const packageDisplayName = packageTemplate
+    ? String(packageTemplate.displayName || packageTemplate.name || packageTemplate.id || packageId).trim()
+    : String(packageId).trim();
+  const rawBaseText = packageTemplate ? String(packageTemplate.text || '').trim() : String(probe?.parameterTextPreview || '').trim();
+  const baseText = stripExistingPktLines(rawBaseText);
+  const addonToggles = getProbeSingleParamToggles(probe);
+  const addonSuffix = buildPktAddonSuffixFromToggles(catalog, addonToggles);
+  let addonText = '';
+  if (probe?.singleParams) {
+    if (catalog && probe.singleParams && typeof probe.singleParams === 'object' && probe.singleParams.toggles) {
+      const addonSelection = mapTogglesToSelection({
+        catalog,
+        toggles: probe.singleParams.toggles,
+      });
+      addonText = buildParameterTextFromSelection(addonSelection);
+    } else {
+      addonText = buildParameterTextFromSelection(probe.singleParams);
+    }
+  }
+  let combinedBody = baseText;
+  let legacyMergeStatus = 'merged';
+  let legacyMergeReason = null;
+  if (String(addonText || '').trim()) {
+    const mergeResult = tryMergeLegacyPackage(baseText, addonText);
+    if (mergeResult.ok) {
+      combinedBody = String(mergeResult.mergedText || '').trim();
+      legacyMergeStatus = 'merged';
+      legacyMergeReason = null;
+    } else {
+      const addon = String(addonText || '').trim();
+      combinedBody = [baseText, addon].filter(Boolean).join('\n');
+      legacyMergeStatus = 'appended';
+      legacyMergeReason = String(mergeResult.reason || 'merge_failed').trim();
+    }
+  }
+  const pktHeader = packageDisplayName ? `PKT: ${packageDisplayName}${addonSuffix}` : '';
+  const sections = [pktHeader, combinedBody].filter(Boolean);
+  return {
+    text: sections.join('\n'),
+    legacyMergeStatus,
+    legacyMergeReason,
+  };
+}
+
 function buildOrderPreview(order, options = {}) {
   const { lastLabNo = 26203, now = new Date() } = options;
   const warnings = [];
   const packages = readPackages();
   const packageById = new Map(packages.map((pkg) => [pkg.id, pkg]));
+  let builderPackageById = new Map();
+  try {
+    const builderStore = loadBuilderPackagesStore();
+    const builderPackages = Array.isArray(builderStore?.packages) ? builderStore.packages : [];
+    builderPackageById = new Map(builderPackages.map((pkg) => [String(pkg?.id || '').trim(), pkg]));
+  } catch (_error) {
+    builderPackageById = new Map();
+  }
+  let singleParamCatalog = null;
+  try {
+    singleParamCatalog = loadSingleParameterCatalog();
+  } catch (_error) {
+    singleParamCatalog = null;
+  }
   const probes = Array.isArray(order.proben) ? order.proben : [];
   const vorschau = {
     ...order,
     headerILines: buildHeaderILinesPreview(order, now),
     proben: probes.map((probe) => {
-      const packageTemplate = probe.packageId ? packageById.get(probe.packageId) : null;
-      const renderedTextD = packageTemplate ? packageTemplate.text : (probe.parameterTextPreview || '');
+      const resolved = resolvePackageTextForProbe({
+        probe,
+        packageById,
+        builderPackageById,
+        catalog: singleParamCatalog,
+      });
       return {
         ...probe,
-        parameterTextPreview: renderedTextD,
-        renderedTextD,
+        parameterTextPreview: resolved.text,
+        renderedTextD: resolved.text,
+        legacyMergeStatus: resolved.legacyMergeStatus || undefined,
+        legacyMergeReason: resolved.legacyMergeReason || undefined,
       };
     }),
   };
@@ -1110,6 +1388,16 @@ async function buildCommitPreviewState(order, config, now = new Date()) {
   const absoluteExcelPath = resolveExcelPath(config.excelPath);
   const enrichedOrderResult = await applyPaketKeyTextsToOrder(order, absoluteExcelPath);
   const orderForWrite = enrichedOrderResult.order;
+  const packages = readPackages();
+  const packageById = new Map(packages.map((pkg) => [pkg.id, pkg]));
+  let builderPackageById = new Map();
+  try {
+    const builderStore = loadBuilderPackagesStore();
+    const builderPackages = Array.isArray(builderStore?.packages) ? builderStore.packages : [];
+    builderPackageById = new Map(builderPackages.map((pkg) => [String(pkg?.id || '').trim(), pkg]));
+  } catch (_error) {
+    builderPackageById = new Map();
+  }
   let singleParamCatalog = null;
   try {
     singleParamCatalog = loadSingleParameterCatalog();
@@ -1124,7 +1412,18 @@ async function buildCommitPreviewState(order, config, now = new Date()) {
       }
       const hasPackage = String(probe.packageId || '').trim() || String(probe.paketKey || '').trim();
       if (hasPackage) {
-        return { ...probe };
+        const resolved = resolvePackageTextForProbe({
+          probe,
+          packageById,
+          builderPackageById,
+          catalog: singleParamCatalog,
+        });
+        return {
+          ...probe,
+          parameterTextPreview: resolved.text,
+          legacyMergeStatus: resolved.legacyMergeStatus || undefined,
+          legacyMergeReason: resolved.legacyMergeReason || undefined,
+        };
       }
       if (!probe.singleParams) {
         return { ...probe };
@@ -1320,6 +1619,9 @@ app.get('/settings/', (req, res) => {
 });
 app.get('/single-parameters', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'single-parameters.html'));
+});
+app.get('/builder-packages', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'builder-packages.html'));
 });
 app.get('/settings/packages', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'packages.html'));
@@ -1788,6 +2090,125 @@ app.get('/api/packages', (req, res) => {
     return res.status(500).json({
       ok: false,
       message: error.message,
+    });
+  }
+});
+
+app.get('/api/builder-packages', (_req, res) => {
+  try {
+    const store = loadBuilderPackagesStore();
+    return res.status(200).json({
+      ok: true,
+      packages: store.packages,
+      updatedAt: store.updatedAt || null,
+    });
+  } catch (_error) {
+    return res.status(500).json({
+      ok: false,
+      message: 'Builder-Pakete konnten nicht geladen werden.',
+    });
+  }
+});
+
+app.post('/api/builder-packages', (req, res) => {
+  try {
+    const payload = req.body && typeof req.body === 'object' ? req.body : {};
+    const incoming = (payload.package && typeof payload.package === 'object')
+      ? payload.package
+      : payload;
+    if (!incoming) {
+      return res.status(400).json({
+        ok: false,
+        message: 'package fehlt.',
+      });
+    }
+    const nowIso = new Date().toISOString();
+    const name = String(incoming.name || '').trim();
+    if (!name) {
+      return res.status(400).json({
+        ok: false,
+        message: 'name ist erforderlich.',
+      });
+    }
+    const id = String(incoming.id || '').trim() || `bp_${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`;
+    const definition = incoming.definition && typeof incoming.definition === 'object'
+      ? incoming.definition
+      : { toggles: {} };
+
+    const store = loadBuilderPackagesStore();
+    const packages = Array.isArray(store.packages) ? [...store.packages] : [];
+    const existingIndex = packages.findIndex((entry) => String(entry.id || '').trim() === id);
+    const existing = existingIndex >= 0 ? packages[existingIndex] : null;
+    const record = normalizeBuilderPackage({
+      id,
+      type: 'builder',
+      name,
+      createdAt: existing?.createdAt || String(incoming.createdAt || '').trim() || nowIso,
+      updatedAt: nowIso,
+      definition,
+    });
+    if (!record) {
+      return res.status(400).json({
+        ok: false,
+        message: 'Builder-Paket ist ungültig.',
+      });
+    }
+    if (existingIndex >= 0) {
+      packages[existingIndex] = record;
+    } else {
+      packages.push(record);
+    }
+    const saved = saveBuilderPackagesStore({
+      ...store,
+      updatedAt: nowIso,
+      packages,
+    });
+    return res.status(200).json({
+      ok: true,
+      package: record,
+      packages: saved.packages,
+      updatedAt: saved.updatedAt || nowIso,
+    });
+  } catch (_error) {
+    return res.status(500).json({
+      ok: false,
+      message: 'Builder-Paket konnte nicht gespeichert werden.',
+    });
+  }
+});
+
+app.delete('/api/builder-packages/:id', (req, res) => {
+  try {
+    const id = String(req.params.id || '').trim();
+    if (!id) {
+      return res.status(400).json({
+        ok: false,
+        message: 'id fehlt.',
+      });
+    }
+    const store = loadBuilderPackagesStore();
+    const packages = Array.isArray(store.packages) ? store.packages : [];
+    const nextPackages = packages.filter((entry) => String(entry.id || '').trim() !== id);
+    if (nextPackages.length === packages.length) {
+      return res.status(404).json({
+        ok: false,
+        message: 'Builder-Paket nicht gefunden.',
+      });
+    }
+    const nowIso = new Date().toISOString();
+    const saved = saveBuilderPackagesStore({
+      ...store,
+      updatedAt: nowIso,
+      packages: nextPackages,
+    });
+    return res.status(200).json({
+      ok: true,
+      updatedAt: saved.updatedAt || nowIso,
+    });
+  } catch (_error) {
+    return res.status(500).json({
+      ok: false,
+      message: 'Builder-Paket konnte nicht gelöscht werden.',
     });
   }
 });

@@ -25,6 +25,7 @@
             <h2 class="section-title">Kopf</h2>
             <div class="head-action-row">
               <button type="button" id="new-order-btn" class="secondary head-action-btn" title="Neuer Auftrag" aria-label="Neuer Auftrag">Neu</button>
+              <button type="button" id="open-package-builder-modal" class="secondary head-action-btn" title="Paket Builder" aria-label="Paket Builder">Paket Builder</button>
               <button type="button" id="new-order-same-project-btn" class="secondary head-action-btn" title="Neuer Auftrag gleiches Projekt" aria-label="Neuer Auftrag gleiches Projekt">Neu gleiches Projekt</button>
               <button type="button" id="open-customers-modal" class="secondary head-action-btn" title="Kunden" aria-label="Kunden">Kunden</button>
               <button type="button" id="add-probe" class="secondary head-action-btn" title="Probe hinzufügen" aria-label="Probe hinzufügen">Probe +</button>
@@ -149,6 +150,7 @@
           <button type="button" data-action="single-params" class="secondary icon-btn" title="Einzelparameter" aria-label="Einzelparameter">Einzel...</button>
           <input name="parameterTextPreview" type="hidden" />
           <input name="singleParamsJson" type="hidden" />
+          <input name="packageAddonsJson" type="hidden" />
         </td>
         <td>
           <button type="button" data-action="gebinde" class="secondary icon-btn" title="Gebinde auswählen" aria-label="Gebinde auswählen">◐</button>
@@ -354,7 +356,7 @@
     <div id="single-params-modal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="single-params-modal-title" style="overflow: hidden;">
       <div class="modal-card" style="width: min(1200px, 95vw); max-height: 92vh; display: flex; flex-direction: column; overflow: hidden;">
         <h3 id="single-params-modal-title">Einzelparameter</h3>
-        <p id="single-params-package-warning" class="meta hidden">Paket ist gesetzt, Einzelparameter werden beim Commit ignoriert.</p>
+        <p id="single-params-package-warning" class="meta hidden"></p>
         <div id="single-params-body" style="display: grid; grid-template-columns: 1fr 1.2fr; gap: 16px; flex: 1 1 auto; min-height: 0;">
           <div style="display: flex; flex-direction: column; min-height: 0;">
             <div id="single-params-search-wrap" style="position: sticky; top: 0; background: inherit; z-index: 2; padding-bottom: 8px; flex: 0 0 auto;">
@@ -374,6 +376,35 @@
         <div class="modal-actions" style="flex: 0 0 auto;">
           <button type="button" id="single-params-cancel" class="secondary">Abbrechen</button>
           <button type="button" id="single-params-apply" class="primary">Übernehmen</button>
+        </div>
+      </div>
+    </div>
+    <div id="package-builder-modal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="package-builder-modal-title" style="overflow: hidden;">
+      <div class="modal-card" style="width: min(1200px, 95vw); max-height: 92vh; display: flex; flex-direction: column; overflow: hidden;">
+        <h3 id="package-builder-modal-title">Paket erstellen</h3>
+        <div style="display:flex; flex-direction:column; gap:8px; margin-bottom:8px;">
+          <label for="package-builder-name">Paketname</label>
+          <input id="package-builder-name" type="text" placeholder="Paketname" />
+        </div>
+        <div style="display: grid; grid-template-columns: 1fr 1.2fr; gap: 16px; flex: 1 1 auto; min-height: 0;">
+          <div style="display: flex; flex-direction: column; min-height: 0;">
+            <div style="position: sticky; top: 0; background: inherit; z-index: 2; padding-bottom: 8px; flex: 0 0 auto;">
+              <label for="package-builder-search">Suche</label>
+              <input id="package-builder-search" type="text" placeholder="Parameter suchen..." />
+            </div>
+            <div id="package-builder-list" class="list-editor" style="max-height: 70vh; overflow-y: auto; flex: 1 1 auto; min-height: 0;"></div>
+          </div>
+          <div style="display: flex; flex-direction: column; min-height: 0; gap: 10px;">
+            <div id="package-builder-selected-list" class="list-editor" style="flex: 1 1 auto; max-height: 58vh; overflow-y: auto; min-height: 0;"></div>
+            <div style="flex: 0 0 auto; display: flex; flex-direction: column;">
+              <label for="package-builder-preview">Vorschau</label>
+              <div id="package-builder-preview" style="height: 180px; min-height: 180px; max-height: 200px; overflow-y: auto; resize: vertical; border: 1px solid var(--line); border-radius: 8px; padding: 0.55rem 0.6rem; background: var(--surface-2); white-space: pre-wrap;"></div>
+            </div>
+          </div>
+        </div>
+        <div class="modal-actions" style="flex: 0 0 auto;">
+          <button type="button" id="package-builder-cancel" class="secondary">Abbrechen</button>
+          <button type="button" id="package-builder-save" class="primary">Speichern</button>
         </div>
       </div>
     </div>
@@ -522,6 +553,7 @@
       const addressPreviewBlock = document.getElementById('address-preview-block');
       const addressModalCancel = document.getElementById('address-modal-cancel');
       const addressModalApply = document.getElementById('address-modal-apply');
+      const openPackageBuilderModalButton = document.getElementById('open-package-builder-modal');
       const singleParamsModal = document.getElementById('single-params-modal');
       const singleParamsPackageWarning = document.getElementById('single-params-package-warning');
       const singleParamsSearchInput = document.getElementById('single-params-search');
@@ -530,6 +562,14 @@
       const singleParamsPreviewInput = document.getElementById('single-params-preview');
       const singleParamsCancel = document.getElementById('single-params-cancel');
       const singleParamsApply = document.getElementById('single-params-apply');
+      const packageBuilderModal = document.getElementById('package-builder-modal');
+      const packageBuilderNameInput = document.getElementById('package-builder-name');
+      const packageBuilderSearchInput = document.getElementById('package-builder-search');
+      const packageBuilderList = document.getElementById('package-builder-list');
+      const packageBuilderSelectedList = document.getElementById('package-builder-selected-list');
+      const packageBuilderPreview = document.getElementById('package-builder-preview');
+      const packageBuilderCancel = document.getElementById('package-builder-cancel');
+      const packageBuilderSave = document.getElementById('package-builder-save');
       const sidebarActionButtons = [
         addProbeButton,
         openBulkProbeModalButton,
@@ -556,7 +596,22 @@
       let pendingCustomerDeleteEntry = null;
       let activeProbeForSingleParamsModal = null;
       let singleParamsCatalog = { version: 1, parameters: [] };
-      let singleParamsModalState = { toggles: {}, search: '' };
+      let singleParamsModalState = {
+        toggles: {},
+        search: '',
+        packageSelectedType: '',
+        packageDisplayName: '',
+        packageBaseText: '',
+        packageBaseToggles: {},
+        legacyMergeStatus: '',
+        legacyMergeReason: '',
+      };
+      let packageBuilderState = {
+        editId: '',
+        name: '',
+        search: '',
+        toggles: {},
+      };
       const SINGLE_PARAM_USAGE_KEY = 'singleParamUsageCountsV1';
       const SINGLE_PARAM_CATALOG_UPDATED_AT_KEY = 'singleParamCatalogUpdatedAtV1';
       const DEFAULT_SINGLE_PARAM_GROUPS = [
@@ -629,12 +684,41 @@
       }
 
       async function loadPackages() {
-        const response = await fetch('/api/packages', { cache: 'no-store' });
-        const data = await response.json();
-        if (!response.ok || !Array.isArray(data)) {
-          throw new Error(data.message || 'Pakete konnten nicht geladen werden');
+        const [legacyResponse, builderResponse] = await Promise.all([
+          fetch('/api/packages', { cache: 'no-store' }),
+          fetch('/api/builder-packages', { cache: 'no-store' }),
+        ]);
+        const legacyData = await legacyResponse.json();
+        if (!legacyResponse.ok || !Array.isArray(legacyData)) {
+          throw new Error(legacyData.message || 'Pakete konnten nicht geladen werden');
         }
-        packages = data;
+        let builderData = [];
+        if (builderResponse.ok) {
+          const parsed = await builderResponse.json();
+          if (parsed && parsed.ok === true && Array.isArray(parsed.packages)) {
+            builderData = parsed.packages;
+          }
+        }
+        const builderPackages = builderData.map((pkg) => {
+          const definition = pkg && typeof pkg.definition === 'object' ? pkg.definition : {};
+          const toggles = definition && typeof definition.toggles === 'object' ? definition.toggles : {};
+          const selection = buildSelectionFromCatalogToggles(singleParamsCatalog, toggles);
+          const text = typeof window.buildParameterTextFromSelection === 'function'
+            ? window.buildParameterTextFromSelection(selection)
+            : buildPreviewTextFromToggles(singleParamsCatalog, toggles);
+          const name = String(pkg?.name || pkg?.id || '').trim();
+          const firstLine = String(text || '').split('\n').map((line) => line.trim()).filter(Boolean)[0] || '';
+          return {
+            id: `builder:${String(pkg?.id || '').trim()}`,
+            name,
+            displayName: `[B] ${name}`,
+            shortText: firstLine,
+            text: text || '',
+            type: 'builder',
+            definition,
+          };
+        }).filter((pkg) => String(pkg.id || '').trim() && String(pkg.name || '').trim());
+        packages = [...legacyData, ...builderPackages];
       }
 
       async function loadSingleParameterCatalog() {
@@ -1642,6 +1726,7 @@
           material: firstRow.querySelector('[name="material"]').value,
           packageId: firstRow.querySelector('[name="packageId"]').value,
           singleParamsJson: firstRow.querySelector('[name="singleParamsJson"]').value,
+          packageAddonsJson: firstRow.querySelector('[name="packageAddonsJson"]').value,
           parameterTextPreview: firstRow.querySelector('[name="parameterTextPreview"]').value,
           tiefeVolumen: firstRow.querySelector('[name="tiefeVolumen"]').value,
           gewicht: firstRow.querySelector('[name="gewicht"]').value,
@@ -1663,6 +1748,7 @@
             material: base.material ?? defaultMaterial ?? 'Boden',
             packageId: base.packageId ?? defaultPackageId ?? '',
             singleParamsJson: base.singleParamsJson ?? '',
+            packageAddonsJson: base.packageAddonsJson ?? '',
             parameterTextPreview: base.parameterTextPreview ?? '',
             tiefeVolumen: base.tiefeVolumen ?? '',
             gewicht: base.gewicht ?? '',
@@ -1850,26 +1936,26 @@
       function setPackageText(probeElement) {
         const packageSelect = probeElement.querySelector('[name="packageId"]');
         const parameterTextInput = probeElement.querySelector('[name="parameterTextPreview"]');
+        const singleParamsInput = probeElement.querySelector('[name="singleParamsJson"]');
+        const addonToggles = parseSingleParamsTogglesJson(singleParamsInput?.value);
         const selected = packages.find((pkg) => pkg.id === packageSelect.value);
         if (selected) {
-          parameterTextInput.value = selected.text;
+          if (selected.type === 'builder') {
+            singleParamsModalState.legacyMergeStatus = '';
+            singleParamsModalState.legacyMergeReason = '';
+            parameterTextInput.value = buildBuilderPackageMergedText(selected, addonToggles);
+          } else {
+            const baseText = String(selected.text || '').trim();
+            const displayName = String(selected.displayName || selected.name || selected.id || '').trim();
+            const addonText = buildPreviewTextFromToggles(singleParamsCatalog, addonToggles);
+            const legacyPreview = buildLegacyPackageMergedText(baseText, displayName, addonText, addonToggles);
+            parameterTextInput.value = legacyPreview.text;
+          }
           return;
         }
-        const singleParamsInput = probeElement.querySelector('[name="singleParamsJson"]');
-        let preview = '';
-        if (singleParamsInput && singleParamsInput.value && typeof window.buildParameterTextFromSelection === 'function') {
-          try {
-            const parsed = JSON.parse(singleParamsInput.value);
-            if (parsed && typeof parsed === 'object' && parsed.toggles) {
-              const selection = buildSelectionFromCatalogToggles(singleParamsCatalog, parsed.toggles);
-              preview = window.buildParameterTextFromSelection(selection);
-            } else {
-              preview = window.buildParameterTextFromSelection(parsed);
-            }
-          } catch (_error) {
-            preview = '';
-          }
-        }
+        singleParamsModalState.legacyMergeStatus = '';
+        singleParamsModalState.legacyMergeReason = '';
+        const preview = buildPreviewTextFromToggles(singleParamsCatalog, addonToggles);
         parameterTextInput.value = preview || '';
       }
 
@@ -1888,6 +1974,320 @@
         const name = labelLong || label || key;
         const short = key || label || fallbackKey;
         return { name, short };
+      }
+
+      function getPackageById(packageId) {
+        const id = String(packageId || '').trim();
+        if (!id) return null;
+        return packages.find((pkg) => String(pkg?.id || '') === id) || null;
+      }
+
+      function getDefaultToggleForParam(param) {
+        const allowedLabs = Array.isArray(param?.allowedLabs) ? param.allowedLabs : [];
+        const allowedMedia = Array.isArray(param?.allowedMedia) ? param.allowedMedia : [];
+        if (allowedLabs.length < 1 || allowedMedia.length < 1) return null;
+        const preferredLab = String(param?.defaultLab || '').trim();
+        const lab = allowedLabs.includes(preferredLab) ? preferredLab : String(allowedLabs[0] || '').trim();
+        if (!lab) return null;
+        const preferredMedium = allowedMedia.includes('FS') ? 'FS' : String(allowedMedia[0] || '').trim();
+        if (!preferredMedium) return null;
+        return {
+          selected: true,
+          lab,
+          media: { [preferredMedium]: true },
+        };
+      }
+
+      function parseSingleParamsTogglesJson(raw) {
+        const text = String(raw || '').trim();
+        if (!text) return {};
+        try {
+          const parsed = JSON.parse(text);
+          const toggles = parsed && typeof parsed === 'object' ? parsed.toggles : null;
+          return normalizeSingleParamsToggles(toggles);
+        } catch (_error) {
+          return {};
+        }
+      }
+
+      function splitTopLevelLegacy(input, delimiterChar) {
+        const text = String(input || '');
+        const out = [];
+        let current = '';
+        let depth = 0;
+        for (let i = 0; i < text.length; i += 1) {
+          const ch = text[i];
+          if (ch === '(') depth += 1;
+          if (ch === ')' && depth > 0) depth -= 1;
+          if (ch === delimiterChar && depth === 0) {
+            out.push(current.trim());
+            current = '';
+            continue;
+          }
+          current += ch;
+        }
+        out.push(current.trim());
+        return out.filter(Boolean);
+      }
+
+      function parseLabeledLegacyLine(line) {
+        const raw = String(line || '');
+        const idx = raw.indexOf(':');
+        if (idx < 0) return null;
+        const label = raw.slice(0, idx).trim();
+        const value = raw.slice(idx + 1).trim();
+        if (!label) return null;
+        return { label, value };
+      }
+
+      function normalizeLegacyLabel(label) {
+        return String(label || '')
+          .trim()
+          .toLowerCase()
+          .replace(/\s+/g, ' ');
+      }
+
+      function canonicalLegacyMedium(rawMedium, labelNorm) {
+        const source = String(rawMedium || '').trim();
+        const key = source.toLowerCase().replace(/\s+/g, '');
+        if (key === 'fs') return 'FS';
+        if (key === 'h2o') return 'H2O';
+        if (labelNorm === 'hb') {
+          if (key === '2e' || key === '2:1-eluat' || key === '2:1eluat') return '2e';
+          if (key === '10e' || key === '10:1-eluat' || key === '10:1eluat') return '10e';
+        } else {
+          if (key === '2e') return '2e';
+          if (key === '10e') return '10e';
+        }
+        return source;
+      }
+
+      function mediumDisplayLegacy(canonical, labelNorm, original) {
+        if (labelNorm === 'hb') {
+          if (canonical === '2e') return '2:1-Eluat';
+          if (canonical === '10e') return '10:1-Eluat';
+        }
+        if (canonical === 'FS') return 'FS';
+        if (canonical === 'H2O') return 'H2O';
+        if (canonical === '2e') return '2e';
+        if (canonical === '10e') return '10e';
+        return String(original || canonical || '').trim();
+      }
+
+      function dedupeLegacyKeepOrder(tokens) {
+        const out = [];
+        const seen = new Set();
+        tokens.forEach((token) => {
+          const value = String(token || '').trim();
+          if (!value || seen.has(value)) return;
+          seen.add(value);
+          out.push(value);
+        });
+        return out;
+      }
+
+      function parseLegacyMediumBlocks(value, labelNorm) {
+        const rawBlocks = splitTopLevelLegacy(value, ';');
+        const blocks = [];
+        for (const rawBlock of rawBlocks) {
+          const idx = rawBlock.indexOf(':');
+          if (idx < 0) return { ok: false, reason: `medium_block_missing_colon:${rawBlock}` };
+          const medium = rawBlock.slice(0, idx).trim();
+          const content = rawBlock.slice(idx + 1).trim();
+          if (!medium) return { ok: false, reason: 'medium_label_empty' };
+          blocks.push({
+            originalMedium: medium,
+            canonical: canonicalLegacyMedium(medium, labelNorm),
+            tokens: splitTopLevelLegacy(content, ','),
+          });
+        }
+        return { ok: true, blocks };
+      }
+
+      function tryMergeLegacyPackagePreview(baseText, addonText) {
+        const base = String(baseText || '').trim();
+        const addon = String(addonText || '').trim();
+        if (!addon) return { ok: true, mergedText: base, reason: null };
+
+        const baseLines = base ? base.split(/\r?\n/) : [];
+        const addonLines = addon.split(/\r?\n/).map((x) => String(x || '').trim()).filter(Boolean);
+        const parsedBase = baseLines.map((line, idx) => {
+          const parsed = parseLabeledLegacyLine(line);
+          if (!parsed) return { raw: line, index: idx, label: null, value: null, labelNorm: null };
+          return {
+            raw: line,
+            index: idx,
+            label: parsed.label,
+            value: parsed.value,
+            labelNorm: normalizeLegacyLabel(parsed.label),
+          };
+        });
+
+        for (const addonLine of addonLines) {
+          const parsedAddon = parseLabeledLegacyLine(addonLine);
+          if (!parsedAddon) {
+            return { ok: false, mergedText: base, reason: `addon_line_missing_colon:${addonLine}` };
+          }
+          const labelNorm = normalizeLegacyLabel(parsedAddon.label);
+          const baseMatch = parsedBase.find((entry) => entry.labelNorm === labelNorm);
+          if (!baseMatch) {
+            const appended = `${parsedAddon.label}: ${parsedAddon.value}`.trim();
+            baseLines.push(appended);
+            parsedBase.push({
+              raw: appended,
+              index: baseLines.length - 1,
+              label: parsedAddon.label,
+              value: parsedAddon.value,
+              labelNorm,
+            });
+            continue;
+          }
+
+          let mergedValue = '';
+          if (labelNorm === 'pv') {
+            mergedValue = dedupeLegacyKeepOrder([
+              ...splitTopLevelLegacy(baseMatch.value, ','),
+              ...splitTopLevelLegacy(parsedAddon.value, ','),
+            ]).join(', ');
+          } else if (labelNorm === 'vor ort' || labelNorm === 'vor-ort') {
+            mergedValue = dedupeLegacyKeepOrder([
+              ...String(baseMatch.value || '').split(','),
+              ...String(parsedAddon.value || '').split(','),
+            ]).join(', ');
+          } else {
+            const parsedBaseBlocks = parseLegacyMediumBlocks(baseMatch.value, labelNorm);
+            if (!parsedBaseBlocks.ok) return { ok: false, mergedText: base, reason: parsedBaseBlocks.reason };
+            const parsedAddonBlocks = parseLegacyMediumBlocks(parsedAddon.value, labelNorm);
+            if (!parsedAddonBlocks.ok) return { ok: false, mergedText: base, reason: parsedAddonBlocks.reason };
+            const byCanonical = new Map();
+            const order = [];
+            parsedBaseBlocks.blocks.forEach((block) => {
+              byCanonical.set(block.canonical, {
+                originalMedium: block.originalMedium,
+                tokens: [...block.tokens],
+              });
+              order.push(block.canonical);
+            });
+            parsedAddonBlocks.blocks.forEach((block) => {
+              const existing = byCanonical.get(block.canonical);
+              if (existing) {
+                existing.tokens = dedupeLegacyKeepOrder([...existing.tokens, ...block.tokens]);
+                return;
+              }
+              byCanonical.set(block.canonical, {
+                originalMedium: block.originalMedium,
+                tokens: [...block.tokens],
+              });
+              order.push(block.canonical);
+            });
+            mergedValue = order
+              .map((canonical) => {
+                const block = byCanonical.get(canonical);
+                if (!block) return '';
+                const mediumLabel = mediumDisplayLegacy(canonical, labelNorm, block.originalMedium);
+                return `${mediumLabel}: ${dedupeLegacyKeepOrder(block.tokens).join(', ')}`.trim();
+              })
+              .filter(Boolean)
+              .join('; ');
+          }
+
+          const newLine = `${baseMatch.label}: ${mergedValue}`.trim();
+          baseLines[baseMatch.index] = newLine;
+          baseMatch.raw = newLine;
+          baseMatch.value = mergedValue;
+        }
+
+        return { ok: true, mergedText: baseLines.join('\n').trim(), reason: null };
+      }
+
+      function stripExistingPktLines(text) {
+        if (!text) return '';
+        const lines = String(text).split(/\r?\n/);
+        const out = lines.filter((line) => !String(line).trimStart().toUpperCase().startsWith('PKT:'));
+        return out.join('\n').trim();
+      }
+
+      function buildPktAddonSuffixFromToggles(catalog, toggles) {
+        if (!toggles || typeof toggles !== 'object') return '';
+        const params = Array.isArray(catalog?.parameters) ? catalog.parameters : [];
+        const byKey = new Map(params.map((p) => [String(p?.key || '').trim(), p]));
+        const labels = [];
+        Object.entries(toggles).forEach(([rawKey, toggle]) => {
+          const key = String(rawKey || '').trim();
+          if (!key || !toggle || toggle.selected !== true) return;
+          const param = byKey.get(key);
+          const labelLong = String(param?.labelLong || '').trim();
+          labels.push(labelLong || key);
+        });
+        const unique = Array.from(new Set(labels));
+        unique.sort((a, b) => a.localeCompare(b, 'de', { sensitivity: 'base' }));
+        if (unique.length < 1) return '';
+        return `+${unique.join(', +')}`;
+      }
+
+      function mergeBuilderPackageAddonToggles(baseToggles, addonToggles) {
+        const merged = normalizeSingleParamsToggles(baseToggles || {});
+        const addons = normalizeSingleParamsToggles(addonToggles || {});
+        Object.entries(addons).forEach(([key, addonToggle]) => {
+          const param = findCatalogParameter(key);
+          if (!param || !addonToggle || addonToggle.selected !== true) return;
+          const base = merged[key];
+          if (!base || base.selected !== true) {
+            merged[key] = addonToggle;
+            return;
+          }
+          const mergedMedia = {};
+          const baseMedia = base.media && typeof base.media === 'object' ? base.media : {};
+          const addonMedia = addonToggle.media && typeof addonToggle.media === 'object' ? addonToggle.media : {};
+          Object.entries(baseMedia).forEach(([medium, enabled]) => {
+            if (enabled === true) mergedMedia[medium] = true;
+          });
+          Object.entries(addonMedia).forEach(([medium, enabled]) => {
+            if (enabled === true) mergedMedia[medium] = true;
+          });
+          const mergedVorOrt = base.vorOrt === true || addonToggle.vorOrt === true;
+          merged[key] = {
+            ...base,
+            selected: true,
+            lab: String(base.lab || '').trim(),
+            media: mergedVorOrt ? {} : mergedMedia,
+            vorOrt: mergedVorOrt,
+          };
+        });
+        return merged;
+      }
+
+      function buildBuilderPackageMergedText(packageEntry, addonToggles) {
+        const definition = packageEntry && typeof packageEntry.definition === 'object' ? packageEntry.definition : {};
+        const baseToggles = definition && typeof definition.toggles === 'object' ? definition.toggles : {};
+        const mergedToggles = mergeBuilderPackageAddonToggles(baseToggles, addonToggles);
+        const built = buildPreviewTextFromToggles(singleParamsCatalog, mergedToggles);
+        const suffix = buildPktAddonSuffixFromToggles(singleParamsCatalog, addonToggles);
+        const packageName = String(packageEntry?.name || packageEntry?.displayName || packageEntry?.id || '').trim();
+        const pktHeader = packageName ? `PKT: ${packageName}${suffix}` : '';
+        if (!pktHeader) return built;
+        if (!built) return pktHeader;
+        return `${pktHeader}\n${built}`;
+      }
+
+      function buildLegacyPackageMergedText(baseText, packageDisplayName, addonText, addonToggles) {
+        const base = stripExistingPktLines(baseText);
+        const packageName = String(packageDisplayName || '').trim();
+        const suffix = buildPktAddonSuffixFromToggles(singleParamsCatalog, addonToggles);
+        const addon = String(addonText || '').trim();
+        const mergeResult = tryMergeLegacyPackagePreview(base, addon);
+        const body = mergeResult.ok
+          ? String(mergeResult.mergedText || '').trim()
+          : [base, addon].filter(Boolean).join('\n');
+        const pktHeader = packageName ? `PKT: ${packageName}${suffix}` : '';
+        const sections = [];
+        if (pktHeader) sections.push(pktHeader);
+        if (body) sections.push(body);
+        return {
+          text: sections.join('\n'),
+          legacyMergeStatus: mergeResult.ok ? 'merged' : 'appended',
+          legacyMergeReason: mergeResult.ok ? '' : String(mergeResult.reason || 'merge_failed'),
+        };
       }
 
       function findCatalogGroup(groupKey) {
@@ -2231,7 +2631,38 @@
       }
 
       function updateSingleParamsModalPreview() {
-        const preview = buildPreviewTextFromToggles(singleParamsCatalog, singleParamsModalState.toggles);
+        let preview = '';
+        if (singleParamsModalState.packageSelectedType === 'builder') {
+          singleParamsModalState.legacyMergeStatus = '';
+          singleParamsModalState.legacyMergeReason = '';
+          const mergedToggles = mergeBuilderPackageAddonToggles(
+            singleParamsModalState.packageBaseToggles,
+            singleParamsModalState.toggles,
+          );
+          const mergedText = buildPreviewTextFromToggles(singleParamsCatalog, mergedToggles);
+          const suffix = buildPktAddonSuffixFromToggles(singleParamsCatalog, singleParamsModalState.toggles);
+          const pktHeader = singleParamsModalState.packageDisplayName ? `PKT: ${singleParamsModalState.packageDisplayName}${suffix}` : '';
+          if (pktHeader && mergedText) {
+            preview = `${pktHeader}\n${mergedText}`;
+          } else {
+            preview = pktHeader || mergedText;
+          }
+        } else if (singleParamsModalState.packageSelectedType === 'legacy') {
+          const addonText = buildPreviewTextFromToggles(singleParamsCatalog, singleParamsModalState.toggles);
+          const legacyPreview = buildLegacyPackageMergedText(
+            singleParamsModalState.packageBaseText,
+            singleParamsModalState.packageDisplayName,
+            addonText,
+            singleParamsModalState.toggles,
+          );
+          preview = legacyPreview.text;
+          singleParamsModalState.legacyMergeStatus = legacyPreview.legacyMergeStatus;
+          singleParamsModalState.legacyMergeReason = legacyPreview.legacyMergeReason;
+        } else {
+          singleParamsModalState.legacyMergeStatus = '';
+          singleParamsModalState.legacyMergeReason = '';
+          preview = buildPreviewTextFromToggles(singleParamsCatalog, singleParamsModalState.toggles);
+        }
         const escapeHtml = (value) => String(value || '')
           .replace(/&/g, '&amp;')
           .replace(/</g, '&lt;')
@@ -2248,8 +2679,33 @@
             return `<div><strong>${head}</strong>${tail}</div>`;
           })
           .join('');
+        updateSingleParamsPackageWarning();
         singleParamsPreviewInput.innerHTML = html;
         return preview;
+      }
+
+      function updateSingleParamsPackageWarning() {
+        if (!singleParamsModalState.packageSelectedType) {
+          singleParamsPackageWarning.classList.add('hidden');
+          singleParamsPackageWarning.style.color = '';
+          singleParamsPackageWarning.innerHTML = '';
+          return;
+        }
+        singleParamsPackageWarning.classList.remove('hidden');
+        if (singleParamsModalState.packageSelectedType === 'builder') {
+          singleParamsPackageWarning.style.color = '#166534';
+          singleParamsPackageWarning.textContent = 'Builder Paket. Addons werden strukturiert gemerged und einsortiert.';
+          return;
+        }
+        singleParamsPackageWarning.style.color = '#b45309';
+        const baseHint = 'Legacy Paket. Addons werden best effort einsortiert. Prüfen, ob es plausibel ist.';
+        if (singleParamsModalState.legacyMergeStatus === 'appended') {
+          const reason = String(singleParamsModalState.legacyMergeReason || '').trim();
+          const reasonText = reason ? ` (${reason})` : '';
+          singleParamsPackageWarning.innerHTML = `${baseHint}<br><small>Einsortieren nicht möglich, Addons wurden angehängt.${reasonText}</small>`;
+          return;
+        }
+        singleParamsPackageWarning.textContent = baseHint;
       }
 
       function getSelectedParamKeys() {
@@ -2535,24 +2991,32 @@
         await loadSingleParameterCatalog();
         activeProbeForSingleParamsModal = probeElement;
         const packageValue = String(probeElement.querySelector('[name="packageId"]').value || '').trim();
-        singleParamsPackageWarning.classList.toggle('hidden', !packageValue);
+        const packageEntry = packageValue ? getPackageById(packageValue) : null;
         const singleParamsInput = probeElement.querySelector('[name="singleParamsJson"]');
-        const raw = String(singleParamsInput?.value || '').trim();
-        let parsed = {};
-        if (raw) {
-          try {
-            parsed = JSON.parse(raw);
-          } catch (_error) {
-            parsed = {};
-          }
+        const toggles = parseSingleParamsTogglesJson(singleParamsInput?.value);
+        let packageBaseText = '';
+        let packageDisplayName = '';
+        let packageBaseToggles = {};
+        let packageSelectedType = '';
+        if (packageValue) {
+          const pkg = packageEntry;
+          packageBaseText = String(pkg?.text || '').trim();
+          packageSelectedType = String(pkg?.type || '').trim() === 'builder' ? 'builder' : 'legacy';
+          packageDisplayName = packageSelectedType === 'builder'
+            ? String(pkg?.name || pkg?.displayName || pkg?.id || packageValue).trim()
+            : String(pkg?.displayName || pkg?.name || pkg?.id || packageValue).trim();
+          const definition = pkg && typeof pkg.definition === 'object' ? pkg.definition : {};
+          packageBaseToggles = definition && typeof definition.toggles === 'object' ? definition.toggles : {};
         }
-        singleParamsModalState = {
-          toggles: normalizeSingleParamsToggles(parsed?.toggles),
-          search: '',
-        };
-        singleParamsSearchInput.value = '';
-        renderSingleParamsModal();
-        singleParamsModal.classList.remove('hidden');
+        openParamPickerModal('single', {
+          initialToggles: toggles,
+          packageSelectedType,
+          packageDisplayName,
+          packageBaseText,
+          packageBaseToggles,
+          legacyMergeStatus: '',
+          legacyMergeReason: '',
+        });
       }
 
       function closeSingleParamsModal() {
@@ -2565,18 +3029,462 @@
           closeSingleParamsModal();
           return;
         }
-        const toggles = normalizeSingleParamsToggles(singleParamsModalState.toggles);
-        incrementUsageCountsForSelected(toggles);
         const preview = updateSingleParamsModalPreview();
         const singleParamsInput = activeProbeForSingleParamsModal.querySelector('[name="singleParamsJson"]');
+        const packageAddonsInput = activeProbeForSingleParamsModal.querySelector('[name="packageAddonsJson"]');
         const parameterTextInput = activeProbeForSingleParamsModal.querySelector('[name="parameterTextPreview"]');
+        const toggles = normalizeSingleParamsToggles(singleParamsModalState.toggles);
+        incrementUsageCountsForSelected(toggles);
         if (Object.keys(toggles).length === 0) {
           singleParamsInput.value = '';
         } else {
           singleParamsInput.value = JSON.stringify({ toggles });
         }
+        packageAddonsInput.value = '';
         parameterTextInput.value = preview || '';
         closeSingleParamsModal();
+      }
+
+      function getPackageBuilderSelectedKeys() {
+        return Object.keys(packageBuilderState.toggles || {}).filter((key) => packageBuilderState.toggles[key]?.selected === true);
+      }
+
+      function togglePackageBuilderSelection(key) {
+        const param = findCatalogParameter(key);
+        if (!param) return;
+        if (packageBuilderState.toggles[key]?.selected === true) {
+          delete packageBuilderState.toggles[key];
+        } else {
+          const allowedLabs = Array.isArray(param.allowedLabs) ? param.allowedLabs : [];
+          const lab = allowedLabs.includes(String(param.defaultLab || '').trim())
+            ? String(param.defaultLab || '').trim()
+            : (allowedLabs[0] || '');
+          packageBuilderState.toggles[key] = {
+            selected: true,
+            lab,
+            media: {},
+            vorOrt: false,
+          };
+        }
+        renderPackageBuilderModal();
+      }
+
+      function setPackageBuilderLab(key, lab) {
+        const param = findCatalogParameter(key);
+        if (!param) return;
+        const allowedLabs = Array.isArray(param.allowedLabs) ? param.allowedLabs : [];
+        if (!allowedLabs.includes(lab)) return;
+        if (!packageBuilderState.toggles[key]?.selected) return;
+        if (packageBuilderState.toggles[key].vorOrt === true) return;
+        packageBuilderState.toggles[key].lab = lab;
+        renderPackageBuilderModal();
+      }
+
+      function togglePackageBuilderMedium(key, medium) {
+        const param = findCatalogParameter(key);
+        if (!param) return;
+        const allowedMedia = Array.isArray(param.allowedMedia) ? param.allowedMedia : [];
+        if (!allowedMedia.includes(medium)) return;
+        if (!packageBuilderState.toggles[key]?.selected) return;
+        if (packageBuilderState.toggles[key].vorOrt === true) return;
+        const media = packageBuilderState.toggles[key].media || {};
+        if (media[medium] === true) {
+          delete media[medium];
+        } else {
+          media[medium] = true;
+        }
+        packageBuilderState.toggles[key].media = media;
+        renderPackageBuilderModal();
+      }
+
+      function togglePackageBuilderVorOrt(key) {
+        const param = findCatalogParameter(key);
+        if (!param || param.allowVorOrt !== true) return;
+        if (!packageBuilderState.toggles[key]?.selected) return;
+        packageBuilderState.toggles[key].vorOrt = packageBuilderState.toggles[key].vorOrt !== true;
+        renderPackageBuilderModal();
+      }
+
+      function buildPackageBuilderPreviewText() {
+        const name = String(packageBuilderState.name || '').trim() || 'Neues Paket';
+        const text = buildPreviewTextFromToggles(singleParamsCatalog, packageBuilderState.toggles);
+        return text ? `PKT: ${name}\n${text}` : `PKT: ${name}`;
+      }
+
+      function updatePackageBuilderPreview() {
+        const preview = buildPackageBuilderPreviewText();
+        const escapeHtml = (value) => String(value || '')
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;')
+          .replace(/'/g, '&#39;');
+        const html = String(preview || '')
+          .split('\n')
+          .map((line) => {
+            const match = line.match(/^([^:]+:)(.*)$/);
+            if (!match) return `<div>${escapeHtml(line)}</div>`;
+            const head = escapeHtml(match[1]);
+            const tail = escapeHtml(match[2] || '');
+            return `<div><strong>${head}</strong>${tail}</div>`;
+          })
+          .join('');
+        packageBuilderPreview.innerHTML = html;
+        return preview;
+      }
+
+      function renderPackageBuilderList() {
+        const filter = String(packageBuilderState.search || '').trim().toLowerCase();
+        const usageCounts = loadUsageCounts();
+        const params = getCatalogParameters().filter((p) => {
+          const key = String(p?.key || '').toLowerCase();
+          const label = String(p?.label || '').toLowerCase();
+          const labelLong = String(p?.labelLong || '').toLowerCase();
+          return !filter || key.includes(filter) || label.includes(filter) || labelLong.includes(filter);
+        }).sort((a, b) => {
+          const keyA = String(a?.key || '').trim();
+          const keyB = String(b?.key || '').trim();
+          const labelA = getParameterDisplay(a, keyA).name;
+          const labelB = getParameterDisplay(b, keyB).name;
+          const usageA = Number(usageCounts[keyA] || 0);
+          const usageB = Number(usageCounts[keyB] || 0);
+          if (usageA !== usageB) return usageB - usageA;
+          return labelA.localeCompare(labelB, 'de', { sensitivity: 'base' });
+        });
+        packageBuilderList.innerHTML = '';
+        if (params.length === 0) {
+          const empty = document.createElement('div');
+          empty.className = 'meta';
+          empty.textContent = 'Keine Parameter gefunden.';
+          packageBuilderList.appendChild(empty);
+          return;
+        }
+        params.forEach((param) => {
+          const key = String(param.key || '').trim();
+          const selected = packageBuilderState.toggles[key]?.selected === true;
+          const row = document.createElement('div');
+          row.className = 'list-item';
+          row.style.cursor = 'pointer';
+          row.style.display = 'grid';
+          row.style.gridTemplateColumns = '1fr';
+          row.style.gap = '4px';
+          row.style.alignItems = 'center';
+          row.setAttribute('role', 'button');
+          row.tabIndex = 0;
+          row.addEventListener('click', () => togglePackageBuilderSelection(key));
+          row.addEventListener('keydown', (event) => {
+            if (event.key === 'Enter' || event.key === ' ') {
+              event.preventDefault();
+              togglePackageBuilderSelection(key);
+            }
+          });
+          const left = document.createElement('div');
+          const display = getParameterDisplay(param, key);
+          left.textContent = display.short ? `${display.name} (${display.short})` : display.name;
+          const group = findCatalogGroup(param.functionGroup);
+          if (group) {
+            const badge = document.createElement('small');
+            badge.className = 'meta';
+            badge.style.marginLeft = '0.5rem';
+            badge.textContent = String(group.label || group.key || '').trim();
+            left.appendChild(badge);
+          }
+          left.style.fontWeight = selected ? '600' : '400';
+          if (selected) {
+            row.style.background = 'color-mix(in srgb, var(--primary) 18%, transparent)';
+            row.style.borderColor = 'var(--primary-strong)';
+          }
+          row.appendChild(left);
+          packageBuilderList.appendChild(row);
+        });
+      }
+
+      function renderPackageBuilderSelectedList() {
+        packageBuilderSelectedList.innerHTML = '';
+        const selectedKeys = getPackageBuilderSelectedKeys();
+        if (selectedKeys.length === 0) {
+          const empty = document.createElement('small');
+          empty.className = 'meta';
+          empty.textContent = 'Keine Parameter ausgewählt';
+          packageBuilderSelectedList.appendChild(empty);
+          return;
+        }
+        const mediaOrder = ['FS', 'H2O', '2e', '10e'];
+        selectedKeys.forEach((key) => {
+          const param = findCatalogParameter(key);
+          if (!param) return;
+          const toggle = packageBuilderState.toggles[key];
+          if (!toggle || toggle.selected !== true) return;
+          const isVorOrt = toggle.vorOrt === true;
+          const allowedLabs = Array.isArray(param.allowedLabs) ? param.allowedLabs : [];
+          const allowedMedia = Array.isArray(param.allowedMedia) ? param.allowedMedia : [];
+          if (toggle.media && typeof toggle.media === 'object') {
+            Object.keys(toggle.media).forEach((medium) => {
+              if (!allowedMedia.includes(medium)) delete toggle.media[medium];
+            });
+          }
+          if (allowedLabs.length === 1) {
+            toggle.lab = allowedLabs[0];
+          }
+          const row = document.createElement('div');
+          row.style.display = 'grid';
+          row.style.gridTemplateColumns = '1fr 44px 360px 84px';
+          row.style.gap = '6px';
+          row.style.alignItems = 'center';
+          row.style.padding = '4px 0';
+          row.style.fontSize = '13px';
+          row.style.lineHeight = '1.2';
+          row.style.borderBottom = '1px solid rgba(255,255,255,0.06)';
+
+          const nameCell = document.createElement('div');
+          const label = document.createElement('span');
+          label.style.display = 'block';
+          label.style.maxWidth = '100%';
+          label.style.overflow = 'hidden';
+          label.style.textOverflow = 'ellipsis';
+          label.style.whiteSpace = 'nowrap';
+          const display = getParameterDisplay(param, key);
+          const labelText = display.short ? `${display.name} (${display.short})` : display.name;
+          label.textContent = labelText;
+          label.title = labelText;
+          nameCell.appendChild(label);
+          row.appendChild(nameCell);
+
+          const removeCell = document.createElement('div');
+          removeCell.style.display = 'flex';
+          removeCell.style.justifyContent = 'flex-end';
+          const removeBtn = document.createElement('button');
+          removeBtn.type = 'button';
+          removeBtn.textContent = 'x';
+          removeBtn.title = 'Entfernen';
+          removeBtn.style.padding = '4px 8px';
+          removeBtn.style.fontSize = '12px';
+          removeBtn.addEventListener('click', (event) => {
+            event.stopPropagation();
+            togglePackageBuilderSelection(key);
+          });
+          removeCell.appendChild(removeBtn);
+          row.appendChild(removeCell);
+
+          const actionsCell = document.createElement('div');
+          actionsCell.style.justifySelf = 'end';
+          actionsCell.style.display = 'flex';
+          actionsCell.style.justifyContent = 'flex-end';
+          actionsCell.style.gap = '6px';
+          actionsCell.style.flexWrap = 'wrap';
+          if (allowedLabs.length > 1) {
+            const orderedLabs = [];
+            ['EMD', 'HB'].forEach((lab) => {
+              if (allowedLabs.includes(lab)) orderedLabs.push(lab);
+            });
+            allowedLabs.forEach((lab) => {
+              if (!orderedLabs.includes(lab)) orderedLabs.push(lab);
+            });
+            orderedLabs.forEach((lab) => {
+              const btn = document.createElement('button');
+              btn.type = 'button';
+              btn.className = toggle.lab === lab ? 'primary' : 'secondary';
+              btn.textContent = lab;
+              btn.disabled = isVorOrt;
+              btn.style.padding = '4px 8px';
+              btn.style.fontSize = '12px';
+              btn.addEventListener('click', () => setPackageBuilderLab(key, lab));
+              actionsCell.appendChild(btn);
+            });
+          }
+          const otherMediumName = String(param.otherMediumName || '').trim();
+          const orderedAllowedMedia = [];
+          mediaOrder.forEach((medium) => {
+            if (allowedMedia.includes(medium)) orderedAllowedMedia.push(medium);
+          });
+          if (otherMediumName && (allowedMedia.includes(otherMediumName) || !orderedAllowedMedia.includes(otherMediumName))) {
+            orderedAllowedMedia.push(otherMediumName);
+          }
+          orderedAllowedMedia.forEach((medium) => {
+            const active = toggle.media && toggle.media[medium] === true;
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = active ? 'primary' : 'secondary';
+            btn.textContent = medium;
+            btn.disabled = isVorOrt;
+            btn.style.padding = '4px 8px';
+            btn.style.fontSize = '12px';
+            btn.addEventListener('click', () => togglePackageBuilderMedium(key, medium));
+            actionsCell.appendChild(btn);
+          });
+          row.appendChild(actionsCell);
+
+          const vorOrtCell = document.createElement('div');
+          vorOrtCell.style.display = 'flex';
+          vorOrtCell.style.justifyContent = 'flex-end';
+          vorOrtCell.style.justifySelf = 'end';
+          if (param.allowVorOrt === true) {
+            const vorOrtBtn = document.createElement('button');
+            vorOrtBtn.type = 'button';
+            vorOrtBtn.className = isVorOrt ? 'primary' : 'secondary';
+            vorOrtBtn.textContent = 'vor Ort';
+            vorOrtBtn.title = 'Als Vor-Ort-Parameter markieren';
+            vorOrtBtn.style.whiteSpace = 'nowrap';
+            vorOrtBtn.style.minWidth = '72px';
+            vorOrtBtn.style.padding = '4px 8px';
+            vorOrtBtn.style.fontSize = '12px';
+            vorOrtBtn.addEventListener('click', (event) => {
+              event.stopPropagation();
+              togglePackageBuilderVorOrt(key);
+            });
+            vorOrtCell.appendChild(vorOrtBtn);
+          }
+          row.appendChild(vorOrtCell);
+          packageBuilderSelectedList.appendChild(row);
+        });
+      }
+
+      function renderPackageBuilderModal() {
+        renderPackageBuilderList();
+        renderPackageBuilderSelectedList();
+        updatePackageBuilderPreview();
+      }
+
+      function openParamPickerModal(mode, ctx = {}) {
+        if (mode === 'single') {
+          singleParamsModalState = {
+            toggles: ctx.initialToggles || {},
+            search: '',
+            packageSelectedType: String(ctx.packageSelectedType || '').trim(),
+            packageDisplayName: String(ctx.packageDisplayName || '').trim(),
+            packageBaseText: String(ctx.packageBaseText || '').trim(),
+            packageBaseToggles: ctx.packageBaseToggles || {},
+            legacyMergeStatus: String(ctx.legacyMergeStatus || '').trim(),
+            legacyMergeReason: String(ctx.legacyMergeReason || '').trim(),
+          };
+          singleParamsSearchInput.value = '';
+          renderSingleParamsModal();
+          singleParamsModal.classList.remove('hidden');
+          return;
+        }
+        if (mode === 'packageBuilder') {
+          packageBuilderState = {
+            editId: String(ctx.editId || '').trim(),
+            name: String(ctx.name || '').trim(),
+            search: '',
+            toggles: ctx.initialToggles || {},
+          };
+          packageBuilderNameInput.value = packageBuilderState.name;
+          packageBuilderSearchInput.value = '';
+          renderPackageBuilderModal();
+          packageBuilderModal.classList.remove('hidden');
+          setTimeout(() => packageBuilderNameInput.focus(), 0);
+        }
+      }
+
+      function resolveBuilderPackagePrefillFromCurrentProbe() {
+        const activeRow = (document.activeElement && document.activeElement.closest)
+          ? document.activeElement.closest('.probe-row')
+          : null;
+        const probeRow = activeRow || probenContainer.querySelector('.probe-row');
+        if (!probeRow) return null;
+        const packageSelect = probeRow.querySelector('[name="packageId"]');
+        const selectedPackageId = String(packageSelect?.value || '').trim();
+        if (!selectedPackageId || !selectedPackageId.startsWith('builder:')) {
+          return null;
+        }
+        const builderPackage = getPackageById(selectedPackageId);
+        if (!builderPackage || builderPackage.type !== 'builder') return null;
+        const definition = builderPackage.definition && typeof builderPackage.definition === 'object'
+          ? builderPackage.definition
+          : {};
+        const toggles = normalizeSingleParamsToggles(definition.toggles);
+        return {
+          editId: selectedPackageId.replace(/^builder:/, '').trim(),
+          name: String(builderPackage.name || '').trim(),
+          toggles,
+        };
+      }
+
+      function openPackageBuilderModal() {
+        const prefill = resolveBuilderPackagePrefillFromCurrentProbe();
+        openPackageBuilderModalWithState(prefill || {
+          editId: '',
+          name: '',
+          toggles: {},
+        });
+      }
+
+      function openPackageBuilderModalWithState(initialState = {}) {
+        const initialToggles = initialState && typeof initialState.toggles === 'object' ? initialState.toggles : {};
+        const normalizedToggles = normalizeSingleParamsToggles(initialToggles);
+        openParamPickerModal('packageBuilder', {
+          editId: String(initialState?.editId || '').trim(),
+          name: String(initialState?.name || '').trim(),
+          initialToggles: normalizedToggles,
+        });
+      }
+
+      function closePackageBuilderModal() {
+        packageBuilderModal.classList.add('hidden');
+      }
+
+      async function savePackageBuilderModal() {
+        const name = String(packageBuilderState.name || '').trim();
+        if (!name) {
+          showToast('error', 'Paketname ist erforderlich');
+          packageBuilderNameInput.focus();
+          return;
+        }
+        const toggles = normalizeSingleParamsToggles(packageBuilderState.toggles);
+        const response = await fetch('/api/builder-packages', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            id: packageBuilderState.editId || null,
+            name,
+            definition: { toggles },
+          }),
+        });
+        const data = await response.json();
+        if (!response.ok || data.ok !== true) {
+          throw new Error(data?.message || 'Builder-Paket konnte nicht gespeichert werden');
+        }
+        showToast('success', packageBuilderState.editId ? 'Builder-Paket aktualisiert' : 'Builder-Paket gespeichert');
+        await loadPackages();
+        refreshAllPackageSelects();
+        closePackageBuilderModal();
+      }
+
+      function maybeOpenPackageBuilderEditFromQuery() {
+        const params = new URLSearchParams(window.location.search || '');
+        const openBuilder = String(params.get('openPackageBuilder') || '').trim();
+        if (openBuilder === '1') {
+          openPackageBuilderModalWithState({
+            editId: '',
+            name: '',
+            toggles: {},
+          });
+          params.delete('openPackageBuilder');
+          const openQuery = params.toString();
+          const openUrl = `${window.location.pathname}${openQuery ? `?${openQuery}` : ''}${window.location.hash || ''}`;
+          window.history.replaceState({}, '', openUrl);
+          return;
+        }
+        const rawId = String(params.get('editBuilderPackage') || '').trim();
+        if (!rawId) return;
+        const packageId = rawId.startsWith('builder:') ? rawId : `builder:${rawId}`;
+        const builderPackage = packages.find((pkg) => pkg.type === 'builder' && String(pkg.id || '').trim() === packageId);
+        if (!builderPackage) {
+          showToast('error', 'Builder-Paket zum Bearbeiten nicht gefunden');
+          return;
+        }
+        const definition = builderPackage.definition && typeof builderPackage.definition === 'object' ? builderPackage.definition : {};
+        const toggles = definition.toggles && typeof definition.toggles === 'object' ? definition.toggles : {};
+        openPackageBuilderModalWithState({
+          editId: String(packageId.replace(/^builder:/, '')).trim(),
+          name: String(builderPackage.name || '').trim(),
+          toggles,
+        });
+        params.delete('editBuilderPackage');
+        const nextQuery = params.toString();
+        const nextUrl = `${window.location.pathname}${nextQuery ? `?${nextQuery}` : ''}${window.location.hash || ''}`;
+        window.history.replaceState({}, '', nextUrl);
       }
 
       function populatePackageSelect(probeElement) {
@@ -2590,7 +3498,19 @@
           option.textContent = shortText ? `${displayName} - ${shortText}` : displayName;
           packageSelect.appendChild(option);
         });
-        packageSelect.addEventListener('change', () => setPackageText(probeElement));
+        packageSelect.onchange = () => setPackageText(probeElement);
+      }
+
+      function refreshAllPackageSelects() {
+        Array.from(probenContainer.querySelectorAll('.probe-row')).forEach((probeElement) => {
+          const packageSelect = probeElement.querySelector('[name="packageId"]');
+          const currentValue = String(packageSelect?.value || '').trim();
+          populatePackageSelect(probeElement);
+          if (packageSelect) {
+            packageSelect.value = currentValue;
+          }
+          setPackageText(probeElement);
+        });
       }
 
       function updateProbeIndexes() {
@@ -2641,6 +3561,7 @@
           probeElement.querySelector('[name="bemerkung"]').value = initialData.bemerkung ?? '';
           probeElement.querySelector('[name="packageId"]').value = initialData.packageId || '';
           probeElement.querySelector('[name="singleParamsJson"]').value = initialData.singleParamsJson || '';
+          probeElement.querySelector('[name="packageAddonsJson"]').value = initialData.packageAddonsJson || '';
           probeElement.querySelector('[name="parameterTextPreview"]').value = initialData.parameterTextPreview || '';
           setProbeContainersData(probeElement, initialData.containers || null);
         } else {
@@ -2662,6 +3583,7 @@
           material: probeElement.querySelector('[name="material"]').value,
           packageId: probeElement.querySelector('[name="packageId"]').value,
           singleParamsJson: probeElement.querySelector('[name="singleParamsJson"]').value,
+          packageAddonsJson: probeElement.querySelector('[name="packageAddonsJson"]').value,
           parameterTextPreview: probeElement.querySelector('[name="parameterTextPreview"]').value,
           tiefeVolumen: probeElement.querySelector('[name="tiefeVolumen"]').value,
           gewicht: probeElement.querySelector('[name="gewicht"]').value,
@@ -2896,6 +3818,29 @@
         singleParamsModalState.search = singleParamsSearchInput.value;
         renderSingleParamsModal();
       });
+      openPackageBuilderModalButton.addEventListener('click', openPackageBuilderModal);
+      packageBuilderNameInput.addEventListener('input', () => {
+        packageBuilderState.name = packageBuilderNameInput.value;
+        updatePackageBuilderPreview();
+      });
+      packageBuilderSearchInput.addEventListener('input', () => {
+        packageBuilderState.search = packageBuilderSearchInput.value;
+        renderPackageBuilderModal();
+      });
+      packageBuilderCancel.addEventListener('click', closePackageBuilderModal);
+      packageBuilderSave.addEventListener('click', async () => {
+        try {
+          packageBuilderSave.disabled = true;
+          await savePackageBuilderModal();
+        } catch (error) {
+          showToast('error', error.message);
+        } finally {
+          packageBuilderSave.disabled = false;
+        }
+      });
+      packageBuilderModal.addEventListener('click', (event) => {
+        if (event.target === packageBuilderModal) closePackageBuilderModal();
+      });
       singleParamsCancel.addEventListener('click', closeSingleParamsModal);
       singleParamsApply.addEventListener('click', applySingleParamsModal);
       singleParamsModal.addEventListener('click', (event) => {
@@ -2975,6 +3920,10 @@
         }
         if (event.key === 'Escape' && !singleParamsModal.classList.contains('hidden')) {
           closeSingleParamsModal();
+          return;
+        }
+        if (event.key === 'Escape' && !packageBuilderModal.classList.contains('hidden')) {
+          closePackageBuilderModal();
         }
       });
       probenContainer.addEventListener('keydown', (event) => {
@@ -3069,6 +4018,7 @@
         await loadConfig();
         await loadSingleParameterCatalog();
         await loadPackages();
+        maybeOpenPackageBuilderEditFromQuery();
         await loadCustomers().catch(() => {});
         addProbe();
         applyHeaderDefaults();
