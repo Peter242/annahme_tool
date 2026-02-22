@@ -103,6 +103,31 @@ const defaultConfig = {
 const configPath = path.join(__dirname, 'config.json');
 const singleParameterCatalogPath = path.join(__dirname, 'data', 'single_parameter_catalog.json');
 const builderPackagesPath = path.join(__dirname, 'data', 'builder_packages.json');
+const reportDbDir = path.join(__dirname, 'data', 'reportdb');
+const reportDbEventsPath = path.join(reportDbDir, 'orders_events.jsonl');
+const reportDbIndexPath = path.join(reportDbDir, 'orders_index.csv');
+const REPORTDB_CSV_FIELDS = [
+  'committedAt',
+  'commitId',
+  'orderNo',
+  'projectNo',
+  'projectName',
+  'clientName',
+  'clientEmail',
+  'samplingDate',
+  'samplers',
+  'transport',
+  'addressCompany',
+  'addressStreet',
+  'addressZip',
+  'addressCity',
+  'labNoFirst',
+  'labNoLast',
+  'labNoCount',
+  'packageSummary',
+  'deleted',
+];
+const REPORTDB_CSV_HEADER_LINE = REPORTDB_CSV_FIELDS.join(';');
 let singleParameterCatalogCache = null;
 let singleParameterCatalogUpdatedAt = null;
 let builderPackagesCache = null;
@@ -254,6 +279,7 @@ function getConfig() {
 }
 
 const EXCEL_NOT_OPEN_USER_MESSAGE = 'Fehler: Annahme muss ge\u00f6ffnet sein. Bitte \u00f6ffnen und erneut versuchen';
+const WORKBOOK_READONLY_USER_MESSAGE = 'Annahme.xlsx ist schreibgeschützt oder von einem anderen Benutzer gesperrt. Bitte in Excel schreibbar öffnen oder Sperre lösen.';
 
 function extractWriterDebug(errorMessage) {
   const text = String(errorMessage || '');
@@ -530,6 +556,320 @@ function readClientRequestId(value) {
     return '';
   }
   return value.trim();
+}
+
+function parseLabNoNumeric(labNoRaw) {
+  const m = String(labNoRaw || '').match(/^(\d+)/);
+  if (!m) return null;
+  const digits = m[1];
+  if (digits.length === 8) return null;
+  const n = Number(digits);
+  return Number.isFinite(n) ? n : null;
+}
+
+function computeLabNoRange(samples) {
+  const numericNos = (Array.isArray(samples) ? samples : [])
+    .map((sample) => {
+      if (sample && typeof sample === 'object') {
+        return parseLabNoNumeric(sample.labNo ?? sample.labNoRaw ?? '');
+      }
+      return parseLabNoNumeric(sample);
+    })
+    .filter((value) => value !== null);
+  if (numericNos.length === 0) {
+    return { first: '', last: '', count: 0 };
+  }
+  const min = Math.min(...numericNos);
+  const max = Math.max(...numericNos);
+  return {
+    first: String(min),
+    last: String(max),
+    count: numericNos.length,
+  };
+}
+
+function csvEscape(value) {
+  if (value === null || value === undefined) return '';
+  const text = String(value).replace(/\r\n?/g, ' ').replace(/\n/g, ' ');
+  const escaped = text.replace(/"/g, '""');
+  if (/[;"\n]/.test(text)) {
+    return `"${escaped}"`;
+  }
+  return escaped;
+}
+
+function ensureCsvHeader(filePath, headerLine) {
+  if (fs.existsSync(filePath)) return;
+  fs.mkdirSync(path.dirname(filePath), { recursive: true });
+  fs.writeFileSync(filePath, `${headerLine}\r\n`, 'utf-8');
+}
+
+function ensureReportDbFiles() {
+  fs.mkdirSync(reportDbDir, { recursive: true });
+  if (!fs.existsSync(reportDbEventsPath)) {
+    fs.writeFileSync(reportDbEventsPath, '', 'utf-8');
+  }
+  ensureCsvHeader(reportDbIndexPath, REPORTDB_CSV_HEADER_LINE);
+}
+
+function parseCsvLine(line) {
+  const out = [];
+  let current = '';
+  let inQuotes = false;
+  for (let i = 0; i < line.length; i += 1) {
+    const ch = line[i];
+    if (ch === '"') {
+      const next = line[i + 1];
+      if (inQuotes && next === '"') {
+        current += '"';
+        i += 1;
+      } else {
+        inQuotes = !inQuotes;
+      }
+      continue;
+    }
+    if (ch === ';' && !inQuotes) {
+      out.push(current);
+      current = '';
+      continue;
+    }
+    current += ch;
+  }
+  out.push(current);
+  return out;
+}
+
+function readReportDbIndexRows() {
+  ensureReportDbFiles();
+  const raw = fs.readFileSync(reportDbIndexPath, 'utf-8');
+  const lines = raw.split(/\r?\n/).filter((line) => line !== '');
+  if (lines.length <= 1) return [];
+  const header = parseCsvLine(lines[0]);
+  const rows = [];
+  for (const line of lines.slice(1)) {
+    const cols = parseCsvLine(line);
+    const row = {};
+    header.forEach((name, idx) => {
+      row[name] = String(cols[idx] ?? '');
+    });
+    rows.push(row);
+  }
+  return rows;
+}
+
+function writeReportDbIndexRows(rows) {
+  ensureReportDbFiles();
+  const lines = [REPORTDB_CSV_HEADER_LINE];
+  for (const row of Array.isArray(rows) ? rows : []) {
+    const values = REPORTDB_CSV_FIELDS.map((field) => csvEscape(row?.[field] ?? ''));
+    lines.push(values.join(';'));
+  }
+  fs.writeFileSync(reportDbIndexPath, `${lines.join('\r\n')}\r\n`, 'utf-8');
+}
+
+function appendReportDbEvent(event) {
+  ensureReportDbFiles();
+  fs.appendFileSync(reportDbEventsPath, `${JSON.stringify(event)}\n`, 'utf-8');
+}
+
+function createReportDbCommitId() {
+  if (typeof crypto.randomUUID === 'function') {
+    return crypto.randomUUID();
+  }
+  return `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+}
+
+function normalizeSamplerCsvValue(samplers) {
+  const list = (Array.isArray(samplers) ? samplers : [])
+    .map((item) => String(item || '').trim())
+    .filter(Boolean);
+  if (list.some((item) => item.toLowerCase() === 'kunde')) {
+    return 'Kunde';
+  }
+  return list.join('+');
+}
+
+function parseAddressForReportDb(addressBlock) {
+  const lines = String(addressBlock || '')
+    .replace(/\r\n?/g, '\n')
+    .split('\n')
+    .map((line) => line.trim())
+    .filter(Boolean);
+  const out = {
+    company: '',
+    street: '',
+    zip: '',
+    city: '',
+  };
+  if (lines.length === 0) return out;
+  out.company = lines[0];
+  let idx = 1;
+  if (lines[idx] && /^zh\s+/i.test(lines[idx])) {
+    idx += 1;
+  }
+  out.street = String(lines[idx] || '');
+  const zipCityLine = String(lines[idx + 1] || '');
+  const m = zipCityLine.match(/^(\S+)\s+(.+)$/);
+  if (m) {
+    out.zip = String(m[1] || '').trim();
+    out.city = String(m[2] || '').trim();
+  } else if (zipCityLine) {
+    out.city = zipCityLine;
+  }
+  return out;
+}
+
+function buildPackageDisplayMapForReportDb() {
+  const map = new Map();
+  try {
+    const packages = readPackages();
+    for (const pkg of Array.isArray(packages) ? packages : []) {
+      const id = String(pkg?.id || '').trim();
+      if (!id) continue;
+      const display = String(pkg?.displayName || pkg?.name || id).trim();
+      map.set(id, display || id);
+    }
+  } catch (_error) {
+    // ignore package map errors, fallback to IDs below
+  }
+  try {
+    const store = loadBuilderPackagesStore();
+    const builderPackages = Array.isArray(store?.packages) ? store.packages : [];
+    for (const pkg of builderPackages) {
+      const rawId = String(pkg?.id || '').trim();
+      if (!rawId) continue;
+      const id = `builder:${rawId}`;
+      const display = String(pkg?.name || rawId).trim();
+      map.set(id, display ? `[B] ${display}` : id);
+    }
+  } catch (_error) {
+    // ignore builder package map errors, fallback to IDs below
+  }
+  return map;
+}
+
+function buildPackageSummaryForReportDb(probes, packageDisplayMap) {
+  const unique = [];
+  const seen = new Set();
+  for (const probe of Array.isArray(probes) ? probes : []) {
+    const packageId = String(probe?.packageId || '').trim();
+    const paketKey = String(probe?.paketKey || '').trim();
+    const token = packageId || paketKey;
+    if (!token) continue;
+    const display = String(packageDisplayMap.get(token) || token).trim();
+    if (!display || seen.has(display)) continue;
+    seen.add(display);
+    unique.push(display);
+  }
+  if (unique.length <= 3) {
+    return unique.join('|');
+  }
+  return `${unique.slice(0, 3).join('|')}|+${unique.length - 3}`;
+}
+
+function upsertReportDbIndexRow(nextRow) {
+  const rows = readReportDbIndexRows();
+  const orderNo = String(nextRow?.orderNo || '').trim();
+  if (!orderNo) {
+    throw new Error('orderNo fehlt für ReportDB Upsert');
+  }
+  const index = rows.findIndex((row) => String(row.orderNo || '').trim() === orderNo);
+  const normalized = {};
+  REPORTDB_CSV_FIELDS.forEach((field) => {
+    normalized[field] = String(nextRow?.[field] ?? '');
+  });
+  if (index >= 0) {
+    rows[index] = normalized;
+  } else {
+    rows.push(normalized);
+  }
+  writeReportDbIndexRows(rows);
+}
+
+function markReportDbOrderDeleted(orderNo, committedAt, commitId) {
+  const normalizedOrderNo = String(orderNo || '').trim();
+  if (!normalizedOrderNo) {
+    throw new Error('orderNo fehlt');
+  }
+  const rows = readReportDbIndexRows();
+  const idx = rows.findIndex((row) => String(row.orderNo || '').trim() === normalizedOrderNo);
+  if (idx >= 0) {
+    rows[idx] = {
+      ...rows[idx],
+      committedAt: String(committedAt || ''),
+      commitId: String(commitId || ''),
+      deleted: '1',
+    };
+  } else {
+    const row = {};
+    REPORTDB_CSV_FIELDS.forEach((field) => {
+      row[field] = '';
+    });
+    row.committedAt = String(committedAt || '');
+    row.commitId = String(commitId || '');
+    row.orderNo = normalizedOrderNo;
+    row.deleted = '1';
+    rows.push(row);
+  }
+  writeReportDbIndexRows(rows);
+}
+
+function buildReportDbUpsertRow({ order, orderNo, sampleNos, committedAt, commitId }) {
+  const sourceOrder = order && typeof order === 'object' ? order : {};
+  const probes = Array.isArray(sourceOrder.proben) ? sourceOrder.proben : [];
+  const packageDisplayMap = buildPackageDisplayMapForReportDb();
+  const packageSummary = buildPackageSummaryForReportDb(probes, packageDisplayMap);
+  const address = parseAddressForReportDb(sourceOrder.adresseBlock);
+  const sampleRange = computeLabNoRange(probes.map((probe, idx) => ({
+    labNo: sampleNos[idx] ?? probe?.labNo ?? '',
+    labNoRaw: probe?.labNoRaw ?? '',
+  })));
+  return {
+    committedAt: String(committedAt || ''),
+    commitId: String(commitId || ''),
+    orderNo: String(orderNo || ''),
+    projectNo: String(sourceOrder.projektnummer || ''),
+    projectName: String(sourceOrder.projektName || ''),
+    clientName: String(sourceOrder.kunde || ''),
+    clientEmail: String(sourceOrder.email || ''),
+    samplingDate: String(sourceOrder.probenahmedatum || ''),
+    samplers: normalizeSamplerCsvValue(sourceOrder.samplers),
+    transport: String(sourceOrder.probentransport || ''),
+    addressCompany: address.company,
+    addressStreet: address.street,
+    addressZip: address.zip,
+    addressCity: address.city,
+    labNoFirst: sampleRange.first,
+    labNoLast: sampleRange.last,
+    labNoCount: String(sampleRange.count),
+    packageSummary,
+    deleted: '0',
+  };
+}
+
+function saveReportDbUpsertForCommit({ order, orderNo, sampleNos, committedAt }) {
+  const normalizedOrderNo = String(orderNo || '').trim();
+  if (!normalizedOrderNo) {
+    throw new Error('orderNo fehlt für ReportDB Commit');
+  }
+  const commitId = createReportDbCommitId();
+  const row = buildReportDbUpsertRow({
+    order,
+    orderNo: normalizedOrderNo,
+    sampleNos: Array.isArray(sampleNos) ? sampleNos : [],
+    committedAt,
+    commitId,
+  });
+  appendReportDbEvent({
+    schemaVersion: 1,
+    eventType: 'upsert',
+    commitId,
+    committedAt,
+    orderNo: normalizedOrderNo,
+    data: row,
+  });
+  upsertReportDbIndexRow(row);
+  return { commitId, row };
 }
 
 function normalizeCustomerName(value) {
@@ -2393,6 +2733,67 @@ app.get('/api/order/schema', (req, res) => {
   });
 });
 
+app.get('/api/reportdb/index', (req, res) => {
+  try {
+    const rawLimit = Number.parseInt(String(req.query.limit || '50'), 10);
+    const limit = Number.isFinite(rawLimit) && rawLimit > 0 ? Math.min(rawLimit, 500) : 50;
+    const search = String(req.query.search || '').trim().toLowerCase();
+    const includeDeletedRaw = String(req.query.includeDeleted || '0').trim().toLowerCase();
+    const includeDeleted = includeDeletedRaw === '1' || includeDeletedRaw === 'true' || includeDeletedRaw === 'yes';
+
+    let rows = readReportDbIndexRows();
+    if (!includeDeleted) {
+      rows = rows.filter((row) => String(row.deleted || '0') !== '1');
+    }
+    if (search) {
+      rows = rows.filter((row) => {
+        const orderNo = String(row.orderNo || '').toLowerCase();
+        const clientName = String(row.clientName || '').toLowerCase();
+        const projectName = String(row.projectName || '').toLowerCase();
+        return orderNo.includes(search) || clientName.includes(search) || projectName.includes(search);
+      });
+    }
+    rows.sort((a, b) => String(b.committedAt || '').localeCompare(String(a.committedAt || '')));
+    return res.json({
+      ok: true,
+      rows: rows.slice(0, limit),
+    });
+  } catch (error) {
+    return res.status(500).json({
+      ok: false,
+      message: `ReportDB Index konnte nicht geladen werden: ${error.message}`,
+    });
+  }
+});
+
+app.post('/api/reportdb/delete-order', (req, res) => {
+  try {
+    const orderNo = String(req.body?.orderNo || '').trim();
+    if (!orderNo) {
+      return res.status(400).json({
+        ok: false,
+        message: 'orderNo ist erforderlich',
+      });
+    }
+    const committedAt = new Date().toISOString();
+    const commitId = createReportDbCommitId();
+    appendReportDbEvent({
+      schemaVersion: 1,
+      eventType: 'delete',
+      commitId,
+      committedAt,
+      orderNo,
+    });
+    markReportDbOrderDeleted(orderNo, committedAt, commitId);
+    return res.json({ ok: true });
+  } catch (error) {
+    return res.status(500).json({
+      ok: false,
+      message: `ReportDB Löschung fehlgeschlagen: ${error.message}`,
+    });
+  }
+});
+
 app.post('/api/order/draft', (req, res) => {
   const order = parseOrderOrRespond(req, res);
   if (!order) {
@@ -2548,14 +2949,17 @@ app.post('/api/order/commit', async (req, res) => {
     }
     const fullMessage = `Writer fehlgeschlagen (${usedBackend}): ${error.message}`;
     const parsedWriterError = extractWriterDebug(error.message);
+    const writerErrorCode = String(parsedWriterError?.debug?.code || '').trim();
+    const isWorkbookReadonly = writerErrorCode === 'WORKBOOK_READONLY';
     const normalizedUserMessage = isExcelNotOpenMessage(parsedWriterError.userMessage)
       ? EXCEL_NOT_OPEN_USER_MESSAGE
-      : parsedWriterError.userMessage;
+      : (isWorkbookReadonly ? WORKBOOK_READONLY_USER_MESSAGE : parsedWriterError.userMessage);
     const userMessage = normalizedUserMessage === EXCEL_NOT_OPEN_USER_MESSAGE
       ? EXCEL_NOT_OPEN_USER_MESSAGE
       : `Writer fehlgeschlagen (${usedBackend}): ${normalizedUserMessage}`;
     const debug = normalizedUserMessage === EXCEL_NOT_OPEN_USER_MESSAGE ? undefined : (parsedWriterError.debug || undefined);
-    return res.status(400).json({
+    const statusCode = isWorkbookReadonly ? 409 : 400;
+    return res.status(statusCode).json({
       ok: false,
       message: fullMessage,
       userMessage,
@@ -2621,6 +3025,21 @@ app.post('/api/order/commit', async (req, res) => {
   }
 
   console.log(`[commit] writer=${usedBackend} order=${orderNo || 'n/a'} rows=${endRowRange || 'n/a'}`);
+  let reportDbSaved = false;
+  let reportDbError = '';
+  try {
+    saveReportDbUpsertForCommit({
+      order: orderForWrite,
+      orderNo,
+      sampleNos,
+      committedAt: nowForCommit.toISOString(),
+    });
+    reportDbSaved = true;
+  } catch (error) {
+    reportDbError = String(error.message || 'unbekannter Fehler');
+    console.warn(`[reportdb] save failed for order ${orderNo || 'n/a'}: ${reportDbError}`);
+  }
+
   const responsePayload = {
     ok: true,
     writer: usedBackend,
@@ -2644,6 +3063,8 @@ app.post('/api/order/commit', async (req, res) => {
     backup,
     writerBackend: usedBackend,
     writerResult: writeResult,
+    reportDbSaved,
+    reportDbError: reportDbSaved ? undefined : reportDbError,
     clientRequestId: clientRequestId || undefined,
   };
 

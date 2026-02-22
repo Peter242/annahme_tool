@@ -1,4 +1,4 @@
-﻿param(
+param(
   [int]$ParentPid = 0
 )
 
@@ -437,6 +437,71 @@ function Get-Sheet {
   return $sheet
 }
 
+function Build-ReadOnlyErrorResult {
+  param(
+    [string]$targetPath,
+    [object]$wb,
+    [bool]$isWriteReserved
+  )
+  $message = 'Annahme.xlsx ist schreibgeschützt oder gesperrt. Bitte Datei schreibbar öffnen (nicht Schreibgeschützt) und erneut versuchen.'
+  $workbookFullName = ''
+  $readOnly = $false
+  try { $workbookFullName = [string]$wb.FullName } catch { $workbookFullName = '' }
+  try { $readOnly = ($wb.ReadOnly -eq $true) } catch { $readOnly = $false }
+  return @{
+    ok = $false
+    saved = $false
+    writer = 'com'
+    errorCode = 'WORKBOOK_READONLY'
+    error = $message
+    message = $message
+    targetPath = $targetPath
+    workbookFullName = $workbookFullName
+    readOnly = $readOnly
+    writeReserved = $isWriteReserved
+  }
+}
+
+function Build-ExcelNotReadyDialogErrorResult {
+  $message = 'Excel wartet auf ein Dialogfenster (Datei gesperrt, Warnung, etc). Bitte schließe das Dialogfenster und versuche erneut.'
+  return @{
+    ok = $false
+    saved = $false
+    writer = 'com'
+    errorCode = 'EXCEL_NOT_READY_DIALOG'
+    error = $message
+    message = $message
+  }
+}
+
+function Wait-ExcelReady {
+  param(
+    [object]$excel,
+    [int]$timeoutMs = 1500,
+    [int]$pollMs = 100
+  )
+  $sw = [System.Diagnostics.Stopwatch]::StartNew()
+  while ($sw.ElapsedMilliseconds -lt $timeoutMs) {
+    $isReady = $false
+    $isInteractive = $false
+    try {
+      $isReady = ($excel.Ready -eq $true)
+    } catch {
+      $isReady = $false
+    }
+    try {
+      $isInteractive = ($excel.Interactive -eq $true)
+    } catch {
+      $isInteractive = $false
+    }
+    if ($isReady -and $isInteractive) {
+      return $true
+    }
+    Start-Sleep -Milliseconds $pollMs
+  }
+  return $false
+}
+
 function Process-Commit {
   param([object]$payload)
   $timings = @{}
@@ -466,6 +531,9 @@ function Process-Commit {
 
   $excel = Get-ExcelApplication -allowAutoOpen $allowAutoOpenExcel
   Mark-Time -timings $timings -sw $sw -name 'excel.connect'
+  if (-not (Wait-ExcelReady -excel $excel -timeoutMs 1500 -pollMs 100)) {
+    return (Build-ExcelNotReadyDialogErrorResult)
+  }
 
   Set-ErrorContext -where 'path.resolve' -detail 'targetPath from payload.excelPath'
   $targetPath = Resolve-FullPath -pathValue ([string]$payload.excelPath)
@@ -473,6 +541,23 @@ function Process-Commit {
   $targetName = [System.IO.Path]::GetFileName($targetPath)
   $wb = Get-Workbook -excel $excel -targetPath $targetPath -targetPathNormalized $targetPathNormalized -targetName $targetName -allowAutoOpen $allowAutoOpenExcel
   Mark-Time -timings $timings -sw $sw -name 'workbook.attach'
+  $isReadOnly = $false
+  $isWriteReserved = $false
+  try {
+    $isReadOnly = ($wb.ReadOnly -eq $true)
+  } catch {
+    $isReadOnly = $false
+  }
+  try {
+    if ($wb.PSObject.Properties.Name -contains 'WriteReserved') {
+      $isWriteReserved = -not [string]::IsNullOrWhiteSpace([string]$wb.WriteReserved)
+    }
+  } catch {
+    $isWriteReserved = $false
+  }
+  if ($isReadOnly -or $isWriteReserved) {
+    return (Build-ReadOnlyErrorResult -targetPath $targetPath -wb $wb -isWriteReserved $isWriteReserved)
+  }
 
   $sheet = Get-Sheet -wb $wb -sheetName ([string]$payload.yearSheetName)
   Mark-Time -timings $timings -sw $sw -name 'sheet.get'
@@ -596,16 +681,6 @@ function Process-Commit {
   Mark-Time -timings $timings -sw $sw -name 'rows.autofit'
 
   Set-ErrorContext -where 'workbook.save' -detail 'Save only'
-  if ($wb.ReadOnly -eq $true) {
-    return @{
-      ok = $false
-      saved = $false
-      writer = 'com'
-      reason = 'read-only'
-      readOnly = $true
-      targetPath = $targetPath
-    }
-  }
 
   $wb.Save()
   Mark-Time -timings $timings -sw $sw -name 'save.done'

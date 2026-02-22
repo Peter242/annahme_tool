@@ -1,6 +1,7 @@
 const path = require('path');
 const { spawn, spawnSync } = require('child_process');
 const readline = require('readline');
+const WORKBOOK_READONLY_USER_MESSAGE = 'Annahme.xlsx ist schreibgeschützt oder von einem anderen Benutzer gesperrt. Bitte in Excel schreibbar öffnen oder Sperre lösen.';
 
 class ComWorkerClient {
   constructor(rootDir) {
@@ -201,8 +202,18 @@ class ComWorkerClient {
     };
 
     try {
-      return await execute();
+      const parsed = await execute();
+      if (parsed && parsed.ok === false && String(parsed.errorCode || '') === 'WORKBOOK_READONLY') {
+        const readonlyError = new Error(`${WORKBOOK_READONLY_USER_MESSAGE} | code=WORKBOOK_READONLY`);
+        readonlyError.code = 'WORKBOOK_READONLY';
+        readonlyError.userMessage = WORKBOOK_READONLY_USER_MESSAGE;
+        throw readonlyError;
+      }
+      return parsed;
     } catch (error) {
+      if (error && String(error.code || '') === 'WORKBOOK_READONLY') {
+        throw error;
+      }
       if (!retryOnFailure) {
         throw error;
       }

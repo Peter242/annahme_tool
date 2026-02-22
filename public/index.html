@@ -15,6 +15,7 @@
       <div class="topbar-actions">
         <button type="button" id="open-package-builder-modal" class="secondary topbar-icon-btn" title="Paket Builder" aria-label="Paket Builder">🧰</button>
         <button type="button" id="open-customers-modal" class="secondary topbar-icon-btn" title="Kunden" aria-label="Kunden">👤</button>
+        <button type="button" id="open-reportdb-modal" class="secondary topbar-icon-btn" title="Aufträge" aria-label="Aufträge">Aufträge</button>
         <button type="button" id="theme-toggle" class="secondary theme-toggle topbar-icon-btn" title="Theme wechseln" aria-label="Theme wechseln">◐</button>
         <a class="topbar-icon-btn secondary" href="/settings.html" title="Settings" aria-label="Settings">⚙</a>
       </div>
@@ -330,6 +331,18 @@
       </div>
     </div>
 
+    <div id="reportdb-modal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="reportdb-modal-title">
+      <div class="modal-card modal-card-medium">
+        <h3 id="reportdb-modal-title">Aufträge</h3>
+        <p class="meta" style="margin-top:0;">Löschen entfernt den Auftrag nur aus der ReportDB, nicht aus Excel.</p>
+        <div class="grid" style="grid-template-columns: 1fr auto; gap: 0.45rem;">
+          <input id="reportdb-search" type="text" placeholder="Suchen: Auftragsnr, Kunde, Projekt" />
+          <button type="button" id="reportdb-modal-close" class="secondary">Schließen</button>
+        </div>
+        <div id="reportdb-list" class="customers-list" role="listbox" aria-label="Auftragsliste"></div>
+      </div>
+    </div>
+
     <div id="important-fields-modal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="important-fields-modal-title">
       <div class="modal-card modal-card-small">
         <h3 id="important-fields-modal-title">Wichtige Felder fehlen</h3>
@@ -521,6 +534,7 @@
       const probeTemplate = document.getElementById('probe-template');
       const newOrderButton = document.getElementById('new-order-btn');
       const openCustomersModalButton = document.getElementById('open-customers-modal');
+      const openReportDbModalButton = document.getElementById('open-reportdb-modal');
       const newOrderSameProjectButton = document.getElementById('new-order-same-project-btn');
       const addProbeButton = document.getElementById('add-probe');
       const openBulkProbeModalButton = document.getElementById('open-bulk-probe-modal');
@@ -592,6 +606,10 @@
       const customersList = document.getElementById('customers-list');
       const customersModalClose = document.getElementById('customers-modal-close');
       const customersRefreshFromExcelButton = document.getElementById('customers-refresh-from-excel');
+      const reportDbModal = document.getElementById('reportdb-modal');
+      const reportDbSearchInput = document.getElementById('reportdb-search');
+      const reportDbList = document.getElementById('reportdb-list');
+      const reportDbModalClose = document.getElementById('reportdb-modal-close');
       const importantFieldsModal = document.getElementById('important-fields-modal');
       const importantFieldsList = document.getElementById('important-fields-list');
       const importantFieldsCancel = document.getElementById('important-fields-cancel');
@@ -647,6 +665,7 @@
       let packages = [];
       let customers = [];
       let activeCustomerSearch = '';
+      let activeReportDbSearch = '';
       let activeProbeForGeruchModal = null;
       let activeProbeForNoteModal = null;
       let commitInFlight = false;
@@ -1047,6 +1066,104 @@
 
       function closeCustomersModal() {
         customersModal.classList.add('hidden');
+      }
+
+      function formatReportDbRange(row) {
+        const first = String(row?.labNoFirst || '').trim();
+        const last = String(row?.labNoLast || '').trim();
+        if (first && last) return `${first}-${last}`;
+        if (first) return first;
+        if (last) return last;
+        return '-';
+      }
+
+      async function fetchReportDbRows() {
+        const params = new URLSearchParams();
+        params.set('limit', '50');
+        params.set('includeDeleted', '0');
+        const search = String(activeReportDbSearch || '').trim();
+        if (search) params.set('search', search);
+        const response = await fetch(`/api/reportdb/index?${params.toString()}`, { cache: 'no-store' });
+        const data = await response.json();
+        if (!response.ok || data.ok !== true || !Array.isArray(data.rows)) {
+          throw new Error(data?.message || 'Aufträge konnten nicht geladen werden');
+        }
+        return data.rows;
+      }
+
+      async function renderReportDbList() {
+        reportDbList.innerHTML = '';
+        const rows = await fetchReportDbRows();
+        if (rows.length === 0) {
+          const empty = document.createElement('div');
+          empty.className = 'meta';
+          empty.textContent = 'Keine Treffer';
+          reportDbList.appendChild(empty);
+          return;
+        }
+        rows.forEach((row) => {
+          const wrapper = document.createElement('div');
+          wrapper.className = 'customer-item-row';
+          const info = document.createElement('button');
+          info.type = 'button';
+          info.className = 'secondary customer-item';
+          info.style.cursor = 'default';
+          const title = document.createElement('strong');
+          title.textContent = String(row.orderNo || '-');
+          const meta = document.createElement('span');
+          meta.textContent = `${String(row.clientName || '-')} | ${String(row.projectName || '-')} | ${String(row.samplingDate || '-')} | ${formatReportDbRange(row)}`;
+          info.appendChild(title);
+          info.appendChild(meta);
+          wrapper.appendChild(info);
+
+          const deleteButton = document.createElement('button');
+          deleteButton.type = 'button';
+          deleteButton.className = 'secondary icon-btn danger';
+          deleteButton.textContent = '✕';
+          deleteButton.title = `Auftrag aus ReportDB löschen: ${String(row.orderNo || '')}`;
+          deleteButton.setAttribute('aria-label', deleteButton.title);
+          deleteButton.addEventListener('click', async (event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            const orderNo = String(row.orderNo || '').trim();
+            if (!orderNo) return;
+            const confirmed = window.confirm(`Auftrag ${orderNo} aus ReportDB löschen?`);
+            if (!confirmed) return;
+            try {
+              const response = await fetch('/api/reportdb/delete-order', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ orderNo }),
+              });
+              const data = await response.json();
+              if (!response.ok || data.ok !== true) {
+                throw new Error(data?.message || 'Löschen fehlgeschlagen');
+              }
+              showToast('success', `Aus ReportDB gelöscht: ${orderNo}`);
+              await renderReportDbList();
+            } catch (error) {
+              showToast('error', error.message);
+            }
+          });
+          wrapper.appendChild(deleteButton);
+          reportDbList.appendChild(wrapper);
+        });
+      }
+
+      async function openReportDbModal() {
+        activeReportDbSearch = '';
+        reportDbSearchInput.value = '';
+        reportDbModal.classList.remove('hidden');
+        try {
+          await renderReportDbList();
+        } catch (error) {
+          showToast('error', error.message);
+        }
+        setTimeout(() => reportDbSearchInput.focus(), 0);
+      }
+
+      function closeReportDbModal() {
+        reportDbModal.classList.add('hidden');
       }
 
       function customerDeleteId(entry) {
@@ -4039,6 +4156,7 @@
       addProbeButton.addEventListener('click', addProbe);
       newOrderButton.addEventListener('click', resetForNewOrder);
       openCustomersModalButton.addEventListener('click', openCustomersModal);
+      openReportDbModalButton.addEventListener('click', openReportDbModal);
       newOrderSameProjectButton.addEventListener('click', resetForNewOrderSameProject);
       openBulkProbeModalButton.addEventListener('click', openBulkProbeModal);
       probeNochNichtDaInput.addEventListener('change', updateEingangDatumState);
@@ -4091,6 +4209,18 @@
         if (event.target === customersModal) closeCustomersModal();
       });
       customersRefreshFromExcelButton.addEventListener('click', refreshCustomersFromExcel);
+      reportDbSearchInput.addEventListener('input', async () => {
+        activeReportDbSearch = reportDbSearchInput.value;
+        try {
+          await renderReportDbList();
+        } catch (error) {
+          showToast('error', error.message);
+        }
+      });
+      reportDbModalClose.addEventListener('click', closeReportDbModal);
+      reportDbModal.addEventListener('click', (event) => {
+        if (event.target === reportDbModal) closeReportDbModal();
+      });
       importantFieldsCancel.addEventListener('click', () => resolveImportantFieldsModal(false));
       importantFieldsProceed.addEventListener('click', () => resolveImportantFieldsModal(true));
       importantFieldsModal.addEventListener('click', (event) => {
@@ -4218,6 +4348,10 @@
           closeCustomersModal();
           return;
         }
+        if (event.key === 'Escape' && !reportDbModal.classList.contains('hidden')) {
+          closeReportDbModal();
+          return;
+        }
         if (event.key === 'Escape' && !kuerzelModal.classList.contains('hidden')) {
           closeKuerzelModal();
           return;
@@ -4264,14 +4398,14 @@
         const rowIndex = allRows.indexOf(row);
         if (rowIndex >= 0 && rowIndex < allRows.length - 1) {
           const nextRow = allRows[rowIndex + 1];
-          const nextFirst = nextRow.querySelector('input[name="probenbezeichnung"]');
+          const nextFirst = nextRow.querySelector('[name="probenbezeichnung"]');
           if (nextFirst) nextFirst.focus();
           return;
         }
 
         if (rowIndex === allRows.length - 1) {
           addProbe();
-          const last = probenContainer.querySelector('.probe-row:last-child input[name="probenbezeichnung"]');
+          const last = probenContainer.querySelector('.probe-row:last-child [name="probenbezeichnung"]');
           if (last) last.focus();
         }
       });
