@@ -17,7 +17,6 @@ const { getComWorkerClient } = require('./src/writers/comWorkerClient');
 const { calculateTermin } = require('./src/termin');
 const { buildParameterTextFromSelection } = require('./src/parameterTextBuilder');
 const { mapTogglesToSelection } = require('./src/singleParamsMapper');
-const { tryMergeLegacyPackage } = require('./src/legacyPackageMerger');
 const {
   QUICK_CONTAINER_DEFAULTS,
   normalizeQuickContainerConfig,
@@ -869,6 +868,7 @@ function buildOrderCommitExample() {
     kuerzel: 'MM',
     eilig: false,
     probenahmedatum: '2026-02-13',
+    samplers: ['SB', 'JO'],
     sameContainersForAll: false,
     headerContainers: {
       mode: 'perOrder',
@@ -903,6 +903,7 @@ function buildOrderSchemaInfo() {
       kuerzel: 'string (optional)',
       eilig: 'boolean (optional)',
       probenahmedatum: 'string YYYY-MM-DD (optional, Ausgabe als Probenahme in Kopf-Spalte I)',
+      samplers: 'string[] (optional, Werte: SB|LW|AR|JO|AD|Kunde; Kunde ist exklusiv)',
       sameContainersForAll: 'boolean (optional, wenn true nutzt Kopf-Gebinde fuer alle Proben)',
       headerContainers: 'object (optional, siehe containers schema)',
       probenEingangDatum: 'string YYYY-MM-DD (optional)',
@@ -1036,6 +1037,7 @@ const orderSchema = z
     email: z.string().optional(),
     adresseBlock: z.string().optional(),
     probenahmedatum: z.string().optional(),
+    samplers: z.array(z.enum(['SB', 'LW', 'AR', 'JO', 'AD', 'Kunde'])).optional(),
     erfasstKuerzel: z.string().optional(),
     kuerzel: z.string().optional(),
     terminDatum: z.string().optional(),
@@ -1097,6 +1099,31 @@ function formatPreviewGermanDate(value) {
   return `${dd}.${mm}.${yyyy}`;
 }
 
+function normalizeSamplerSelection(value) {
+  const allowed = ['SB', 'LW', 'AR', 'JO', 'AD', 'Kunde'];
+  const source = Array.isArray(value) ? value : [];
+  const seen = new Set();
+  const out = [];
+  source.forEach((rawValue) => {
+    const raw = String(rawValue || '').trim();
+    if (!raw) return;
+    const normalized = raw.toLowerCase() === 'kunde' ? 'Kunde' : raw.toUpperCase();
+    if (!allowed.includes(normalized) || seen.has(normalized)) return;
+    seen.add(normalized);
+    out.push(normalized);
+  });
+  if (out.includes('Kunde')) return ['Kunde'];
+  return allowed.filter((item) => item !== 'Kunde' && out.includes(item));
+}
+
+function formatProbenahmeLineForPreview(rawDate, samplers) {
+  const probenahme = formatPreviewGermanDate(rawDate || '');
+  if (!probenahme) return '';
+  const normalizedSamplers = normalizeSamplerSelection(samplers);
+  if (normalizedSamplers.length < 1) return `Probenahme: ${probenahme}`;
+  return `Probenahme: ${probenahme} ${normalizedSamplers.join(' + ')}`;
+}
+
 function samePreviewDay(left, right) {
   const a = parsePreviewDate(left);
   const b = parsePreviewDate(right);
@@ -1111,7 +1138,7 @@ function buildHeaderILinesPreview(order, now = new Date()) {
   const projekt = String(order.projektName || order.projektname || order.projekt || '').trim();
   const projektNr = String(order.projektnummer || '').trim();
   const ansprechpartner = String(order.ansprechpartner || '').trim();
-  const probenahme = formatPreviewGermanDate(order.probenahmedatum || '');
+  const probenahmeLine = formatProbenahmeLineForPreview(order.probenahmedatum, order.samplers);
   const probenEingang = formatPreviewGermanDate(order.probenEingangDatum || '');
   const transportRaw = String(order.probentransport || '').trim().toUpperCase();
   const lines = [];
@@ -1119,7 +1146,7 @@ function buildHeaderILinesPreview(order, now = new Date()) {
   if (ansprechpartner) lines.push(ansprechpartner);
   if (projektNr) lines.push(`Projekt Nr: ${projektNr}`);
   if (projekt) lines.push(`Projekt: ${projekt}`);
-  if (probenahme) lines.push(`Probenahme: ${probenahme}`);
+  if (probenahmeLine) lines.push(probenahmeLine);
   if (probenEingang && !samePreviewDay(order.probenEingangDatum, now)) {
     lines.push(`Eingangsdatum: ${probenEingang}`);
   }
@@ -1174,6 +1201,28 @@ function buildPktAddonSuffixFromToggles(catalog, toggles) {
   unique.sort((a, b) => a.localeCompare(b, 'de', { sensitivity: 'base' }));
   if (unique.length < 1) return '';
   return `+${unique.join(', +')}`;
+}
+
+function extractLegacyManualAddonLines(addonText) {
+  const source = String(addonText || '').replace(/\r\n?/g, '\n');
+  if (!source) return [];
+  return source
+    .split('\n')
+    .map((line) => String(line || '').trim())
+    .filter((line) => line && /^[^:]+:/.test(line))
+    .filter((line) => !/^(PKT|PV|VOR\s*ORT)\s*:/i.test(line));
+}
+
+function buildLegacyManualBlock(packageDisplayName, addonSuffix, addonText) {
+  const packageName = String(packageDisplayName || '').trim();
+  const suffix = String(addonSuffix || '').trim();
+  const manualLines = extractLegacyManualAddonLines(addonText);
+  const pktLine = `PKT: ${[packageName, suffix].filter(Boolean).join(' ')}`.trim();
+  return [
+    'MANUELL (Legacy Paket): Addons bitte in Excel in die Paketzeilen übernehmen.',
+    pktLine,
+    ...manualLines,
+  ].join('\n');
 }
 
 function getProbeSingleParamToggles(probe) {
@@ -1295,28 +1344,20 @@ function resolvePackageTextForProbe({ probe, packageById, builderPackageById, ca
       addonText = buildParameterTextFromSelection(probe.singleParams);
     }
   }
-  let combinedBody = baseText;
-  let legacyMergeStatus = 'merged';
-  let legacyMergeReason = null;
-  if (String(addonText || '').trim()) {
-    const mergeResult = tryMergeLegacyPackage(baseText, addonText);
-    if (mergeResult.ok) {
-      combinedBody = String(mergeResult.mergedText || '').trim();
-      legacyMergeStatus = 'merged';
-      legacyMergeReason = null;
-    } else {
-      const addon = String(addonText || '').trim();
-      combinedBody = [baseText, addon].filter(Boolean).join('\n');
-      legacyMergeStatus = 'appended';
-      legacyMergeReason = String(mergeResult.reason || 'merge_failed').trim();
-    }
-  }
-  const pktHeader = packageDisplayName ? `PKT: ${packageDisplayName}${addonSuffix}` : '';
-  const sections = [pktHeader, combinedBody].filter(Boolean);
+  const hasAddons = Boolean(String(addonSuffix || '').trim());
+  const pktHeader = packageDisplayName ? `PKT: ${packageDisplayName}` : '';
+  const baseSections = [pktHeader, baseText].filter(Boolean);
+  const bodyText = baseSections.join('\n');
+  const manualBlock = hasAddons
+    ? buildLegacyManualBlock(packageDisplayName, addonSuffix, addonText)
+    : '';
+  const text = manualBlock
+    ? [bodyText, manualBlock].filter(Boolean).join('\n\n')
+    : bodyText;
   return {
-    text: sections.join('\n'),
-    legacyMergeStatus,
-    legacyMergeReason,
+    text,
+    legacyMergeStatus: hasAddons ? 'appended' : null,
+    legacyMergeReason: hasAddons ? 'legacy_manual_block' : null,
   };
 }
 
@@ -1516,6 +1557,11 @@ function parseOrderOrRespond(req, res) {
 
   if (incoming.probenEingangDatum === null || incoming.probenEingangDatum === '') {
     incoming.probenEingangDatum = undefined;
+  }
+  if (!Array.isArray(incoming.samplers)) {
+    incoming.samplers = undefined;
+  } else {
+    incoming.samplers = normalizeSamplerSelection(incoming.samplers);
   }
   if (!String(incoming.kopfBemerkung || '').trim() && String(incoming.auftragsnotiz || '').trim()) {
     incoming.kopfBemerkung = String(incoming.auftragsnotiz).trim();

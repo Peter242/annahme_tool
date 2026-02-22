@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="de">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Builder Pakete verwalten</title>
+    <link rel="stylesheet" href="/styles.css" />
+    <link rel="stylesheet" href="/settings/common.css" />
+  </head>
+  <body>
+    <div class="settings-shell">
+      <header class="topbar">
+        <a class="brand" href="/">
+          <img src="/assets/cua-logo.png" alt="CUA Logo" />
+        </a>
+        <h1 class="app-brand-title">Builder Pakete verwalten</h1>
+        <div class="topbar-actions">
+          <button type="button" id="theme-toggle" class="theme-toggle">Light</button>
+          <a class="btn-link" href="/settings">Zurück</a>
+        </div>
+      </header>
+
+      <main class="settings-content" style="padding-top: 1rem;">
+        <p class="settings-note">Hier pflegst du gespeicherte Builder-Pakete.</p>
+        <div class="action-row" style="align-items:center; gap:0.5rem; flex-wrap:wrap;">
+          <input id="bp-search" type="text" placeholder="Paket suchen..." style="min-width:260px; max-width:420px;" />
+          <button type="button" id="bp-reload" class="secondary">Neu laden</button>
+          <a class="secondary" href="/?openPackageBuilder=1">Neues Builder Paket</a>
+        </div>
+
+        <div id="bp-status" class="inline-ok hidden" style="margin-top:0.5rem;"></div>
+
+        <div id="bp-list" class="list-editor" style="margin-top:0.75rem; max-height:72vh; overflow-y:auto;"></div>
+      </main>
+    </div>
+
+    <div id="toast-container" class="toast-wrap"></div>
+
+    <script src="/settings/common.js"></script>
+    <script src="/builder-packages.js"></script>
+  </body>
+</html>

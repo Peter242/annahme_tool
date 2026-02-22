@@ -1,0 +1,58 @@
+{
+  "version": 1,
+  "updatedAt": "2026-02-21T20:54:06.967Z",
+  "packages": [
+    {
+      "id": "bp_mlwsr0xjsc6o5s",
+      "type": "builder",
+      "name": "Peters spezi",
+      "createdAt": "2026-02-21T20:54:06.967Z",
+      "updatedAt": "2026-02-21T20:54:06.967Z",
+      "definition": {
+        "toggles": {
+          "Al": {
+            "selected": true,
+            "lab": "HB",
+            "media": {
+              "FS": true
+            },
+            "vorOrt": false
+          },
+          "Bor": {
+            "selected": true,
+            "lab": "HB",
+            "media": {
+              "H2O": true
+            },
+            "vorOrt": false
+          },
+          "CN ges": {
+            "selected": true,
+            "lab": "EMD",
+            "media": {
+              "H2O": true,
+              "10e": true
+            },
+            "vorOrt": false
+          },
+          "F": {
+            "selected": true,
+            "lab": "EMD",
+            "media": {
+              "H2O": true
+            },
+            "vorOrt": false
+          },
+          "As": {
+            "selected": true,
+            "lab": "HB",
+            "media": {
+              "2e": true
+            },
+            "vorOrt": false
+          }
+        }
+      }
+    }
+  ]
+}

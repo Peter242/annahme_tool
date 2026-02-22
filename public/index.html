@@ -13,26 +13,28 @@
       </div>
       <h1 class="app-brand-title">CUA Annahme</h1>
       <div class="topbar-actions">
+        <button type="button" id="open-package-builder-modal" class="secondary topbar-icon-btn" title="Paket Builder" aria-label="Paket Builder">🧰</button>
+        <button type="button" id="open-customers-modal" class="secondary topbar-icon-btn" title="Kunden" aria-label="Kunden">👤</button>
         <button type="button" id="theme-toggle" class="secondary theme-toggle topbar-icon-btn" title="Theme wechseln" aria-label="Theme wechseln">◐</button>
         <a class="topbar-icon-btn secondary" href="/settings.html" title="Settings" aria-label="Settings">⚙</a>
       </div>
     </header>
 
-    <main class="app-main">
+    <main class="app-main" style="max-width:min(1800px, 98vw); margin:0 auto; padding:0 14px;">
       <form id="order-form" class="order-layout">
         <section class="head-section">
           <div class="head-header-row">
-            <h2 class="section-title">Kopf</h2>
-            <div class="head-action-row">
-              <button type="button" id="new-order-btn" class="secondary head-action-btn" title="Neuer Auftrag" aria-label="Neuer Auftrag">Neu</button>
-              <button type="button" id="open-package-builder-modal" class="secondary head-action-btn" title="Paket Builder" aria-label="Paket Builder">Paket Builder</button>
-              <button type="button" id="new-order-same-project-btn" class="secondary head-action-btn" title="Neuer Auftrag gleiches Projekt" aria-label="Neuer Auftrag gleiches Projekt">Neu gleiches Projekt</button>
-              <button type="button" id="open-customers-modal" class="secondary head-action-btn" title="Kunden" aria-label="Kunden">Kunden</button>
-              <button type="button" id="add-probe" class="secondary head-action-btn" title="Probe hinzufügen" aria-label="Probe hinzufügen">Probe +</button>
-              <button type="button" id="open-bulk-probe-modal" class="secondary head-action-btn" title="Mehrere Proben einfügen" aria-label="Mehrere Proben einfügen">Mehrere Proben</button>
-              <button type="submit" form="order-form" id="draft-btn" class="secondary head-action-btn" title="Draft senden" aria-label="Draft senden">Draft senden</button>
-              <button type="button" id="commit-btn" class="primary head-action-btn hidden" title="Commit senden" aria-label="Commit senden">Commit senden</button>
-              <button type="button" id="retry-commit-btn" class="secondary head-action-btn hidden" title="Erneut versuchen" aria-label="Erneut versuchen">Erneut versuchen</button>
+            <h2 class="section-title" style="display:none;">Kopf</h2>
+            <div style="display:flex; justify-content:space-between; align-items:center; gap:10px; width:100%;">
+              <div id="topbar-left" class="head-action-row">
+                <button type="button" id="new-order-btn" class="secondary head-action-btn" title="Neuer Auftrag" aria-label="Neuer Auftrag">Neu</button>
+                <button type="button" id="new-order-same-project-btn" class="secondary head-action-btn" title="Neuer Auftrag gleiches Projekt" aria-label="Neuer Auftrag gleiches Projekt">Neu gleiches Projekt</button>
+              </div>
+              <div id="topbar-right" class="head-action-row" style="justify-content:flex-end;">
+                <button type="submit" form="order-form" id="draft-btn" class="secondary head-action-btn" title="Erstellt eine Vorschau ohne in Excel zu schreiben" aria-label="Vorschau">Vorschau</button>
+                <button type="button" id="commit-btn" class="primary head-action-btn hidden" title="Schreibt den Auftrag in die geöffnete Annahme Excel" aria-label="In Excel schreiben">In Excel schreiben</button>
+                <button type="button" id="retry-commit-btn" class="secondary head-action-btn hidden" title="Erneut versuchen" aria-label="Erneut versuchen">Erneut versuchen</button>
+              </div>
             </div>
           </div>
           <div id="commit-feedback" class="feedback" role="status" aria-live="polite"></div>
@@ -40,92 +42,106 @@
             <summary>Details</summary>
             <pre id="error-details"></pre>
           </details>
-          <div class="head-grid">
-            <div class="field-kunde">
-              <input id="kunde" name="kunde" list="kunden-options" placeholder="Kunde" />
-              <datalist id="kunden-options"></datalist>
-            </div>
-            <div class="field-ansprechpartner">
-              <input id="ansprechpartner" name="ansprechpartner" placeholder="Ansprechpartner" />
-            </div>
-            <div class="field-projektnummer">
-              <input id="projektnummer" name="projektnummer" placeholder="Projektnummer" />
-            </div>
-            <div class="field-projekt">
-              <input id="projektName" name="projektName" placeholder="Projekt" />
-            </div>
-            <div class="field-email">
-              <input id="email" name="email" type="email" placeholder="Email" />
-            </div>
-            <div class="field-kuerzel">
-              <input id="erfasstKuerzel" name="erfasstKuerzel" maxlength="8" class="head-input-kuerzel hidden" readonly />
-              <button type="button" id="open-kuerzel-modal" class="secondary head-field-btn">Kürzel</button>
-            </div>
-            <div class="field-probenahmedatum">
-              <input id="probenahmedatum" name="probenahmedatum" type="date" class="head-input-date" placeholder="Probenahmedatum" aria-label="Probenahmedatum" />
-            </div>
-            <div class="head-toggle-wrap field-eilig">
-              <button type="button" id="eilig-toggle" class="switch-toggle" role="switch" aria-checked="false" data-value="nein">
-                <span class="switch-toggle-label">Eilig</span>
-                <span class="switch-toggle-value">Aus</span>
-              </button>
-              <input type="hidden" id="eilig-value" name="eilig" value="nein" />
-            </div>
-            <div class="head-toggle-wrap field-transport">
-              <button type="button" id="probentransport-toggle" class="switch-toggle switch-toggle-transport" role="switch" aria-checked="false" data-value="CUA">
-                <span class="switch-toggle-label">Transport</span>
-                <span class="switch-toggle-value">CUA</span>
-              </button>
-              <input type="hidden" id="probentransport-value" name="probentransport" value="CUA" />
-            </div>
-          </div>
-          <div class="head-meta-row">
-            <div class="head-inline-actions head-inline-actions-helper">
-              <button type="button" id="open-address-modal" class="secondary">Anschrift</button>
-              <span id="adresse-preview" class="mini-hint">Keine Anschrift</span>
-            </div>
-            <button type="button" id="open-kopfbemerkung-modal" class="secondary head-note-btn" title="Keine Kopfbemerkung">
-              <span id="kopf-bemerkung-button-label">Kopfbemerkung</span>
-              <span id="kopf-bemerkung-indicator" class="note-indicator hidden" aria-hidden="true"></span>
-            </button>
-            <label for="probeNochNichtDa" class="inline-checkbox compact-inline-checkbox">
-              <input id="probeNochNichtDa" name="probeNochNichtDa" type="checkbox" />
-              Probe noch nicht da
-            </label>
-            <input id="adresseBlock" name="adresseBlock" type="hidden" />
-            <input id="probenEingangDatum" name="probenEingangDatum" type="date" class="head-input-date hidden" />
-            <textarea id="kopfBemerkung" name="kopfBemerkung" class="hidden"></textarea>
-          </div>
-        </section>
+          <div id="page-layout" style="display:grid; grid-template-columns: 220px minmax(0, 1fr); gap: 12px; align-items:start;">
+            <aside id="head-sidebar" style="position: sticky; top: 76px; max-height: calc(100vh - 90px); overflow: hidden; padding: 10px; border: 1px solid rgba(255,255,255,0.08); border-radius: 14px; background: rgba(0,0,0,0.25);">
+              <div style="display:flex; flex-direction:column; gap:6px;">
+                <input id="kunde" name="kunde" list="kunden-options" placeholder="Kunde" style="height:32px; font-size:13px;" />
+                <datalist id="kunden-options"></datalist>
 
-        <section class="sample-section">
-          <h2 class="section-title">Probenliste</h2>
-          <div class="same-set-row">
-            <label for="same-containers-for-all" class="inline-checkbox">
-              <input id="same-containers-for-all" name="sameContainersForAll" type="checkbox" />
-              Gebinde gelten für gesamten Auftrag
-            </label>
-            <button type="button" id="open-header-gebinde-modal" class="secondary hidden">Gebinde Auftrag...</button>
-            <span id="header-gebinde-summary" class="gebinde-summary">-</span>
-          </div>
+                <input id="ansprechpartner" name="ansprechpartner" placeholder="Ansprechpartner" style="height:32px; font-size:13px;" />
 
-          <div class="probes-table-wrap">
-            <table class="probes-table">
-              <thead>
-                <tr>
-                  <th>Probenbezeichnung</th>
-                  <th>Material</th>
-                  <th>Tiefe/Volumen</th>
-                  <th>Paket</th>
-                  <th>Gebinde</th>
-                  <th>Gewicht (kg)</th>
-                  <th>Geruch</th>
-                  <th>Bemerkung</th>
-                  <th>Aktionen</th>
-                </tr>
-              </thead>
-              <tbody id="proben-container"></tbody>
-            </table>
+                <div class="head-inline-actions head-inline-actions-helper" style="margin-bottom:6px; gap:4px;">
+                  <button type="button" id="open-address-modal" class="secondary" style="width:100%; min-height:64px; font-size:13px; position:relative; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2px; padding:6px 28px 6px 10px;" title="Keine Anschrift">
+                    <span id="address-line-1" style="max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; line-height:1.2;">Anschrift</span>
+                    <span id="address-line-2" style="max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; line-height:1.2;"></span>
+                    <span id="address-line-3" style="max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; line-height:1.2;"></span>
+                    <span id="address-indicator" class="note-indicator hidden" aria-hidden="true" style="position:absolute; top:6px; right:8px;"></span>
+                  </button>
+                  <span id="adresse-preview" class="mini-hint" style="display:none;">Keine Anschrift</span>
+                </div>
+
+                <input id="email" name="email" type="email" placeholder="Email" style="height:32px; font-size:13px;" />
+                <input id="projektnummer" name="projektnummer" placeholder="Projektnummer" style="height:32px; font-size:13px;" />
+                <input id="projektName" name="projektName" placeholder="Projekt" style="height:32px; font-size:13px;" />
+                <input id="probenahmedatum" name="probenahmedatum" type="date" class="head-input-date" placeholder="Probenahme" aria-label="Probenahme" title="Datum der Probenahme" style="height:32px; font-size:13px;" />
+
+                <div id="samplers-wrap" class="head-inline-actions head-inline-actions-helper" style="display:flex; flex-direction:column; align-items:flex-start; gap:6px; margin-bottom:6px;">
+                  <button type="button" id="open-samplers-modal" class="secondary" style="width:100%; height:32px; font-size:13px;">
+                    <span id="samplers-button-label">Probenehmer</span>
+                    <span id="samplers-indicator" class="note-indicator hidden" aria-hidden="true"></span>
+                  </button>
+                </div>
+
+                <div class="field-eilig head-toggle-wrap" style="margin-bottom:6px;">
+                  <button type="button" id="eilig-toggle" class="switch-toggle" role="switch" aria-checked="false" data-value="nein" style="height:32px; font-size:13px;">
+                    <span class="switch-toggle-label">Eilig</span>
+                    <span class="switch-toggle-value">Aus</span>
+                  </button>
+                  <input type="hidden" id="eilig-value" name="eilig" value="nein" />
+                </div>
+
+                <div class="field-transport head-toggle-wrap" style="margin-bottom:6px;">
+                  <button type="button" id="probentransport-toggle" class="switch-toggle switch-toggle-transport" role="switch" aria-checked="false" data-value="CUA" style="height:32px; font-size:13px;">
+                    <span class="switch-toggle-label">Transport</span>
+                    <span class="switch-toggle-value">CUA</span>
+                  </button>
+                  <input type="hidden" id="probentransport-value" name="probentransport" value="CUA" />
+                </div>
+
+                <div class="field-kuerzel" style="margin-bottom:6px;">
+                  <input id="erfasstKuerzel" name="erfasstKuerzel" maxlength="4" class="head-input-kuerzel hidden" readonly />
+                  <button type="button" id="open-kuerzel-modal" class="secondary head-field-btn" style="width:100%; height:32px; font-size:13px;">Kürzel</button>
+                </div>
+
+                <button type="button" id="open-kopfbemerkung-modal" class="secondary head-note-btn" title="Keine Kopfbemerkung" style="width:100%; height:32px; font-size:13px; margin-bottom:6px;">
+                  <span id="kopf-bemerkung-button-label">Kopfbemerkung</span>
+                  <span id="kopf-bemerkung-indicator" class="note-indicator hidden" aria-hidden="true"></span>
+                </button>
+
+                <label for="probeNochNichtDa" class="inline-checkbox compact-inline-checkbox">
+                  <input id="probeNochNichtDa" name="probeNochNichtDa" type="checkbox" />
+                  Probe noch nicht da
+                </label>
+              </div>
+              <input id="adresseBlock" name="adresseBlock" type="hidden" />
+              <input id="probenEingangDatum" name="probenEingangDatum" type="date" class="head-input-date hidden" />
+              <textarea id="kopfBemerkung" name="kopfBemerkung" class="hidden"></textarea>
+            </aside>
+            <main id="main-content" style="min-width:0; width:100%;">
+              <section class="sample-section">
+                <div style="display:flex; justify-content:space-between; align-items:center; gap:10px;">
+                  <h2 class="section-title" style="margin:0;">Probenliste</h2>
+                  <div style="display:flex; align-items:center; gap:8px; flex-wrap:nowrap;">
+                    <button type="button" id="add-probe" class="secondary" title="Probe hinzufügen" aria-label="Probe hinzufügen">Probe +</button>
+                    <button type="button" id="open-bulk-probe-modal" class="secondary" title="Mehrere Proben einfügen" aria-label="Mehrere Proben einfügen">Mehrere Proben</button>
+                  </div>
+                </div>
+                <div class="same-set-row">
+                  <label for="same-containers-for-all" class="inline-checkbox">
+                    <input id="same-containers-for-all" name="sameContainersForAll" type="checkbox" />
+                    Gebinde gelten für gesamten Auftrag
+                  </label>
+                  <button type="button" id="open-header-gebinde-modal" class="secondary hidden">Gebinde Auftrag...</button>
+                  <span id="header-gebinde-summary" class="gebinde-summary">-</span>
+                </div>
+
+                <div class="probes-table-wrap">
+                  <table class="probes-table" style="font-size:13px;">
+                    <thead style="position:sticky; top:0; z-index:2;">
+                      <tr>
+                        <th style="width:28%; min-width:320px; padding-top:6px; padding-bottom:6px; position:sticky; top:0; z-index:2; background:var(--surface);">Probenbezeichnung</th>
+                        <th style="min-width:240px; padding-top:6px; padding-bottom:6px; position:sticky; top:0; z-index:2; background:var(--surface);">Paket + Einzel</th>
+                        <th style="min-width:120px; white-space:normal; padding-top:6px; padding-bottom:6px; position:sticky; top:0; z-index:2; background:var(--surface);">Material</th>
+                        <th style="width:90px; min-width:90px; padding-top:6px; padding-bottom:6px; position:sticky; top:0; z-index:2; background:var(--surface);">Gewicht</th>
+                        <th style="width:52px; min-width:52px; text-align:center; padding-top:6px; padding-bottom:6px; position:sticky; top:0; z-index:2; background:var(--surface);">Gebinde</th>
+                        <th style="width:110px; min-width:110px; text-align:right; padding-top:6px; padding-bottom:6px; position:sticky; top:0; z-index:2; background:var(--surface);">Aktionen</th>
+                      </tr>
+                    </thead>
+                    <tbody id="proben-container"></tbody>
+                  </table>
+                </div>
+              </section>
+            </main>
           </div>
         </section>
       </form>
@@ -133,44 +149,55 @@
 
     <template id="probe-template">
       <tr class="probe-row">
-        <td>
-          <input name="probenbezeichnung" />
+        <td style="padding-top:6px; padding-bottom:6px; width:28%; min-width:320px;">
+          <textarea name="probenbezeichnung" rows="1" style="width:100%; resize:none; overflow:hidden; min-height:30px; height:30px; padding:4px 8px; line-height:1.25;"></textarea>
           <input name="probenbezeichnungFull" type="hidden" />
+          <input name="tiefeVolumen" type="hidden" />
         </td>
-        <td>
-          <input name="material" placeholder="Boden, Wasser, Feststoff, Sand ..." />
-        </td>
-        <td>
-          <input name="tiefeVolumen" type="text" />
-        </td>
-        <td>
-          <select name="packageId">
-            <option value="">Bitte wählen</option>
-          </select>
-          <button type="button" data-action="single-params" class="secondary icon-btn" title="Einzelparameter" aria-label="Einzelparameter">Einzel...</button>
+        <td style="padding-top:6px; padding-bottom:6px; min-width:240px;">
+          <div style="display:flex; gap:8px; align-items:center;">
+            <select name="packageId" style="height:30px; padding:4px 8px; flex:1 1 auto; min-width:0;">
+              <option value="">Bitte wählen</option>
+            </select>
+            <button type="button" data-action="single-params" title="Einzelparameter" aria-label="Einzelparameter" style="height:24px; min-width:46px; padding:0 8px; font-size:12px; line-height:1; opacity:0.86; position:relative;">
+              Einzel
+              <span data-single-params-indicator class="hidden" aria-hidden="true" style="position:absolute; top:3px; right:3px; width:7px; height:7px; border-radius:50%; background:#e53935;"></span>
+            </button>
+          </div>
           <input name="parameterTextPreview" type="hidden" />
           <input name="singleParamsJson" type="hidden" />
           <input name="packageAddonsJson" type="hidden" />
         </td>
-        <td>
-          <button type="button" data-action="gebinde" class="secondary icon-btn" title="Gebinde auswählen" aria-label="Gebinde auswählen">◐</button>
-          <span class="gebinde-summary" data-gebinde-summary>-</span>
+        <td style="padding-top:6px; padding-bottom:6px; min-width:120px;">
+          <select name="material" style="height:30px; padding:4px 8px; width:100%;">
+            <option value="Boden">Boden</option>
+            <option value="Wasser">Wasser</option>
+            <option value="Feststoff">Feststoff</option>
+          </select>
+        </td>
+        <td style="padding-top:6px; padding-bottom:6px; width:90px; min-width:90px;">
+          <input name="gewicht" type="number" min="0" step="any" placeholder="kg" style="height:30px; padding:4px 8px; max-width:90px; width:90px; text-align:right;" />
+        </td>
+        <td style="padding-top:6px; padding-bottom:6px; width:52px; min-width:52px; text-align:center;">
+          <button type="button" data-action="gebinde" class="secondary icon-btn" title="Keine Gebinde" aria-label="Gebinde auswählen" style="position:relative;">◐
+            <span data-gebinde-indicator class="hidden" aria-hidden="true" style="position:absolute; top:3px; right:3px; width:7px; height:7px; border-radius:50%; background:#e53935;"></span>
+          </button>
+          <span class="gebinde-summary hidden" data-gebinde-summary>-</span>
           <input name="containersJson" type="hidden" />
         </td>
-        <td>
-          <input name="gewicht" type="number" min="0" step="any" />
-        </td>
-        <td>
-          <button type="button" data-action="geruch" class="secondary icon-btn" title="Geruch wählen" aria-label="Geruch wählen">◐</button>
-          <span class="gebinde-summary" data-geruch-summary>-</span>
-          <input name="geruchOption" type="hidden" />
-          <input name="geruchSonstiges" type="hidden" />
-        </td>
-        <td>
-          <input name="bemerkung" type="text" />
-        </td>
-        <td>
-          <div class="probe-actions-inline">
+        <td style="width:110px; min-width:110px; text-align:right; padding-top:6px; padding-bottom:6px;">
+          <div class="probe-actions-inline" style="justify-content:flex-end;">
+            <button type="button" data-action="geruch" class="secondary icon-btn" title="Geruch wählen" aria-label="Geruch wählen" style="position:relative;">◍
+              <span data-geruch-indicator class="hidden" aria-hidden="true" style="position:absolute; top:3px; right:3px; width:7px; height:7px; border-radius:50%; background:#e53935;"></span>
+            </button>
+            <span class="gebinde-summary hidden" data-geruch-summary>-</span>
+            <button type="button" data-action="probe-note" class="secondary icon-btn" title="Keine Bemerkung" aria-label="Bemerkung" style="width:30px; height:30px; min-width:30px; padding:0; display:inline-flex; align-items:center; justify-content:center; position:relative;">
+            <span aria-hidden="true" style="font-size:15px; line-height:1;">🗒</span>
+            <span data-probe-note-indicator class="hidden" aria-hidden="true" style="position:absolute; top:3px; right:3px; width:7px; height:7px; border-radius:50%; background:#e53935;"></span>
+            </button>
+            <input name="geruchOption" type="hidden" />
+            <input name="geruchSonstiges" type="hidden" />
+            <input name="bemerkung" type="hidden" />
             <button type="button" data-action="duplicate" class="secondary icon-btn" title="Duplizieren" aria-label="Duplizieren">◐</button>
             <button type="button" data-action="delete" class="secondary icon-btn" title="Löschen" aria-label="Löschen">◐</button>
           </div>
@@ -279,6 +306,17 @@
       </div>
     </div>
 
+    <div id="probe-note-modal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="probe-note-modal-title">
+      <div class="modal-card modal-card-small">
+        <h3 id="probe-note-modal-title">Bemerkung</h3>
+        <textarea id="probe-note-text" rows="8" style="width:100%;" placeholder="Bemerkung eingeben..."></textarea>
+        <div class="modal-actions">
+          <button type="button" id="probe-note-cancel" class="secondary">Abbrechen</button>
+          <button type="button" id="probe-note-apply" class="primary">Übernehmen</button>
+        </div>
+      </div>
+    </div>
+
 
     <div id="customers-modal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="customers-modal-title">
       <div class="modal-card modal-card-medium">
@@ -350,6 +388,17 @@
         <div class="modal-actions">
           <button type="button" id="address-modal-cancel" class="secondary">Abbrechen</button>
           <button type="button" id="address-modal-apply" class="primary">Speichern</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="samplers-modal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="samplers-modal-title">
+      <div class="modal-card modal-card-small">
+        <h3 id="samplers-modal-title">Probenehmer wählen</h3>
+        <div id="samplers-modal-buttons-wrap" class="quick-buttons-grid" style="margin-top:0.45rem;"></div>
+        <div class="modal-actions">
+          <button type="button" id="samplers-modal-cancel" class="secondary">Abbrechen</button>
+          <button type="button" id="samplers-modal-apply" class="primary">Übernehmen</button>
         </div>
       </div>
     </div>
@@ -484,6 +533,13 @@
       const probeNochNichtDaInput = document.getElementById('probeNochNichtDa');
       const probenahmedatumInput = document.getElementById('probenahmedatum');
       const probenEingangDatumInput = document.getElementById('probenEingangDatum');
+      const openSamplersModalButton = document.getElementById('open-samplers-modal');
+      const samplersIndicator = document.getElementById('samplers-indicator');
+      const samplersButtonLabel = document.getElementById('samplers-button-label');
+      const samplersModal = document.getElementById('samplers-modal');
+      const samplersModalButtonsWrap = document.getElementById('samplers-modal-buttons-wrap');
+      const samplersModalCancel = document.getElementById('samplers-modal-cancel');
+      const samplersModalApply = document.getElementById('samplers-modal-apply');
       const openKopfBemerkungModalButton = document.getElementById('open-kopfbemerkung-modal');
       const kopfBemerkungButtonLabel = document.getElementById('kopf-bemerkung-button-label');
       const kopfBemerkungIndicator = document.getElementById('kopf-bemerkung-indicator');
@@ -491,6 +547,10 @@
       const kopfBemerkungModalText = document.getElementById('kopf-bemerkung-modal-text');
       const kopfBemerkungModalCancel = document.getElementById('kopf-bemerkung-modal-cancel');
       const kopfBemerkungModalApply = document.getElementById('kopf-bemerkung-modal-apply');
+      const probeNoteModal = document.getElementById('probe-note-modal');
+      const probeNoteText = document.getElementById('probe-note-text');
+      const probeNoteCancel = document.getElementById('probe-note-cancel');
+      const probeNoteApply = document.getElementById('probe-note-apply');
       const bulkProbeModal = document.getElementById('bulk-probe-modal');
       const bulkProbeModalText = document.getElementById('bulk-probe-modal-text');
       const bulkCopyFromFirstInput = document.getElementById('bulk-copy-from-first');
@@ -541,6 +601,10 @@
       const customerDeleteCancel = document.getElementById('customer-delete-cancel');
       const customerDeleteConfirm = document.getElementById('customer-delete-confirm');
       const openAddressModalButton = document.getElementById('open-address-modal');
+      const addressLine1 = document.getElementById('address-line-1');
+      const addressLine2 = document.getElementById('address-line-2');
+      const addressLine3 = document.getElementById('address-line-3');
+      const addressIndicator = document.getElementById('address-indicator');
       const adressePreview = document.getElementById('adresse-preview');
       const adresseBlockInput = document.getElementById('adresseBlock');
       const addressModal = document.getElementById('address-modal');
@@ -584,6 +648,7 @@
       let customers = [];
       let activeCustomerSearch = '';
       let activeProbeForGeruchModal = null;
+      let activeProbeForNoteModal = null;
       let commitInFlight = false;
       let draftInFlight = false;
       let commitClickLocked = false;
@@ -626,6 +691,9 @@
         glass: ['1L', '1L + H2SO4', '500mL', '500mL + H2SO4', '250mL', '250mL Schliff', '250mL Duran', 'HS', 'HS + CuSO4', 'HS + MeOH'],
       };
       const DEFAULT_KUERZEL_PRESETS = ['AD', 'DV', 'LB', 'DH', 'SE', 'JO', 'RS', 'KH'];
+      const SAMPLER_OPTIONS = ['SB', 'LW', 'AR', 'JO', 'AD', 'Kunde'];
+      let selectedSamplers = [];
+      let pendingSamplersSelection = [];
 
       let appConfig = {
         mode: 'single',
@@ -853,9 +921,36 @@
       }
 
       function updateAdressePreviewUi() {
-        const lines = normalizeAddressLines(adresseBlockInput.value);
+        const rawAddress = String(adresseBlockInput.value || '');
+        const lines = normalizeAddressLines(rawAddress);
+        const parsed = parseAdresseBlockToFields(rawAddress);
+        const hasAddress = rawAddress.trim().length > 0;
+        const line1 = hasAddress
+          ? (String(parsed.firma || '').trim() || lines[0] || 'Anschrift')
+          : 'Anschrift';
+        let line2 = '';
+        let line3 = '';
+        if (hasAddress) {
+          line2 = [String(parsed.strasse || '').trim(), String(parsed.hausnummer || '').trim()].filter(Boolean).join(' ').trim();
+          line3 = [String(parsed.plz || '').trim(), String(parsed.ort || '').trim()].filter(Boolean).join(' ').trim();
+          if (!line2) {
+            const fallbackLine2 = lines.find((line, idx) => idx > 0 && !/^zh\s+/i.test(String(line || '').trim()));
+            line2 = String(fallbackLine2 || '').trim();
+          }
+          if (!line3) {
+            const fallbackLine3 = lines.find((line, idx) => idx > 1 && String(line || '').trim() !== line2);
+            line3 = String(fallbackLine3 || '').trim();
+          }
+        }
+        if (addressLine1) addressLine1.textContent = line1;
+        if (addressLine2) addressLine2.textContent = line2;
+        if (addressLine3) addressLine3.textContent = line3;
         adressePreview.textContent = lines.length > 0 ? lines[0] : 'Keine Anschrift';
         adressePreview.title = lines.join('\n');
+        openAddressModalButton.title = hasAddress ? lines.join('\n') : 'Keine Anschrift';
+        if (addressIndicator) {
+          addressIndicator.classList.toggle('hidden', !hasAddress);
+        }
       }
 
       function renderCustomerOptions() {
@@ -1221,6 +1316,13 @@
       }
 
       function autoSizeProbeNameInput(input) {
+        if (!input) return;
+        if (input.tagName === 'TEXTAREA') {
+          input.style.height = 'auto';
+          const nextHeight = Math.max(30, input.scrollHeight);
+          input.style.height = `${nextHeight}px`;
+          return;
+        }
         const base = normalizeProbeNameText(input.value);
         const chars = Math.max(10, Math.min(56, base.length + 2));
         input.style.width = `${chars}ch`;
@@ -1228,11 +1330,10 @@
 
       function setProbeNameValue(probeElement, value) {
         const fullValue = normalizeProbeNameText(value, false);
-        const normalized = normalizeProbeNameText(fullValue, true);
         const visibleInput = probeElement.querySelector('[name="probenbezeichnung"]');
         const hiddenInput = probeElement.querySelector('[name="probenbezeichnungFull"]');
         if (hiddenInput) hiddenInput.value = fullValue;
-        visibleInput.value = normalized;
+        visibleInput.value = fullValue;
         visibleInput.title = fullValue;
         autoSizeProbeNameInput(visibleInput);
       }
@@ -1260,6 +1361,103 @@
 
       function normalizeKuerzelValue(value) {
         return String(value || '').trim().replace(/\s+/g, ' ').toUpperCase();
+      }
+
+      function normalizeSamplers(value) {
+        const source = Array.isArray(value) ? value : [];
+        const seen = new Set();
+        const out = [];
+        source.forEach((item) => {
+          const raw = String(item || '').trim();
+          if (!raw) return;
+          const normalized = raw.toLowerCase() === 'kunde' ? 'Kunde' : raw.toUpperCase();
+          if (!SAMPLER_OPTIONS.includes(normalized) || seen.has(normalized)) return;
+          seen.add(normalized);
+          out.push(normalized);
+        });
+        if (out.includes('Kunde')) return ['Kunde'];
+        return SAMPLER_OPTIONS.filter((item) => item !== 'Kunde' && out.includes(item));
+      }
+
+      function formatSamplersSummary(values) {
+        const normalized = normalizeSamplers(values);
+        return normalized.join(' + ');
+      }
+
+      function updateSamplerUiState() {
+        const summary = formatSamplersSummary(selectedSamplers);
+        const hasSelection = summary.length > 0;
+        if (samplersButtonLabel) {
+          samplersButtonLabel.textContent = hasSelection ? `Probenehmer (${summary})` : 'Probenehmer';
+        }
+        if (openSamplersModalButton) {
+          openSamplersModalButton.title = hasSelection ? summary : 'Keine Probenehmer gewählt';
+        }
+        if (samplersIndicator) {
+          samplersIndicator.classList.toggle('hidden', !hasSelection);
+        }
+      }
+
+      function setSelectedSamplers(nextValues) {
+        const next = normalizeSamplers(nextValues);
+        selectedSamplers = next;
+        updateSamplerUiState();
+      }
+
+      function renderSamplersModalButtons() {
+        if (!samplersModalButtonsWrap) return;
+        const selected = new Set(pendingSamplersSelection);
+        samplersModalButtonsWrap.innerHTML = '';
+        SAMPLER_OPTIONS.forEach((sampler) => {
+          const button = document.createElement('button');
+          button.type = 'button';
+          button.className = 'secondary quick-btn';
+          const isActive = selected.has(sampler);
+          if (isActive) button.classList.add('is-active');
+          button.setAttribute('aria-pressed', String(isActive));
+          button.textContent = sampler;
+          button.addEventListener('click', () => {
+            togglePendingSampler(sampler);
+          });
+          samplersModalButtonsWrap.appendChild(button);
+        });
+      }
+
+      function openSamplersModal() {
+        pendingSamplersSelection = [...selectedSamplers];
+        renderSamplersModalButtons();
+        samplersModal.classList.remove('hidden');
+      }
+
+      function closeSamplersModal() {
+        samplersModal.classList.add('hidden');
+      }
+
+      function applySamplersModal() {
+        setSelectedSamplers(pendingSamplersSelection);
+        closeSamplersModal();
+      }
+
+      function togglePendingSampler(sampler) {
+        const normalized = String(sampler || '').trim();
+        if (!SAMPLER_OPTIONS.includes(normalized)) return;
+        if (normalized === 'Kunde') {
+          if (pendingSamplersSelection.includes('Kunde')) {
+            pendingSamplersSelection = [];
+          } else {
+            pendingSamplersSelection = ['Kunde'];
+          }
+          renderSamplersModalButtons();
+          return;
+        }
+        const base = pendingSamplersSelection.filter((item) => item !== 'Kunde');
+        if (base.includes(normalized)) {
+          pendingSamplersSelection = base.filter((item) => item !== normalized);
+          renderSamplersModalButtons();
+          return;
+        }
+        pendingSamplersSelection = [...base, normalized];
+        renderSamplersModalButtons();
       }
 
       function updateKuerzelButtonLabel() {
@@ -1395,11 +1593,20 @@
         const optionInput = probeElement.querySelector('[name="geruchOption"]');
         const sonstigesInput = probeElement.querySelector('[name="geruchSonstiges"]');
         const summaryEl = probeElement.querySelector('[data-geruch-summary]');
+        const geruchButton = probeElement.querySelector('[data-action="geruch"]');
+        const geruchIndicator = probeElement.querySelector('[data-geruch-indicator]');
         const option = normalizeGeruchOption(String(data?.option || '').trim());
         const sonstiges = option === 'sonstiges' ? String(data?.sonstiges || '').trim() : '';
+        const summary = buildGeruchSummary(option, sonstiges);
         optionInput.value = option;
         sonstigesInput.value = sonstiges;
-        summaryEl.textContent = buildGeruchSummary(option, sonstiges);
+        summaryEl.textContent = summary;
+        if (geruchButton) {
+          geruchButton.title = summary && summary !== '-' ? summary : 'Geruch wählen';
+        }
+        if (geruchIndicator) {
+          geruchIndicator.classList.toggle('hidden', !option);
+        }
       }
 
       function getProbeGeruchData(probeElement) {
@@ -1451,6 +1658,46 @@
           sonstiges: geruchSonstigesInput.value,
         });
         closeGeruchModal();
+      }
+
+      function updateProbeNoteButton(probeElement) {
+        const hiddenInput = probeElement.querySelector('[name="bemerkung"]');
+        const noteButton = probeElement.querySelector('[data-action="probe-note"]');
+        if (!hiddenInput || !noteButton) return;
+        const text = String(hiddenInput.value || '').trim();
+        const indicator = noteButton.querySelector('[data-probe-note-indicator]');
+        const firstLine = text ? String(text.split(/\r?\n/)[0] || '').trim() : '';
+        const preview = text ? (firstLine || 'Bemerkung gesetzt') : 'Keine Bemerkung';
+        noteButton.title = preview;
+        if (indicator) {
+          indicator.classList.toggle('hidden', !text);
+        }
+      }
+
+      function openProbeNoteModalForProbe(probeElement) {
+        activeProbeForNoteModal = probeElement;
+        const hiddenInput = probeElement.querySelector('[name="bemerkung"]');
+        probeNoteText.value = String(hiddenInput?.value || '');
+        probeNoteModal.classList.remove('hidden');
+        setTimeout(() => probeNoteText.focus(), 0);
+      }
+
+      function closeProbeNoteModal() {
+        activeProbeForNoteModal = null;
+        probeNoteModal.classList.add('hidden');
+      }
+
+      function applyProbeNoteModal() {
+        if (!activeProbeForNoteModal) {
+          closeProbeNoteModal();
+          return;
+        }
+        const hiddenInput = activeProbeForNoteModal.querySelector('[name="bemerkung"]');
+        if (hiddenInput) {
+          hiddenInput.value = String(probeNoteText.value || '');
+        }
+        updateProbeNoteButton(activeProbeForNoteModal);
+        closeProbeNoteModal();
       }
 
       function normalizeQuickLabel(raw) {
@@ -1538,8 +1785,16 @@
       function setProbeContainersData(probeElement, containers) {
         const normalized = normalizeContainers(containers, 'perSample');
         const summary = renderContainersSummary(normalized);
+        const gebindeButton = probeElement.querySelector('[data-action="gebinde"]');
+        const gebindeIndicator = probeElement.querySelector('[data-gebinde-indicator]');
         probeElement.querySelector('[name="containersJson"]').value = JSON.stringify(normalized);
         probeElement.querySelector('[data-gebinde-summary]').textContent = summary || '-';
+        if (gebindeButton) {
+          gebindeButton.title = summary || 'Keine Gebinde';
+        }
+        if (gebindeIndicator) {
+          gebindeIndicator.classList.toggle('hidden', !(summary && summary.trim()));
+        }
       }
 
       function getProbeContainersData(probeElement) {
@@ -1643,12 +1898,18 @@
         Array.from(probenContainer.querySelectorAll('.probe-row')).forEach((row) => {
           const button = row.querySelector('[data-action="gebinde"]');
           const summary = row.querySelector('[data-gebinde-summary]');
+          const indicator = row.querySelector('[data-gebinde-indicator]');
           button.disabled = sameForAll;
           if (sameForAll) {
             summary.textContent = 'wie Auftrag';
+            button.title = 'wie Auftrag';
+            if (indicator) indicator.classList.remove('hidden');
           } else {
             const containers = getProbeContainersData(row);
-            summary.textContent = renderContainersSummary(containers) || '-';
+            const rendered = renderContainersSummary(containers) || '-';
+            summary.textContent = rendered;
+            button.title = rendered === '-' ? 'Keine Gebinde' : rendered;
+            if (indicator) indicator.classList.toggle('hidden', rendered === '-');
           }
         });
       }
@@ -1894,6 +2155,7 @@
         setEiligState(false);
         setProbentransportState('CUA');
         setKuerzelValue('');
+        setSelectedSamplers([]);
         adresseBlockInput.value = '';
         updateAdressePreviewUi();
         form.kopfBemerkung.value = '';
@@ -1937,7 +2199,10 @@
         const packageSelect = probeElement.querySelector('[name="packageId"]');
         const parameterTextInput = probeElement.querySelector('[name="parameterTextPreview"]');
         const singleParamsInput = probeElement.querySelector('[name="singleParamsJson"]');
+        const singleParamsButton = probeElement.querySelector('[data-action="single-params"]');
+        const singleParamsIndicator = probeElement.querySelector('[data-single-params-indicator]');
         const addonToggles = parseSingleParamsTogglesJson(singleParamsInput?.value);
+        const hasSingleParams = Object.values(addonToggles || {}).some((toggle) => toggle && toggle.selected === true);
         const selected = packages.find((pkg) => pkg.id === packageSelect.value);
         if (selected) {
           if (selected.type === 'builder') {
@@ -1951,12 +2216,20 @@
             const legacyPreview = buildLegacyPackageMergedText(baseText, displayName, addonText, addonToggles);
             parameterTextInput.value = legacyPreview.text;
           }
+          const previewText = String(parameterTextInput.value || '').trim();
+          packageSelect.title = previewText || 'Paket wählen';
+          if (singleParamsButton) singleParamsButton.title = previewText || 'Einzelparameter';
+          if (singleParamsIndicator) singleParamsIndicator.classList.toggle('hidden', !hasSingleParams);
           return;
         }
         singleParamsModalState.legacyMergeStatus = '';
         singleParamsModalState.legacyMergeReason = '';
         const preview = buildPreviewTextFromToggles(singleParamsCatalog, addonToggles);
         parameterTextInput.value = preview || '';
+        const previewText = String(parameterTextInput.value || '').trim();
+        packageSelect.title = previewText || 'Paket wählen';
+        if (singleParamsButton) singleParamsButton.title = previewText || 'Einzelparameter';
+        if (singleParamsIndicator) singleParamsIndicator.classList.toggle('hidden', !hasSingleParams);
       }
 
       function getCatalogParameters() {
@@ -2225,6 +2498,28 @@
         return `+${unique.join(', +')}`;
       }
 
+      function extractLegacyManualAddonLines(addonText) {
+        const source = String(addonText || '').replace(/\r\n?/g, '\n');
+        if (!source) return [];
+        return source
+          .split('\n')
+          .map((line) => String(line || '').trim())
+          .filter((line) => line && /^[^:]+:/.test(line))
+          .filter((line) => !/^(PKT|PV|VOR\s*ORT)\s*:/i.test(line));
+      }
+
+      function buildLegacyManualBlock(packageDisplayName, addonSuffix, addonText) {
+        const packageName = String(packageDisplayName || '').trim();
+        const suffix = String(addonSuffix || '').trim();
+        const manualLines = extractLegacyManualAddonLines(addonText);
+        const pktLine = `PKT: ${[packageName, suffix].filter(Boolean).join(' ')}`.trim();
+        return [
+          'MANUELL (Legacy Paket): Addons bitte in Excel in die Paketzeilen übernehmen.',
+          pktLine,
+          ...manualLines,
+        ].join('\n');
+      }
+
       function mergeBuilderPackageAddonToggles(baseToggles, addonToggles) {
         const merged = normalizeSingleParamsToggles(baseToggles || {});
         const addons = normalizeSingleParamsToggles(addonToggles || {});
@@ -2275,18 +2570,18 @@
         const packageName = String(packageDisplayName || '').trim();
         const suffix = buildPktAddonSuffixFromToggles(singleParamsCatalog, addonToggles);
         const addon = String(addonText || '').trim();
-        const mergeResult = tryMergeLegacyPackagePreview(base, addon);
-        const body = mergeResult.ok
-          ? String(mergeResult.mergedText || '').trim()
-          : [base, addon].filter(Boolean).join('\n');
-        const pktHeader = packageName ? `PKT: ${packageName}${suffix}` : '';
-        const sections = [];
-        if (pktHeader) sections.push(pktHeader);
-        if (body) sections.push(body);
+        const hasAddons = Boolean(suffix);
+        const pktHeader = packageName ? `PKT: ${packageName}` : '';
+        const baseBody = [pktHeader, base].filter(Boolean).join('\n');
+        const manualBlock = hasAddons
+          ? buildLegacyManualBlock(packageName, suffix, addon)
+          : '';
         return {
-          text: sections.join('\n'),
-          legacyMergeStatus: mergeResult.ok ? 'merged' : 'appended',
-          legacyMergeReason: mergeResult.ok ? '' : String(mergeResult.reason || 'merge_failed'),
+          text: manualBlock
+            ? [baseBody, manualBlock].filter(Boolean).join('\n\n')
+            : baseBody,
+          legacyMergeStatus: hasAddons ? 'appended' : '',
+          legacyMergeReason: hasAddons ? 'legacy_manual_block' : '',
         };
       }
 
@@ -2698,14 +2993,7 @@
           return;
         }
         singleParamsPackageWarning.style.color = '#b45309';
-        const baseHint = 'Legacy Paket. Addons werden best effort einsortiert. Prüfen, ob es plausibel ist.';
-        if (singleParamsModalState.legacyMergeStatus === 'appended') {
-          const reason = String(singleParamsModalState.legacyMergeReason || '').trim();
-          const reasonText = reason ? ` (${reason})` : '';
-          singleParamsPackageWarning.innerHTML = `${baseHint}<br><small>Einsortieren nicht möglich, Addons wurden angehängt.${reasonText}</small>`;
-          return;
-        }
-        singleParamsPackageWarning.textContent = baseHint;
+        singleParamsPackageWarning.textContent = 'Legacy Paket. Addons müssen manuell übernommen werden.';
       }
 
       function getSelectedParamKeys() {
@@ -3042,6 +3330,7 @@
         }
         packageAddonsInput.value = '';
         parameterTextInput.value = preview || '';
+        setPackageText(activeProbeForSingleParamsModal);
         closeSingleParamsModal();
       }
 
@@ -3523,6 +3812,7 @@
         const gebindeButton = probeElement.querySelector('[data-action="gebinde"]');
         const geruchButton = probeElement.querySelector('[data-action="geruch"]');
         const singleParamsButton = probeElement.querySelector('[data-action="single-params"]');
+        const probeNoteButton = probeElement.querySelector('[data-action="probe-note"]');
         const nameInput = probeElement.querySelector('[name="probenbezeichnung"]');
 
         if (gebindeButton) gebindeButton.textContent = '◐';
@@ -3537,6 +3827,9 @@
         if (singleParamsButton) {
           singleParamsButton.addEventListener('click', () => openSingleParamsModalForProbe(probeElement));
         }
+        if (probeNoteButton) {
+          probeNoteButton.addEventListener('click', () => openProbeNoteModalForProbe(probeElement));
+        }
         nameInput.addEventListener('input', () => {
           nameInput.title = nameInput.value;
           const hiddenInput = probeElement.querySelector('[name="probenbezeichnungFull"]');
@@ -3544,6 +3837,7 @@
           autoSizeProbeNameInput(nameInput);
         });
         autoSizeProbeNameInput(nameInput);
+        updateProbeNoteButton(probeElement);
       }
 
       function addProbe(initialData = null) {
@@ -3567,9 +3861,11 @@
         } else {
           setProbeNameValue(probeElement, '');
           setProbeGeruchData(probeElement, null);
+          probeElement.querySelector('[name="bemerkung"]').value = '';
           setProbeContainersData(probeElement, null);
         }
 
+        updateProbeNoteButton(probeElement);
         setPackageText(probeElement);
         probenContainer.appendChild(fragment);
         updateProbeIndexes();
@@ -3620,6 +3916,7 @@
           headerContainers: sameContainersForAll ? getHeaderContainersData() : undefined,
           probeNochNichtDa,
           probenahmedatum: probenahmedatumInput.value || undefined,
+          samplers: selectedSamplers.length > 0 ? [...selectedSamplers] : undefined,
           probenEingangDatum: probeNochNichtDa ? undefined : probenEingangDatumInput.value || undefined,
           proben: Array.from(probenContainer.querySelectorAll('.probe-row')).map((probe) => {
             const tiefeVolumenRaw = probe.querySelector('[name="tiefeVolumen"]').value.trim();
@@ -3762,6 +4059,12 @@
       kuerzelModal.addEventListener('click', (event) => {
         if (event.target === kuerzelModal) closeKuerzelModal();
       });
+      openSamplersModalButton.addEventListener('click', openSamplersModal);
+      samplersModalCancel.addEventListener('click', closeSamplersModal);
+      samplersModalApply.addEventListener('click', applySamplersModal);
+      samplersModal.addEventListener('click', (event) => {
+        if (event.target === samplersModal) closeSamplersModal();
+      });
       openKopfBemerkungModalButton.addEventListener('click', openKopfBemerkungModal);
       kopfBemerkungModalCancel.addEventListener('click', closeKopfBemerkungModal);
       kopfBemerkungModalApply.addEventListener('click', applyKopfBemerkungModal);
@@ -3858,6 +4161,11 @@
       geruchModal.addEventListener('click', (event) => {
         if (event.target === geruchModal) closeGeruchModal();
       });
+      probeNoteCancel.addEventListener('click', closeProbeNoteModal);
+      probeNoteApply.addEventListener('click', applyProbeNoteModal);
+      probeNoteModal.addEventListener('click', (event) => {
+        if (event.target === probeNoteModal) closeProbeNoteModal();
+      });
       gebindeModalCancel.addEventListener('click', closeGebindeModal);
       gebindeModalApply.addEventListener('click', applyGebindeModal);
       gebindeUndoButton.addEventListener('click', () => {
@@ -3902,12 +4210,20 @@
           closeGeruchModal();
           return;
         }
+        if (event.key === 'Escape' && !probeNoteModal.classList.contains('hidden')) {
+          closeProbeNoteModal();
+          return;
+        }
         if (event.key === 'Escape' && !customersModal.classList.contains('hidden')) {
           closeCustomersModal();
           return;
         }
         if (event.key === 'Escape' && !kuerzelModal.classList.contains('hidden')) {
           closeKuerzelModal();
+          return;
+        }
+        if (event.key === 'Escape' && !samplersModal.classList.contains('hidden')) {
+          closeSamplersModal();
           return;
         }
         if (event.key === 'Escape' && !kopfBemerkungModal.classList.contains('hidden')) {
@@ -3936,7 +4252,7 @@
 
         const row = target.closest('.probe-row');
         const focusablesInRow = Array.from(
-          row.querySelectorAll('input:not([type="hidden"]), select, button[data-action="single-params"], button[data-action="gebinde"], button[data-action="geruch"]'),
+          row.querySelectorAll('input:not([type="hidden"]), select, button[data-action="single-params"], button[data-action="gebinde"], button[data-action="geruch"], button[data-action="probe-note"]'),
         ).filter((el) => !el.disabled);
         const currentIndex = focusablesInRow.indexOf(target);
         if (currentIndex >= 0 && currentIndex < focusablesInRow.length - 1) {

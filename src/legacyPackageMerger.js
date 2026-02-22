@@ -45,19 +45,20 @@ function isVorOrtLabel(labelNorm) {
 
 function canonicalMedium(rawMedium, labelNorm) {
   const source = String(rawMedium || '').trim();
-  const normalized = source
-    .toLowerCase()
+  const raw = String(source || '').trim().toLowerCase();
+  const key = raw
     .replace(/\./g, '')
-    .replace(/\s+/g, '')
-    .replace(/-/g, '');
-  const key = normalized;
+    .replace(/-/g, '')
+    .replace(/\s+/g, '');
   if (key === 'fs') return 'FS';
   if (key === 'h2o') return 'H2O';
   if (labelNorm === 'hb') {
-    if (key === '10e' || key === '10:e' || key === '10:1eluat') return '10e';
-    if (key === '2e' || key === '2:e' || key === '2:1eluat') return '2e';
-    if (key.includes('elu') && key.includes('10')) return '10e';
-    if (key.includes('elu') && (key.startsWith('2') || key.includes('2:1'))) return '2e';
+    if ((key.includes('2:1') && key.includes('eluat')) || key === '2e') return '2e';
+    if ((key.includes('10:1') && key.includes('eluat')) || key === '10e') return '10e';
+    if (key === '1eluat' || key === '1:1eluat') return '10e';
+    if (key.startsWith('1') && key.includes('eluat')) return '10e';
+    if (key.includes('eluat') && key.includes('10')) return '10e';
+    if (key.includes('eluat') && key.includes('2')) return '2e';
   } else {
     if (key === '2e') return '2e';
     if (key === '10e') return '10e';
