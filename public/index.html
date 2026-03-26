@@ -39,6 +39,13 @@
             </div>
           </div>
           <div id="commit-feedback" class="feedback" role="status" aria-live="polite"></div>
+          <details id="commit-debug-panel" class="error-panel hidden">
+            <summary>Debug / Commit-Logs</summary>
+            <div style="display:grid; gap:8px;">
+              <pre id="commit-debug-summary" style="margin:0;"></pre>
+              <pre id="commit-debug-logs" style="margin:0; font-family:Consolas, 'Courier New', monospace; max-height:320px; overflow:auto;"></pre>
+            </div>
+          </details>
           <details id="error-panel" class="error-panel hidden">
             <summary>Details</summary>
             <pre id="error-details"></pre>
@@ -543,6 +550,9 @@
       const form = document.getElementById('order-form');
       const errorPanel = document.getElementById('error-panel');
       const errorDetails = document.getElementById('error-details');
+      const commitDebugPanel = document.getElementById('commit-debug-panel');
+      const commitDebugSummary = document.getElementById('commit-debug-summary');
+      const commitDebugLogs = document.getElementById('commit-debug-logs');
       const kundenOptions = document.getElementById('kunden-options');
       const probeNochNichtDaInput = document.getElementById('probeNochNichtDa');
       const probenahmedatumInput = document.getElementById('probenahmedatum');
@@ -2217,6 +2227,54 @@
         errorDetails.textContent = '';
       }
 
+      function clearCommitDebugPanel() {
+        commitDebugPanel.classList.add('hidden');
+        commitDebugPanel.removeAttribute('open');
+        commitDebugSummary.textContent = '';
+        commitDebugLogs.textContent = '';
+      }
+
+      function buildCommitDebugSummary(status, payload = null, debug = null) {
+        const resolvedPayload = payload && typeof payload === 'object' ? payload : {};
+        const resolvedDebug = debug && typeof debug === 'object' ? debug : {};
+        const summary = {
+          status,
+          ok: resolvedPayload.ok ?? null,
+          message: resolvedPayload.userMessage || resolvedPayload.message || null,
+          operation: resolvedDebug.operation ?? null,
+          durationMs: resolvedDebug.durationMs ?? null,
+          written: resolvedDebug.written ?? resolvedPayload.written ?? null,
+          saved: resolvedDebug.saved ?? resolvedPayload.saved ?? null,
+          appliedOrderNo: resolvedDebug.appliedOrderNo ?? null,
+          appliedFirstLabNo: resolvedDebug.appliedFirstLabNo ?? null,
+          appendRow: resolvedDebug.appendRow ?? null,
+          headerRow: resolvedDebug.headerRow ?? null,
+          firstSampleRow: resolvedDebug.firstSampleRow ?? null,
+          writtenHeaderCellA: resolvedDebug.writtenHeaderCellA ?? null,
+          writtenFirstSampleCellA: resolvedDebug.writtenFirstSampleCellA ?? null,
+          writtenSampleLabNos: Array.isArray(resolvedDebug.writtenSampleLabNos) ? resolvedDebug.writtenSampleLabNos : null,
+        };
+        const extraDebug = { ...resolvedDebug };
+        delete extraDebug.logs;
+        Object.keys(extraDebug).forEach((key) => {
+          if (summary[key] === undefined || summary[key] === null) {
+            summary[key] = extraDebug[key];
+          }
+        });
+        return JSON.stringify(summary, null, 2);
+      }
+
+      function showCommitDebugPanel(status, payload = null, debug = null) {
+        const resolvedPayload = payload && typeof payload === 'object' ? payload : {};
+        const resolvedDebug = debug && typeof debug === 'object'
+          ? debug
+          : (resolvedPayload.debug && typeof resolvedPayload.debug === 'object' ? resolvedPayload.debug : {});
+        const logs = Array.isArray(resolvedDebug.logs) ? resolvedDebug.logs : [];
+        commitDebugPanel.classList.remove('hidden');
+        commitDebugSummary.textContent = buildCommitDebugSummary(status, resolvedPayload, resolvedDebug);
+        commitDebugLogs.textContent = logs.length > 0 ? logs.join('\n') : 'Keine Logs verfuegbar';
+      }
+
       function normalizeApiError(data, fallbackMessage = '') {
         const payload = data && typeof data === 'object' ? data : {};
         const userMessage = String(payload.userMessage || payload.message || fallbackMessage || 'Fehler').trim();
@@ -2302,6 +2360,7 @@
         retryCommitButton.classList.add('hidden');
         setCommitFeedback('', '');
         clearErrorPanel();
+        clearCommitDebugPanel();
       }
 
       function resetForNewOrderSameProject() {
@@ -2310,6 +2369,7 @@
         retryCommitButton.classList.add('hidden');
         setCommitFeedback('', '');
         clearErrorPanel();
+        clearCommitDebugPanel();
       }
 
       function setPackageText(probeElement) {
@@ -4078,6 +4138,9 @@
       async function sendOrder(endpoint, options = {}) {
         const { extraHeaders = {}, payload = buildPayload(), isCommit = false } = options;
         clearErrorPanel();
+        if (isCommit) {
+          clearCommitDebugPanel();
+        }
 
         try {
           if (isCommit) {
@@ -4106,6 +4169,7 @@
             if (response.ok && data.ok) {
               setCommitFeedback('success', formatSuccessMessage(data));
               showToast('success', formatSuccessMessage(data));
+              showCommitDebugPanel('success', data, data.debug);
               lastFailedCommitContext = null;
               retryCommitButton.classList.add('hidden');
               loadCustomers().catch(() => {});
@@ -4114,6 +4178,7 @@
               setCommitFeedback('error', info.userMessage);
               showToast('error', info.userMessage);
               showErrorPanel(info.userMessage, data, info.debug);
+              showCommitDebugPanel('error', data, info.debug);
               retryCommitButton.classList.remove('hidden');
               lastFailedCommitContext = {
                 payload,
@@ -4137,6 +4202,7 @@
           showErrorPanel(message);
           if (isCommit) {
             setCommitFeedback('error', `Commit fehlgeschlagen: ${error.message}`);
+            showCommitDebugPanel('error', { ok: false, message }, error && typeof error === 'object' ? error.debug : null);
             retryCommitButton.classList.remove('hidden');
             lastFailedCommitContext = { payload, extraHeaders, clientRequestId: payload.clientRequestId };
           }
@@ -4474,6 +4540,7 @@
         applyHeaderDefaults();
         updateAdressePreviewUi();
         clearErrorPanel();
+        clearCommitDebugPanel();
       }
 
       bootstrap().catch((error) => {

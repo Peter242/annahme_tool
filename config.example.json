@@ -2,8 +2,8 @@
   "port": 3000,
   "mode": "single",
   "writerBackend": "com",
-  "excelPath": "./data/lab.xlsx",
-  "yearSheetName": "",
+  "excelPath": "\\\\laborserver\\umwelt\\DV\\Annahme 2.0\\Annahme1.xlsm",
+  "yearSheetName": "2026",
   "excelWriteAddressBlock": true,
   "allowAutoOpenExcel": false,
   "writerHost": "http://localhost:3000",
@@ -15,16 +15,7 @@
   "backupZip": false,
   "backupDir": "./backups",
   "uiShowPackagePreview": true,
-  "uiKuerzelPreset": [
-    "AD",
-    "DV",
-    "LB",
-    "DH",
-    "SE",
-    "JO",
-    "RS",
-    "KH"
-  ],
+  "uiKuerzelPreset": ["AD","DV","LB","DH","SE","JO","RS","KH"],
   "uiRequiredFields": [
     "kunde",
     "projektName",

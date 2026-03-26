@@ -9,7 +9,6 @@ const { makeOrderNumber, nextLabNumbers } = require('./src/numbering');
 const { ensureBackupBeforeCommit, createManualBackup, resolveBackupDir, ensureBackupDirWritable } = require('./src/backup');
 const { importPackagesFromExcel } = require('./src/packages/importFromExcel');
 const { readPackages, writePackages, invalidatePackagesCache } = require('./src/packages/store');
-const { createImportPackagesHandler } = require('./src/packages/importRoute');
 const { getSheetState, buildTodayPrefix } = require('./src/sheetState');
 const { writeOrderBlock } = require('./src/orderWriter');
 const { writeComTestCell } = require('./src/writers/comTestWriter');
@@ -31,7 +30,7 @@ const configSchema = z
   .object({
     port: z.number().int().min(1).max(65535),
     mode: z.enum(['single', 'writer', 'client']),
-    writerBackend: z.enum(['exceljs', 'com', 'comExceljs']),
+    writerBackend: z.literal('com'),
     excelPath: z.string().trim().min(1),
     yearSheetName: z.string(),
     excelWriteAddressBlock: z.boolean(),
@@ -256,30 +255,47 @@ function isWindowsDrivePath(value) {
 
 function resolveCommitWriterBackend(config) {
   const configuredBackend = String(config.writerBackend || '').trim().toLowerCase();
-  if (configuredBackend === 'comexceljs' || configuredBackend === 'exceljs') {
-    return 'exceljs';
-  }
-
-  if (config.mode === 'single') {
-    if (process.platform === 'win32' && isWindowsDrivePath(config.excelPath)) {
-      return 'com';
-    }
-    return 'exceljs';
-  }
-
   if (configuredBackend === 'com') {
     return 'com';
   }
-
-  return 'exceljs';
+  throw new Error(`Unbekanntes writerBackend in config: ${config.writerBackend}`);
 }
 
 function getConfig() {
   return runtimeConfig;
 }
 
-const EXCEL_NOT_OPEN_USER_MESSAGE = 'Fehler: Annahme muss ge\u00f6ffnet sein. Bitte \u00f6ffnen und erneut versuchen';
+const EXCEL_NOT_OPEN_USER_MESSAGE = 'Excel muss ge\u00f6ffnet sein \u2026';
 const WORKBOOK_READONLY_USER_MESSAGE = 'Annahme.xlsx ist schreibgeschützt oder von einem anderen Benutzer gesperrt. Bitte in Excel schreibbar öffnen oder Sperre lösen.';
+const COM_ONLY_MESSAGE = 'Nur COM unterstützt';
+
+function isMacroEnabledWorkbookPath(excelPath) {
+  return path.extname(String(excelPath || '').trim()).toLowerCase() === '.xlsm';
+}
+
+function canUseExcelJsForWorkbook(excelPath) {
+  return !isMacroEnabledWorkbookPath(excelPath);
+}
+
+function buildComReadBlockedError(contextLabel = 'Excel-Zugriff', userMessage = EXCEL_NOT_OPEN_USER_MESSAGE) {
+  const error = new Error(`${contextLabel}: ${userMessage}`);
+  error.code = 'COM_READ_BLOCKED';
+  error.statusCode = 409;
+  error.userMessage = userMessage;
+  return error;
+}
+
+function isComReadBlockedError(error) {
+  return String(error?.code || '').trim() === 'COM_READ_BLOCKED'
+    || Number(error?.statusCode || 0) === 409;
+}
+
+async function importPackagesForAnnahme(absoluteExcelPath, sheetName = 'Vorlagen') {
+  if (!canUseExcelJsForWorkbook(absoluteExcelPath)) {
+    throw buildComReadBlockedError('Paket-Import', 'Paket-Import ist im COM-only Modus noch nicht verfügbar.');
+  }
+  return importPackagesFromExcel(absoluteExcelPath, sheetName);
+}
 
 function extractWriterDebug(errorMessage) {
   const text = String(errorMessage || '');
@@ -427,6 +443,36 @@ function computeColAHash50(sheet) {
 }
 
 async function probeSheetCacheState(context) {
+  if (!canUseExcelJsForWorkbook(context.absoluteExcelPath)) {
+    const client = getComWorkerClient(__dirname);
+    const parsed = await client.request({
+      __readSheetState: true,
+      excelPath: context.absoluteExcelPath,
+      yearSheetName: context.yearSheetName,
+      allowAutoOpenExcel: false,
+      now: new Date().toISOString(),
+    }, {
+      timeoutMs: 8000,
+      retryOnFailure: false,
+    });
+    if (!parsed || parsed.ok !== true) {
+      if (isExcelNotOpenMessage(parsed?.error || '')) {
+        throw buildComReadBlockedError('Sheet-Cache');
+      }
+      const error = new Error(parsed?.error || 'Sheet-Cache konnte nicht gelesen werden');
+      error.code = String(parsed?.errorCode || parsed?.code || '').trim() || undefined;
+      error.errorCode = error.code;
+      error.debug = parsed?.debug;
+      throw error;
+    }
+    return {
+      sheet: null,
+      colAHash50: String(parsed.colAHash50 || '').trim(),
+      sheetState: parsed.sheetState && typeof parsed.sheetState === 'object'
+        ? parsed.sheetState
+        : null,
+    };
+  }
   const workbook = new ExcelJS.Workbook();
   await workbook.xlsx.readFile(context.absoluteExcelPath);
   const sheet = workbook.getWorksheet(context.yearSheetName);
@@ -479,10 +525,29 @@ function normalizeOrderSeqByPrefix(orderSeqByPrefix) {
   return out;
 }
 
+function describeSheetCacheInitError(error) {
+  if (!error) {
+    return 'unknown';
+  }
+  const errorCode = String(error.code || error.errorCode || error?.debug?.errorCode || '').trim();
+  if (errorCode === 'COM_WORKER_TIMEOUT' || String(error.message || '').includes('timeout')) {
+    return 'timeout';
+  }
+  if (errorCode === 'EXCEL_NOT_READY') {
+    return 'EXCEL_NOT_READY';
+  }
+  if (errorCode) {
+    return errorCode;
+  }
+  return 'COM error';
+}
+
 async function buildFullScanSheetStateCache(context, now = new Date()) {
   const probe = await probeSheetCacheState(context);
   const { sheet, colAHash50 } = probe;
-  const state = getSheetState(sheet, now);
+  const state = probe.sheetState && typeof probe.sheetState === 'object'
+    ? probe.sheetState
+    : getSheetState(sheet, now);
   const todayPrefix = buildTodayPrefix(now);
   return {
     version: 2,
@@ -1089,6 +1154,9 @@ function parseAdresseBlockFromHeaderCellJ(value) {
 
 async function refreshCustomersFromExcel(config, now = new Date()) {
   const absoluteExcelPath = resolveExcelPath(config.excelPath);
+  if (!canUseExcelJsForWorkbook(absoluteExcelPath)) {
+    throw buildComReadBlockedError('Kunden-Refresh', 'Kunden-Refresh ist im COM-only Modus noch nicht verfügbar.');
+  }
   const workbook = new ExcelJS.Workbook();
   await workbook.xlsx.readFile(absoluteExcelPath);
   const yearSheetName = getYearSheetName(config);
@@ -1161,8 +1229,11 @@ async function applyPaketKeyTextsToOrder(order, absoluteExcelPath) {
   const warnings = [];
   let packages = [];
   try {
-    packages = await importPackagesFromExcel(absoluteExcelPath, 'Vorlagen');
+    packages = await importPackagesForAnnahme(absoluteExcelPath, 'Vorlagen');
   } catch (error) {
+    if (isComReadBlockedError(error)) {
+      throw error;
+    }
     for (const probe of probesWithPaketKey) {
       const paketKey = String(probe.paketKey || '').trim();
       probe.parameterTextPreview = `UNBEKANNTES PAKET: ${paketKey}`;
@@ -1324,7 +1395,7 @@ const configUpdateSchema = z.object({
   quickContainerPlastic: z.array(z.string()).optional(),
   quickContainerGlass: z.array(z.string()).optional(),
   mode: z.enum(['single', 'writer', 'client']).optional(),
-  writerBackend: z.enum(['exceljs', 'com', 'comExceljs']).optional(),
+  writerBackend: z.literal('com').optional(),
   writerHost: z.string().trim().optional(),
   writerToken: z.string().optional(),
 }).strict();
@@ -1831,11 +1902,16 @@ async function buildCommitPreviewState(order, config, now = new Date()) {
   commitWarnings.push(...enrichedOrderResult.warnings);
 
   let cache = null;
-  try {
-    cache = await ensureSheetStateCache(config, now);
-  } catch (error) {
-    console.warn(`[sheet-cache] fallback without cache due to scan error: ${error.message}`);
-    cache = null;
+  if (config.mode === 'single') {
+    console.warn('[sheet-cache] single mode: skip blocking cache init before commit');
+  } else {
+    try {
+      cache = await ensureSheetStateCache(config, now);
+    } catch (error) {
+      const reason = describeSheetCacheInitError(error);
+      console.warn(`[sheet-cache] sheetCacheInit failed, continue without cache (${reason}): ${error.message}`);
+      cache = null;
+    }
   }
 
   const preview = buildOrderPreview(normalizedOrderForWrite, {
@@ -2052,9 +2128,15 @@ app.post('/api/customers/refresh-from-excel', async (req, res) => {
       ...result,
     });
   } catch (error) {
-    return res.status(400).json({
+    const statusCode = isComReadBlockedError(error) ? 409 : 400;
+    return res.status(statusCode).json({
       ok: false,
-      message: `Kunden aus Excel aktualisieren fehlgeschlagen: ${error.message}`,
+      message: isComReadBlockedError(error)
+        ? (error.userMessage || EXCEL_NOT_OPEN_USER_MESSAGE)
+        : `Kunden aus Excel aktualisieren fehlgeschlagen: ${error.message}`,
+      userMessage: isComReadBlockedError(error)
+        ? (error.userMessage || EXCEL_NOT_OPEN_USER_MESSAGE)
+        : undefined,
     });
   }
 });
@@ -2235,6 +2317,17 @@ app.get('/api/config/validate', async (req, res) => {
   }
 
   try {
+    if (!canUseExcelJsForWorkbook(absoluteExcelPath)) {
+      errors.push('Excel-Validierung fuer .xlsm ist im COM-only Modus noch nicht verfuegbar.');
+      return res.status(409).json({
+        ok: false,
+        excelPath,
+        absoluteExcelPath,
+        warnings,
+        errors,
+      });
+    }
+
     const workbook = new ExcelJS.Workbook();
     await workbook.xlsx.readFile(absoluteExcelPath);
 
@@ -2242,7 +2335,7 @@ app.get('/api/config/validate', async (req, res) => {
     if (!templateSheet) {
       errors.push('Sheet Vorlagen nicht gefunden');
     } else {
-      const packages = await importPackagesFromExcel(absoluteExcelPath, 'Vorlagen');
+      const packages = await importPackagesForAnnahme(absoluteExcelPath, 'Vorlagen');
       if (packages.length < 1) {
         errors.push('Sheet Vorlagen enthaelt keine gueltigen Pakete');
       }
@@ -2254,6 +2347,16 @@ app.get('/api/config/validate', async (req, res) => {
       warnings.push(`Jahresblatt ${yearSheetName} nicht gefunden`);
     }
   } catch (error) {
+    if (isComReadBlockedError(error)) {
+      errors.push(error.userMessage || EXCEL_NOT_OPEN_USER_MESSAGE);
+      return res.status(409).json({
+        ok: false,
+        excelPath,
+        absoluteExcelPath,
+        warnings,
+        errors,
+      });
+    }
     errors.push(`Excel-Datei kann nicht gelesen werden: ${error.message}`);
   }
 
@@ -2599,14 +2702,34 @@ app.delete('/api/builder-packages/:id', (req, res) => {
   }
 });
 
-app.post('/api/packages/import', createImportPackagesHandler({
-  getConfig,
-  resolveExcelPath,
-  invalidatePackagesCache,
-  importPackagesFromExcel,
-  writePackages,
-  readPackages,
-}));
+app.post('/api/packages/import', async (_req, res) => {
+  try {
+    const config = getConfig();
+    const excelPath = resolveExcelPath(config.excelPath);
+    invalidatePackagesCache();
+    const packages = await importPackagesForAnnahme(excelPath, 'Vorlagen');
+    writePackages(packages);
+    invalidatePackagesCache();
+    const freshPackages = readPackages({ forceReload: true });
+    res.set('Cache-Control', 'no-store');
+    return res.json({
+      ok: true,
+      count: freshPackages.length,
+      packages: freshPackages,
+    });
+  } catch (error) {
+    const statusCode = isComReadBlockedError(error) ? 409 : 400;
+    return res.status(statusCode).json({
+      ok: false,
+      message: isComReadBlockedError(error)
+        ? (error.userMessage || EXCEL_NOT_OPEN_USER_MESSAGE)
+        : error.message,
+      userMessage: isComReadBlockedError(error)
+        ? (error.userMessage || EXCEL_NOT_OPEN_USER_MESSAGE)
+        : undefined,
+    });
+  }
+});
 
 app.post('/api/writer/login', (req, res) => {
   const config = getConfig();
@@ -2840,9 +2963,16 @@ app.post('/api/order/preview', async (req, res) => {
       operation: 'preview',
     });
   } catch (error) {
-    return res.status(400).json({
+    const statusCode = isComReadBlockedError(error) ? 409 : 400;
+    return res.status(statusCode).json({
       ok: false,
-      message: `Preview fehlgeschlagen: ${error.message}`,
+      message: isComReadBlockedError(error)
+        ? (error.userMessage || EXCEL_NOT_OPEN_USER_MESSAGE)
+        : `Preview fehlgeschlagen: ${error.message}`,
+      userMessage: isComReadBlockedError(error)
+        ? (error.userMessage || EXCEL_NOT_OPEN_USER_MESSAGE)
+        : undefined,
+      debug: error?.debug,
     });
   }
 });
@@ -2873,6 +3003,15 @@ app.post('/api/order/commit', async (req, res) => {
         message: 'Writer Token fehlt oder ist ungueltig',
       });
     }
+  }
+
+  if (String(config.writerBackend || '').trim().toLowerCase() !== 'com') {
+    return res.status(400).json({
+      ok: false,
+      message: COM_ONLY_MESSAGE,
+      userMessage: COM_ONLY_MESSAGE,
+      writerBackendUsed: null,
+    });
   }
 
   const order = parseOrderOrRespond(req, res);
@@ -2908,7 +3047,26 @@ app.post('/api/order/commit', async (req, res) => {
   }
 
   const nowForCommit = new Date();
-  const previewState = await buildCommitPreviewState(order, config, nowForCommit);
+  let previewState;
+  try {
+    previewState = await buildCommitPreviewState(order, config, nowForCommit);
+  } catch (error) {
+    if (clientRequestId) {
+      commitRequestStore.delete(clientRequestId);
+    }
+    const statusCode = isComReadBlockedError(error) ? 409 : 400;
+    return res.status(statusCode).json({
+      ok: false,
+      message: isComReadBlockedError(error)
+        ? (error.userMessage || EXCEL_NOT_OPEN_USER_MESSAGE)
+        : `Commit Vorbereitung fehlgeschlagen: ${error.message}`,
+      userMessage: isComReadBlockedError(error)
+        ? (error.userMessage || EXCEL_NOT_OPEN_USER_MESSAGE)
+        : undefined,
+      writerBackendUsed: 'com',
+      clientRequestId,
+    });
+  }
   const {
     absoluteExcelPath,
     orderForWrite,
@@ -2942,28 +3100,37 @@ app.post('/api/order/commit', async (req, res) => {
       termin: preview.termin,
       now: nowForCommit,
       cacheHint,
+      saveWorkbook: false,
     });
   } catch (error) {
     if (clientRequestId) {
       commitRequestStore.delete(clientRequestId);
     }
-    const fullMessage = `Writer fehlgeschlagen (${usedBackend}): ${error.message}`;
     const parsedWriterError = extractWriterDebug(error.message);
     const writerErrorCode = String(parsedWriterError?.debug?.code || '').trim();
     const isWorkbookReadonly = writerErrorCode === 'WORKBOOK_READONLY';
-    const normalizedUserMessage = isExcelNotOpenMessage(parsedWriterError.userMessage)
+    const isExcelNotOpen = usedBackend === 'com' && isExcelNotOpenMessage(parsedWriterError.userMessage);
+    const normalizedUserMessage = isExcelNotOpen
       ? EXCEL_NOT_OPEN_USER_MESSAGE
       : (isWorkbookReadonly ? WORKBOOK_READONLY_USER_MESSAGE : parsedWriterError.userMessage);
-    const userMessage = normalizedUserMessage === EXCEL_NOT_OPEN_USER_MESSAGE
-      ? EXCEL_NOT_OPEN_USER_MESSAGE
-      : `Writer fehlgeschlagen (${usedBackend}): ${normalizedUserMessage}`;
-    const debug = normalizedUserMessage === EXCEL_NOT_OPEN_USER_MESSAGE ? undefined : (parsedWriterError.debug || undefined);
-    const statusCode = isWorkbookReadonly ? 409 : 400;
+    const message = normalizedUserMessage;
+    const userMessage = normalizedUserMessage;
+    const workerDebug = (error && error.debug && typeof error.debug === 'object')
+      ? { ...error.debug }
+      : undefined;
+    if (workerDebug && Object.prototype.hasOwnProperty.call(workerDebug, 'id')) {
+      delete workerDebug.id;
+    }
+    const debug = isExcelNotOpen
+      ? undefined
+      : (workerDebug || parsedWriterError.debug || undefined);
+    const statusCode = (isWorkbookReadonly || isExcelNotOpen) ? 409 : 400;
     return res.status(statusCode).json({
       ok: false,
-      message: fullMessage,
+      message,
       userMessage,
       debug,
+      writerBackendUsed: usedBackend,
       clientRequestId,
     });
   }
@@ -2978,7 +3145,8 @@ app.post('/api/order/commit', async (req, res) => {
   const letzteProbennr = sampleNos.length > 0 ? sampleNos[sampleNos.length - 1] : null;
   const fallbackEndRow = Number.isInteger(writeResult.appendRow) ? writeResult.appendRow + orderForWrite.proben.length : null;
   const endRowRange = writeResult.endRowRange || (fallbackEndRow ? `A${writeResult.appendRow}:J${fallbackEndRow}` : null);
-  const saved = writeResult.saved !== false;
+  const written = writeResult.written !== false;
+  const saved = writeResult.saved === true;
   const todayPrefix = typeof writeResult.todayPrefix === 'string'
     ? writeResult.todayPrefix
     : (orderNo && String(orderNo).length >= 7 ? String(orderNo).slice(0, 7) : null);
@@ -2997,7 +3165,7 @@ app.post('/api/order/commit', async (req, res) => {
     computedOrderNo,
   };
 
-  if (cache && writeResult.saved !== false) {
+  if (cache && written) {
     const fileMetaAfterWrite = getExcelFileMeta(absoluteExcelPath);
     const resolvedAppendRow = Number.isInteger(writeResult.appendRow) ? writeResult.appendRow : appendRowFromCache;
     const resolvedEndRow = Number.isInteger(resolvedAppendRow) ? resolvedAppendRow + orderForWrite.proben.length : null;
@@ -3043,6 +3211,7 @@ app.post('/api/order/commit', async (req, res) => {
   const responsePayload = {
     ok: true,
     writer: usedBackend,
+    written,
     saved,
     mode: writeResult.mode || null,
     workbookFullName: writeResult.workbookFullName || null,
@@ -3062,6 +3231,15 @@ app.post('/api/order/commit', async (req, res) => {
     operation: 'commit',
     backup,
     writerBackend: usedBackend,
+    writerBackendUsed: usedBackend,
+    debug: {
+      ...(writeResult?.debug && typeof writeResult.debug === 'object' ? writeResult.debug : {}),
+      logs: Array.isArray(writeResult?.debug?.logs) ? writeResult.debug.logs : [],
+      operation: writeResult?.debug?.operation || 'commit',
+      durationMs: writeResult?.timingMs?.totalMs ?? null,
+      written,
+      saved,
+    },
     writerResult: writeResult,
     reportDbSaved,
     reportDbError: reportDbSaved ? undefined : reportDbError,
@@ -3106,33 +3284,11 @@ app.listen(port, () => {
     workerClient.start()
       .then(() => {
         console.log('[com-worker] started');
-        const warmupPayload = {
-          __warmup: true,
-          excelPath: resolveExcelPath(config.excelPath),
-          yearSheetName: getYearSheetName(config),
-          allowAutoOpenExcel: false,
-        };
-        return workerClient.request(warmupPayload, {
-          timeoutMs: 10000,
-          retryOnFailure: false,
-        });
-      })
-      .then(() => {
-        console.log('[com-worker] warmup complete');
       })
       .catch((error) => {
         console.warn(`[com-worker] start failed: ${error.message}`);
       });
   }
-  ensureSheetStateCache(config, new Date())
-    .then((cache) => {
-      console.log(
-        `[sheet-cache] ready yearSheet=${cache.yearSheetName} lastUsedRow=${cache.lastUsedRow} lastLabNo=${cache.lastLabNo}`,
-      );
-    })
-    .catch((error) => {
-      console.warn(`[sheet-cache] init failed: ${error.message}`);
-    });
 });
 
 

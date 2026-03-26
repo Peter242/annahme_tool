@@ -76,6 +76,7 @@ function buildComPayload(params) {
     termin,
     cacheHint = null,
     now = new Date(),
+    saveWorkbook = false,
   } = params;
   const absoluteExcelPath = resolveAbsoluteExcelPath(excelPath, rootDir);
   const normalizedProbes = (Array.isArray(order?.proben) ? order.proben : []).map((probe) => ({
@@ -89,6 +90,7 @@ function buildComPayload(params) {
       yearSheetName: resolveYearSheetName(config, now),
       excelWriteAddressBlock: config.excelWriteAddressBlock !== false,
       allowAutoOpenExcel: false,
+      saveWorkbook: saveWorkbook === true,
       now: now.toISOString(),
       termin: termin || null,
       cacheHint,

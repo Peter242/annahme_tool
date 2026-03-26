@@ -6,9 +6,9 @@
     "email": "de@vries.de",
     "adresseBlock": "Ansprechpartner: Peter,\nEMail: CUA@Peter.de",
     "kopfBemerkung": "RN an Dr Döring",
-    "usageCount": 1,
-    "lastUsed": "2026-02-17T20:49:01.521Z",
-    "updatedAt": "2026-02-18T21:58:01.150Z"
+    "usageCount": 9,
+    "lastUsed": "2026-03-26T11:26:13.326Z",
+    "updatedAt": "2026-03-26T11:26:13.326Z"
   },
   "peter": {
     "key": "peter",
@@ -17,8 +17,8 @@
     "email": "de@vries.de",
     "adresseBlock": "Chemisches Untersuchungsamt GmbH\nzH Herr Olk\nZum Nordkai 16\n26725 EMDEN",
     "kopfBemerkung": "RN an Anna",
-    "usageCount": 19,
-    "lastUsed": "2026-02-22T12:14:13.366Z",
-    "updatedAt": "2026-02-22T12:14:13.366Z"
+    "usageCount": 28,
+    "lastUsed": "2026-03-26T11:36:52.217Z",
+    "updatedAt": "2026-03-26T11:36:52.217Z"
   }
 }
